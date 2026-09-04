@@ -153,6 +153,7 @@ termination logic and tuning guidance.
 | `linear_system/fem_preconditioner` | string | `"diag"` | `"diag"`, `"mas"` | FEM local preconditioner. MAS auto-partitions every non-empty FEM geometry into fixed-size clusters and is intended for stiff/ill-conditioned FEM scenes. |
 | `linear_system/use_cuda_graph` | integer mode | `1` | `0`, `1`, `2` | Fused-PCG launch mode: `0` plain launches; `1` host-checked block replay; `2` full-GPU while-loop graph. Mode 2 requires CUDA 12.4+ and falls back when unsupported. Non-IPC pipelines currently force graphs off. |
 | `linear_system/check_interval` | integer | `5` | `>= 1` | Number of fused-PCG iterations between host convergence checks in modes 0/1. Larger values reduce checks but make exit granularity coarser. |
+| `linear_system/hessian_reuse_iters` | integer | `1` | `>= 1` | Newton iterations the assembled Hessian, BCOO matrix and preconditioner are kept within a frame, refreshing only the gradient RHS (`1` = reassemble every iteration). Modified/chord-Newton reuse; the first iteration of a frame always reassembles, and the DyTopo Hessian evaluation is skipped on reused iterations. |
 
 ## Line search
 

@@ -173,6 +173,16 @@ static SceneConfigContract make_scene_config_contract()
         "PCG iterations between host convergence checks.",
         {"src/backends/cuda/linear_system/linear_fused_pcg.cu"},
         Json{{"minimum", 1}});
+    add("linear_system/hessian_reuse_iters",
+        IndexT{1},
+        "integer",
+        "Newton iterations the assembled Hessian (and its preconditioner) is "
+        "kept within a frame, refreshing only the gradient (1 = reassemble "
+        "every iteration). Modified-Newton reuse; the first iteration of a "
+        "frame always reassembles.",
+        {"src/backends/cuda/linear_system/global_linear_system.cu",
+         "src/backends/cuda/engine/advance_ipc.cu"},
+        Json{{"minimum", 1}});
 
     add("line_search/max_iter",
         IndexT{8},

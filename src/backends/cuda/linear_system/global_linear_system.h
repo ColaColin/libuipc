@@ -279,6 +279,7 @@ class GlobalLinearSystem : public SimSystem
         void build_linear_system();
         bool _update_subsystem_extent();
         void _assemble_linear_system();
+        void _assemble_gradient_only();
         void _assemble_preconditioner();
         void solve_linear_system();
         void distribute_solution();
@@ -321,6 +322,20 @@ class GlobalLinearSystem : public SimSystem
         bool  empty_system          = true;
         SizeT last_solve_iterations = 0;
 
+        // Newton context of the current build_linear_system() call, set by
+        // GlobalLinearSystem (Impl itself has no engine() access)
+        SizeT cur_frame       = 0;
+        SizeT cur_newton_iter = 0;
+        // H1b: keep the assembled Hessian (triplets, BCOO matrix and
+        // preconditioner) for `hessian_reuse_iters` Newton iterations within a
+        // frame, refreshing only the gradient b (modified/chord Newton). The
+        // engine is told via prepare_newton_iteration() so it can skip the
+        // DyTopo Hessian evaluation on those iterations.
+        SizeT  hessian_reuse_iters = 1;
+        IndexT hessian_frame       = -1;
+        SizeT  hessian_built_iter  = ~0ull;
+        bool   reuse_hessian_now   = false;  // one-shot, set by prepare_newton_iteration()
+
         void apply_preconditioner(cuda_tool::DenseVectorView<Float>  z,
                                   cuda_tool::CDenseVectorView<Float> r,
                                   cuda_tool::CVarView<IndexT>        converged,
@@ -358,6 +373,12 @@ class GlobalLinearSystem : public SimSystem
     SizeT dof_count() const;
     SizeT last_solve_iterations() const noexcept;
     void  compute_gradient(ComputeGradientInfo& info);
+
+    // Called by the engine at the top of every Newton iteration, before the
+    // DyTopo effect assembly. Returns true when the upcoming solve() reuses
+    // the Hessian assembled in an earlier iteration of the same frame (so the
+    // caller should evaluate the DyTopo effect gradient-only).
+    bool prepare_newton_iteration();
 
     cuda_tool::LinearSystemContext& ctx() noexcept { return m_impl.ctx; }
 
