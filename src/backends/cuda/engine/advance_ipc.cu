@@ -21,6 +21,22 @@ void SimEngine::advance()
     Float ccd_alpha = 1.0;
     Float cfl_alpha = 1.0;
 
+    // ---- DIAGNOSTIC oracle flags (extras/debug/*, both default off) ----
+    // [candidate_reuse_oracle] skip the DCD broadphase re-detection for
+    // newton_iter > 0 and reuse the previous iteration's candidate buffers
+    // as-is: the wall-time ceiling of a perfect learned candidate predictor.
+    // NOT exactness-preserving (the reused set is not a certified superset).
+    const bool dcd_candidate_reuse = m_candidate_reuse_oracle->view()[0] != 0;
+    if(dcd_candidate_reuse && m_current_frame == 0)  // announce once per run
+    {
+        logger::warn("[candidate_reuse_oracle] ACTIVE: DCD re-detection is "
+                     "skipped for newton_iter > 0 (diagnostic only)");
+    }
+    // [warm_start_oracle == 2] replay the captured frame-t positions as the
+    // initial Newton iterate of frame t: the ceiling of a perfect learned
+    // warm start. Changes the trajectory by construction.
+    const bool warm_start_replay = m_warm_start_oracle->view()[0] == 2;
+
     /***************************************************************************************
     *                                  Function Shortcuts
     ***************************************************************************************/
@@ -330,6 +346,11 @@ void SimEngine::advance()
             step_animation_and_external_forces();
             m_time_integrator_manager->predict_dof();
 
+            // DIAGNOSTIC: overwrite the initial Newton iterate with the
+            // captured solution of this frame (warm-start oracle)
+            if(warm_start_replay)
+                oracle_inject_frame();
+
             // 3. Adaptive Parameter Calculation
             detect_dcd_candidates();
             compute_adaptive_kappa();
@@ -352,7 +373,10 @@ void SimEngine::advance()
 
 
                 // 2) Build Collision Pairs
-                if(newton_iter > 0)
+                // DIAGNOSTIC (candidate_reuse_oracle): with the oracle active,
+                // iterations > 0 reuse the previous iteration's candidate
+                // buffers instead of re-running the broadphase detection.
+                if(newton_iter > 0 && !dcd_candidate_reuse)
                     detect_dcd_candidates();
 
 
@@ -470,6 +494,11 @@ void SimEngine::advance()
                 Timer timer{"Update Velocity"};
                 m_time_integrator_manager->update_state();
             }
+
+            // DIAGNOSTIC: record the converged positions of this frame
+            // (warm-start oracle, capture mode)
+            if(m_warm_start_oracle->view()[0] == 1)
+                oracle_capture_frame();
 
             // Check Newton Iteration
             // report warnings or throw exceptions if needed

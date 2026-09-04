@@ -364,6 +364,28 @@ static SceneConfigContract make_scene_config_contract()
         "Dump matrices assembled by the MAS FEM preconditioner.",
         {"src/backends/cuda/finite_element/fem_mas_preconditioner.cu"},
         flag);
+    add("extras/debug/candidate_reuse_oracle",
+        IndexT{0},
+        "integer",
+        "DIAGNOSTIC (default off, do not ship enabled): skip the DCD broadphase "
+        "re-detection for newton_iter>0 and reuse the previous iteration's "
+        "candidate buffers as-is. Measures the wall-time ceiling of a learned "
+        "contact-candidate predictor; NOT exactness-preserving (the reused set "
+        "is not a certified superset of the exact one).",
+        {"src/backends/cuda/engine/advance_ipc.cu"},
+        flag);
+    add("extras/debug/warm_start_oracle",
+        IndexT{0},
+        "integer",
+        "DIAGNOSTIC (default off, do not ship enabled): oracle for a learned "
+        "Newton warm start. 1 = capture the converged vertex positions at the "
+        "end of every frame to $UIPC_ORACLE_DIR/positions_f64.bin; 2 = replay "
+        "the captured frame-t positions as the initial Newton iterate of frame "
+        "t (injected right after predict_dof, so the potential itself is built "
+        "from the run's own state). Measures the ceiling of a perfect "
+        "next-frame predictor; changes the trajectory by construction.",
+        {"src/backends/cuda/engine/advance_ipc.cu"},
+        Json{{"enum", Json::array({0, 1, 2})}});
     add("extras/strict_mode/enable",
         IndexT{0},
         "integer",

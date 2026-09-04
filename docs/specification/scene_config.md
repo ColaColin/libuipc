@@ -228,6 +228,8 @@ over the configured fallback bounds.
 | `extras/debug/dump_linear_system` | flag | `0` | `0`, `1` | Dumps assembled global linear systems for diagnosis. |
 | `extras/debug/dump_linear_pcg` | flag | `0` | `0`, `1` | Dumps PCG vectors for `linear_pcg`. `fused_pcg` warns and ignores this option. |
 | `extras/debug/dump_mas_matrices` | flag | `0` | `0`, `1` | Dumps MAS matrices when the MAS FEM preconditioner is active. |
+| `extras/debug/candidate_reuse_oracle` | flag | `0` | `0`, `1` | Research diagnostic, never ship enabled: for Newton iterations past the first, skip the DCD broadphase re-detection and reuse the previous iteration's candidate buffers as-is. Measures the wall-time ceiling of a learned contact-candidate predictor; the reused set is not a certified superset, so trajectories diverge from the default run. |
+| `extras/debug/warm_start_oracle` | integer | `0` | `0`, `1`, `2` | Research diagnostic, never ship enabled: `1` appends the converged vertex positions of every frame to `$UIPC_ORACLE_DIR/positions_f64.bin`; `2` replays the captured frame-`t` record as the initial Newton iterate of frame `t` (injected after `predict_dof`). Measures the ceiling of a perfect learned warm start and changes the trajectory by construction. |
 | `extras/strict_mode/enable` | flag | `0` | `0`, `1` | Converts nonlinear/line-search limit warnings into engine errors. Recommended for automated validation, not exploratory tuning. |
 
 The three alternate collision selectors are compiled only when

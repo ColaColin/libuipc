@@ -62,6 +62,8 @@ void SimEngine::init_scene()
 {
     auto& info     = world().scene().config();
     m_dump_surface = info.find<IndexT>("extras/debug/dump_surface");
+    m_candidate_reuse_oracle = info.find<IndexT>("extras/debug/candidate_reuse_oracle");
+    m_warm_start_oracle      = info.find<IndexT>("extras/debug/warm_start_oracle");
 
     m_newton_velocity_tol = info.find<Float>("newton/velocity_tol");
     m_newton_max_iter     = info.find<IndexT>("newton/max_iter");
@@ -142,6 +144,9 @@ void SimEngine::init_scene()
         //if(m_abd_diff_sim_manager)
         //    m_abd_diff_sim_manager->init();
     }
+
+    // 4. DIAGNOSTIC: warm-start oracle file setup (no-op when disabled)
+    init_warm_start_oracle();
 }
 
 void SimEngine::do_init(InitInfo& info)
