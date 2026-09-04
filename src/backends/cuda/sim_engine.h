@@ -159,6 +159,7 @@ class SimEngine final : public backend::SimEngine
     CAS<IndexT> m_dump_surface;
     CAS<IndexT> m_candidate_reuse_oracle;
     CAS<IndexT> m_warm_start_oracle;
+    CAS<IndexT> m_dump_candidates;
 
     // warm-start-oracle state (diagnostic only)
     std::string                 m_oracle_dir;

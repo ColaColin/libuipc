@@ -7,6 +7,8 @@
 #include <contact_system/global_contact_manager.h>
 #include <cuda_tool/cuda_tool.h>
 #include <utils/dump_utils.h>
+#include <cstdio>
+#include <string>
 
 namespace uipc::backend::cuda
 {
@@ -154,6 +156,14 @@ class SimplexTrajectoryFilter : public TrajectoryFilter
         BufferDump dump_PEs;
         BufferDump dump_PPs;
 
+        // ---- NN-research per-pair candidate dump (extras/debug/dump_candidates,
+        // default off). Defined in nn_candidate_dump.cu. Appends one record
+        // group per DCD detection to $UIPC_ORACLE_DIR/candidates.bin. ----
+        bool        candidate_dump_on   = false;
+        std::FILE*  candidate_dump_file = nullptr;
+        std::string candidate_dump_path;
+        void        dump_candidate_pairs(SizeT frame, SizeT newton_iter);
+
         template <typename T>
         void loose_resize(cuda_tool::DeviceBuffer<T>& buffer, SizeT size)
         {
@@ -169,6 +179,9 @@ class SimplexTrajectoryFilter : public TrajectoryFilter
     cuda_tool::CBufferView<Vector4i> EEs() const noexcept;
     cuda_tool::CBufferView<Vector3i> PEs() const noexcept;
     cuda_tool::CBufferView<Vector2i> PPs() const noexcept;
+
+    // DIAGNOSTIC (extras/debug/dump_candidates): no-op unless the flag is on
+    void dump_active_pairs(SizeT frame, SizeT newton_iter) noexcept;
 
     cuda_tool::CBufferView<Vector4i> friction_PTs() const noexcept;
     cuda_tool::CBufferView<Vector4i> friction_EEs() const noexcept;

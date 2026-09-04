@@ -74,12 +74,24 @@ void SimplexTrajectoryFilter::do_build()
     const auto constitution =
         world().scene().config().find<std::string>("contact/constitution")->view()[0];
     m_impl.toi_safety_margin       = constitution == "al-ipc" ? 0.001 : 0.1;
+
+    // DIAGNOSTIC: per-pair candidate dump switch (default off)
+    m_impl.candidate_dump_on =
+        world().scene().config().find<IndexT>("extras/debug/dump_candidates")->view()[0]
+        != 0;
+
     auto& global_trajectory_filter = require<GlobalTrajectoryFilter>();
 
     BuildInfo info;
     do_build(info);
 
     global_trajectory_filter.add_filter(this);
+}
+
+void SimplexTrajectoryFilter::dump_active_pairs(SizeT frame, SizeT newton_iter) noexcept
+{
+    if(m_impl.candidate_dump_on)
+        m_impl.dump_candidate_pairs(frame, newton_iter);
 }
 
 void SimplexTrajectoryFilter::do_detect(GlobalTrajectoryFilter::DetectInfo& info)

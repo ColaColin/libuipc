@@ -95,6 +95,10 @@ class GlobalTrajectoryFilter final : public SimSystem
     void add_filter(TrajectoryFilter* filter);
     void require_discard_friction();
 
+    // DIAGNOSTIC (extras/debug/dump_candidates): forward (frame, newton_iter)
+    // to every simplex filter so it can dump its per-pair candidate set.
+    void dump_dcd_candidates(SizeT frame, SizeT newton_iter);
+
   private:
     virtual void do_build() override final;
     virtual void do_apply_recover(RecoverInfo& info) override final;

@@ -364,6 +364,18 @@ static SceneConfigContract make_scene_config_contract()
         "Dump matrices assembled by the MAS FEM preconditioner.",
         {"src/backends/cuda/finite_element/fem_mas_preconditioner.cu"},
         flag);
+    add("extras/debug/dump_candidates",
+        IndexT{0},
+        "integer",
+        "DIAGNOSTIC (default off, do not ship enabled): after every DCD candidate "
+        "detection (frame start and every Newton iteration > 0), append one binary "
+        "record per reported candidate pair (PT/EE/PE/PP: vertex ids, squared "
+        "distance, per-primitive displacement magnitudes, d_hat, thickness, body "
+        "ids) to $UIPC_ORACLE_DIR/candidates.bin. Host-side only; used to train "
+        "offline candidate-persistence predictors for the NN-acceleration "
+        "research.",
+        {"src/backends/cuda/collision_detection/nn_candidate_dump.cu"},
+        flag);
     add("extras/debug/candidate_reuse_oracle",
         IndexT{0},
         "integer",

@@ -1,5 +1,6 @@
 #include <collision_detection/global_trajectory_filter.h>
 #include <collision_detection/trajectory_filter.h>
+#include <collision_detection/simplex_trajectory_filter.h>
 #include <contact_system/global_contact_manager.h>
 #include <sim_engine.h>
 
@@ -73,6 +74,17 @@ void GlobalTrajectoryFilter::filter_active()
     {
         FilterActiveInfo info(&m_impl);
         filter->filter_active(info);
+    }
+}
+
+void GlobalTrajectoryFilter::dump_dcd_candidates(SizeT frame, SizeT newton_iter)
+{
+    // DIAGNOSTIC: no-op for every filter unless extras/debug/dump_candidates
+    // is set (the simplex filter caches the flag at build time).
+    for(auto filter : m_impl.filters.view())
+    {
+        if(auto simplex = dynamic_cast<SimplexTrajectoryFilter*>(filter))
+            simplex->dump_active_pairs(frame, newton_iter);
     }
 }
 

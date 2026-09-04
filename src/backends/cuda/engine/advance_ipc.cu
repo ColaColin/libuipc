@@ -41,13 +41,19 @@ void SimEngine::advance()
     *                                  Function Shortcuts
     ***************************************************************************************/
 
-    auto detect_dcd_candidates = [this]
+    auto detect_dcd_candidates = [this](SizeT newton_iter)
     {
         if(m_global_trajectory_filter)
         {
             Timer timer{"Detect DCD Candidates"};
             m_global_trajectory_filter->detect(0.0);
             m_global_trajectory_filter->filter_active();
+
+            // DIAGNOSTIC (extras/debug/dump_candidates): per-pair candidate
+            // dump; no-op unless the flag is set.
+            if(m_dump_candidates->view()[0])
+                m_global_trajectory_filter->dump_dcd_candidates(m_current_frame,
+                                                                newton_iter);
         }
     };
 
@@ -352,7 +358,7 @@ void SimEngine::advance()
                 oracle_inject_frame();
 
             // 3. Adaptive Parameter Calculation
-            detect_dcd_candidates();
+            detect_dcd_candidates(0);
             compute_adaptive_kappa();
 
             // 4. Nonlinear-Newton Iteration
@@ -377,7 +383,7 @@ void SimEngine::advance()
                 // iterations > 0 reuse the previous iteration's candidate
                 // buffers instead of re-running the broadphase detection.
                 if(newton_iter > 0 && !dcd_candidate_reuse)
-                    detect_dcd_candidates();
+                    detect_dcd_candidates(newton_iter);
 
 
                 // 3) Compute Dynamic Topo Effect Gradient and Hessian => G:Vector3, H:Matrix3x3
