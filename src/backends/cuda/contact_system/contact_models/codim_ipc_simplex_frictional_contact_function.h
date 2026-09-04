@@ -8,6 +8,26 @@ namespace uipc::backend::cuda
 namespace sym::codim_ipc_contact
 {
 
+    //tex:
+    //$$
+    // J = [\,w_1 \hat{t}_1 \,|\, w_1 \hat{t}_2\,|\;\dots\;|\, w_m \hat{t}_1 \,|\, w_m \hat{t}_2\,]
+    // \;\Rightarrow\; J J^T = \|w\|^2 I_2 \;\Rightarrow\; \mathrm{make\_spd}(J^T M J) = J^T\,\mathrm{make\_spd}(M)\,J
+    //$$
+    // Every friction Jacobian below stacks the blocks $w_k \hat{t}^T$ of an orthonormal
+    // tangent basis $\hat t$, so its two rows are orthogonal and of equal norm $\|w\|$:
+    // $J^T M J = \|w\|^2\, Q M Q^T$ with $Q^T Q = I_2$, and clamping eigenvalues commutes
+    // with that scaled isometry (exactly, for any symmetric $M$). The SPD projection of
+    // the assembled NxN Hessian is therefore the expansion of the projected 2x2 $M$:
+    // the eigenproblem collapses 12x12/9x9/6x6 -> 2x2.
+    template <int N>
+    inline __device__ void friction_make_spd(Matrix<Float, N, N>&       H,
+                                             const Matrix<Float, 2, N>& J,
+                                             Matrix2x2&                 H2x2)
+    {
+        make_spd(H2x2);
+        H = J.transpose() * H2x2 * J;
+    }
+
     inline __device__ ContactCoeff PT_contact_coeff(const cuda_tool::CDense2D<ContactCoeff>& table,
                                                     const Vector4i& cids)
     {
@@ -198,7 +218,7 @@ namespace sym::codim_ipc_contact
 
         Matrix2x2 H2x2;
         friction_hessian(H2x2, mu, f, eps_vh, tan_rel_dx);
-        H = J.transpose() * H2x2 * J;
+        friction_make_spd<12>(H, J, H2x2);
     }
 
     inline __device__ void PT_friction_gradient(Vector12&      G,
@@ -386,7 +406,7 @@ namespace sym::codim_ipc_contact
 
         Matrix2x2 H2x2;
         friction_hessian(H2x2, mu, f, eps_vh, tan_rel_dx);
-        H = J.transpose() * H2x2 * J;
+        friction_make_spd<12>(H, J, H2x2);
     }
 
     inline __device__ void EE_friction_gradient(Vector12&      G,
@@ -566,7 +586,7 @@ namespace sym::codim_ipc_contact
 
         Matrix2x2 H2x2;
         friction_hessian(H2x2, mu, f, eps_vh, tan_rel_dx);
-        H = J.transpose() * H2x2 * J;
+        friction_make_spd<9>(H, J, H2x2);
     }
 
     inline __device__ void PE_friction_gradient(Vector9&       G,
@@ -725,7 +745,7 @@ namespace sym::codim_ipc_contact
 
         Matrix2x2 H2x2;
         friction_hessian(H2x2, mu, f, eps_vh, tan_rel_dx);
-        H = J.transpose() * H2x2 * J;
+        friction_make_spd<6>(H, J, H2x2);
     }
 
     inline __device__ void PP_friction_gradient(Vector6&       G,

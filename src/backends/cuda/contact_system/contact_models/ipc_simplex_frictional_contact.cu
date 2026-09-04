@@ -2,7 +2,6 @@
 #include <contact_system/contact_models/codim_ipc_simplex_frictional_contact_function.h>
 #include <utils/codim_thickness.h>
 #include <kernel_cout.h>
-#include <utils/make_spd.h>
 #include <utils/matrix_assembler.h>
 #include <utils/primitive_d_hat.h>
 #include <pipeline/ipc_pipeline_flag.h>
@@ -335,7 +334,6 @@ namespace
                 Matrix12x12 H;
                 PT_friction_gradient_hessian(
                     G, H, kt2, d_hat, thickness, mu, eps_v * dt, prev_P, prev_T0, prev_T1, prev_T2, P, T0, T1, T2);
-                cuda::make_spd(H);
                 DoubletVectorAssembler DVA{PT_Gs};
                 DVA.segment<4>(i * 4).write(PT, G);
                 TripletMatrixAssembler TMA{PT_Hs};
@@ -405,7 +403,6 @@ namespace
                 {
                     EE_friction_gradient_hessian(
                         G, H, kt2, d_hat, thickness, mu, eps_v * dt, prev_Ea0, prev_Ea1, prev_Eb0, prev_Eb1, Ea0, Ea1, Eb0, Eb1);
-                    cuda::make_spd(H);
                 }
                 DoubletVectorAssembler DVA{EE_Gs};
                 DVA.segment<4>(i * 4).write(EE, G);
@@ -448,7 +445,6 @@ namespace
                 Matrix9x9 H;
                 PE_friction_gradient_hessian(
                     G, H, kt2, d_hat, thickness, mu, eps_v * dt, prev_P, prev_E0, prev_E1, P, E0, E1);
-                cuda::make_spd(H);
                 DoubletVectorAssembler DVA{PE_Gs};
                 DVA.segment<3>(i * 3).write(PE, G);
                 TripletMatrixAssembler TMA{PE_Hs};
@@ -487,7 +483,6 @@ namespace
                 Matrix6x6 H;
                 PP_friction_gradient_hessian(
                     G, H, kt2, d_hat, thickness, mu, eps_v * dt, prev_P0, prev_P1, P0, P1);
-                cuda::make_spd(H);
                 DoubletVectorAssembler DVA{PP_Gs};
                 DVA.segment<2>(i * 2).write(PP, G);
                 TripletMatrixAssembler TMA{PP_Hs};
