@@ -34,31 +34,6 @@ void GlobalLinearSystem::do_build()
 
     m_impl.need_debug_dump =
         dump_linear_system_attr ? dump_linear_system_attr->view()[0] : false;
-
-    auto hessian_reuse_attr =
-        world().scene().config().find<IndexT>("linear_system/hessian_reuse_iters");
-    if(hessian_reuse_attr)
-    {
-        auto v = hessian_reuse_attr->view()[0];
-        UIPC_ASSERT(v >= 1,
-                    "linear_system/hessian_reuse_iters must be >= 1, yours {}.",
-                    v);
-        m_impl.hessian_reuse_iters = static_cast<SizeT>(v);
-    }
-}
-
-bool GlobalLinearSystem::prepare_newton_iteration()
-{
-    m_impl.cur_frame       = engine().frame();
-    m_impl.cur_newton_iter = engine().newton_iter();
-    // Reuse only within a frame, and only while the Hessian built
-    // `hessian_reuse_iters` ago is still the latest one.
-    m_impl.reuse_hessian_now =
-        m_impl.hessian_reuse_iters > 1
-        && static_cast<IndexT>(m_impl.cur_frame) == m_impl.hessian_frame
-        && m_impl.cur_newton_iter >= m_impl.hessian_built_iter
-        && m_impl.cur_newton_iter - m_impl.hessian_built_iter < m_impl.hessian_reuse_iters;
-    return m_impl.reuse_hessian_now;
 }
 
 void GlobalLinearSystem::_dump_A_b()
@@ -117,16 +92,12 @@ void GlobalLinearSystem::solve()
 
 Float GlobalLinearSystem::diag_norm()
 {
-    m_impl.cur_frame       = engine().frame();
-    m_impl.cur_newton_iter = engine().newton_iter();
     m_impl.build_linear_system();
     return m_impl.diag_norm();
 }
 
 Float GlobalLinearSystem::mass_norm()
 {
-    m_impl.cur_frame       = engine().frame();
-    m_impl.cur_newton_iter = engine().newton_iter();
     m_impl.build_linear_system();
     return m_impl.mass_norm();
 }
@@ -244,22 +215,6 @@ void GlobalLinearSystem::Impl::init()
 void GlobalLinearSystem::Impl::build_linear_system()
 {
     Timer timer{"Build Linear System"};
-
-    // H1b (modified/chord Newton): reuse the Hessian assembled in an earlier
-    // iteration of this frame. Only the gradient b is refreshed; the BCOO
-    // matrix, its graph-stable nnz count and the preconditioner stay as they
-    // were, so the PCG solve runs against the stale Hessian exactly.
-    if(reuse_hessian_now)
-    {
-        reuse_hessian_now = false;  // one-shot, set by prepare_newton_iteration()
-        empty_system      = false;  // a Hessian was built earlier this frame
-        logger::info("GlobalLinearSystem reuses the Hessian of newton iteration {}",
-                     hessian_built_iter);
-        Timer t{"Assemble Gradient"};
-        _assemble_gradient_only();
-        return;
-    }
-
     empty_system = !_update_subsystem_extent();
 
     if(empty_system) [[unlikely]]
@@ -286,9 +241,6 @@ void GlobalLinearSystem::Impl::build_linear_system()
         Timer t{"Assemble Preconditioner"};
         _assemble_preconditioner();
     }
-
-    hessian_frame      = static_cast<IndexT>(cur_frame);
-    hessian_built_iter = cur_newton_iter;
 
     logger::info("GlobalLinearSystem has {} DoFs, Unique Triplet Count: {}",
                  b.size(),
@@ -464,35 +416,6 @@ void GlobalLinearSystem::Impl::_assemble_linear_system()
 
             off_diag_subsystem->assemble(info);
         }
-    }
-}
-
-void GlobalLinearSystem::Impl::_assemble_gradient_only()
-{
-    auto B = b.view();
-    B.buffer_view().fill(0.0);
-
-    auto diag_subsystem_view = diag_subsystems.view();
-
-    auto diag_dof_counts  = diag_dof_offsets_counts.counts();
-    auto diag_dof_offsets = diag_dof_offsets_counts.offsets();
-
-    // Same gradient-only path GlobalLinearSystem::compute_gradient() uses for
-    // the line search, but with all energy components and the Newton RHS
-    // destination: every subsystem refreshes its gradient into b while the
-    // Hessian buffers stay untouched (they are reused as assembled).
-    for(auto&& [i, diag_subsystem] : enumerate(diag_subsystem_view))
-    {
-        DiagExtentInfo extent_info;
-        extent_info.m_gradient_only = true;
-        diag_subsystem->report_extent(extent_info);
-
-        DiagInfo info{this};
-        info.m_index         = diag_subsystem->m_index;
-        info.m_gradients     = B.subview(diag_dof_offsets[i], diag_dof_counts[i]);
-        info.m_hessians      = TripletMatrixView{};
-        info.m_gradient_only = true;
-        diag_subsystem->assemble(info);
     }
 }
 

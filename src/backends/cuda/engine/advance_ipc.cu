@@ -67,19 +67,15 @@ void SimEngine::advance()
             m_global_contact_manager->compute_adaptive_parameters();
     };
 
-    auto compute_dytopo_effect = [this](bool gradient_only)
+    auto compute_dytopo_effect = [this]
     {
         // compute the dytopo effect gradient and hessian, containing:
         // 1) contact effect from contact pairs
         // 2) other dynamic topo effects, e.g. point picker, vertex stitch ...
-        // gradient_only=true skips the Hessian evaluation on Newton
-        // iterations whose linear solve reuses the previous Hessian.
         if(m_global_dytopo_effect_manager)
         {
             Timer timer{"Compute DyTopo Effect"};
-            GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo info;
-            info.gradient_only(gradient_only);
-            m_global_dytopo_effect_manager->compute_dytopo_effect(info);
+            m_global_dytopo_effect_manager->compute_dytopo_effect();
         }
     };
 
@@ -363,13 +359,8 @@ void SimEngine::advance()
                 // 3) Compute Dynamic Topo Effect Gradient and Hessian => G:Vector3, H:Matrix3x3
                 //    - Contact Effect
                 //    - Other DyTopo Effects
-                //    Ask the linear system first: on iterations that reuse the
-                //    previous Hessian (linear_system/hessian_reuse_iters) the
-                //    Hessian evaluation is skipped.
-                bool reuse_hessian = m_global_linear_system
-                                     && m_global_linear_system->prepare_newton_iteration();
                 m_state = SimEngineState::ComputeDyTopoEffect;
-                compute_dytopo_effect(reuse_hessian);
+                compute_dytopo_effect();
 
 
                 // 4) Solve Global Linear System => dx = A^-1 * b
