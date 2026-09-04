@@ -15,6 +15,7 @@ class MaxTranslationChecker : public NewtonToleranceChecker
     Float                                   velocity_tol_relative = 0.0;
     Float                                   res0                  = 0.0;
     Float                                   res                   = 0.0;
+    SizeT                                   arg_vertex            = 0;  // DIAG
     Float                                   rel_tol               = 0.0;
     Float                                   abs_tol               = 0.0;
     SizeT                                   frame                 = 0;
@@ -46,7 +47,7 @@ class MaxTranslationChecker : public NewtonToleranceChecker
         if(velocity_tol_relative > 0.0)
             vel_tol = velocity_tol_relative * vertex_manager->scene_diagonal();
         abs_tol          = vel_tol * dt_attr->view()[0];
-        res              = vertex_manager->compute_axis_max_displacement();
+        res              = vertex_manager->compute_axis_max_displacement_argmax(arg_vertex);
         auto newton_iter = info.newton_iter();
         if(newton_iter == 0)
             res0 = res;  // record the initial residual
@@ -58,7 +59,8 @@ class MaxTranslationChecker : public NewtonToleranceChecker
 
     std::string do_report() override
     {
-        std::string report = fmt::format("Residual/AbsTol: {}/{}", res, abs_tol);
+        std::string report =
+            fmt::format("Residual/AbsTol: {}/{} (vertex {})", res, abs_tol, arg_vertex);
         return report;
     }
 };

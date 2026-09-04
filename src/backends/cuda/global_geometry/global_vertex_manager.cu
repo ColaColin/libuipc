@@ -44,6 +44,20 @@ namespace
         pos(i)     = base_pos(i);
     }
 
+    __global__ void GlobalVertexManager_abs_components_kernel(
+        cuda_tool::CBufferView<Vector3> disp,
+        cuda_tool::BufferView<Float>    abs_disp,
+        int                             n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        Vector3 d = disp(i);
+        abs_disp(i * 3 + 0) = std::abs(d[0]);
+        abs_disp(i * 3 + 1) = std::abs(d[1]);
+        abs_disp(i * 3 + 2) = std::abs(d[2]);
+    }
+
     struct GlobalVertexManager_MaxAbsOp
     {
         CUB_RUNTIME_FUNCTION Float operator()(const Float& L, const Float& R) const
@@ -296,6 +310,27 @@ Float GlobalVertexManager::Impl::compute_axis_max_displacement()
     return axis_max_disp;
 }
 
+Float GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(SizeT& vertex)
+{
+    auto n = (int)displacements.size();
+    if(n == 0)
+    {
+        vertex = 0;
+        return 0.0;
+    }
+    abs_displacements.resize_discard(n * 3);
+    {
+        auto k = GlobalVertexManager_abs_components_kernel;
+        k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            displacements.cview(), abs_displacements.view(), n);
+    }
+    static cuda_tool::DeviceVar<cub::KeyValuePair<int, Float>> arg_max;
+    cuda_tool::DeviceReduce().ArgMax(abs_displacements.data(), arg_max.data(), n * 3);
+    axis_arg_max = arg_max;  // host readback (sync)
+    vertex       = static_cast<SizeT>(axis_arg_max.key) / 3;
+    return axis_arg_max.value;
+}
+
 AABB GlobalVertexManager::Impl::compute_vertex_bounding_box()
 {
     Float max_float = std::numeric_limits<Float>::max();
@@ -546,6 +581,11 @@ cuda_tool::CBufferView<Float> GlobalVertexManager::thicknesses() const noexcept
 Float GlobalVertexManager::compute_axis_max_displacement()
 {
     return m_impl.compute_axis_max_displacement();
+}
+
+Float GlobalVertexManager::compute_axis_max_displacement_argmax(SizeT& vertex)
+{
+    return m_impl.compute_axis_max_displacement_argmax(vertex);
 }
 
 AABB GlobalVertexManager::compute_vertex_bounding_box()

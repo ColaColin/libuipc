@@ -1,6 +1,7 @@
 #pragma once
 #include <sim_system.h>
 #include <cuda_tool/cuda_tool.h>
+#include <cuda_tool/cub.h>
 #include <functional>
 #include <Eigen/Geometry>
 #include <collision_detection/aabb.h>
@@ -188,6 +189,8 @@ class GlobalVertexManager final : public SimSystem
         void overwrite_positions(cuda_tool::CBufferView<Vector3> src);
 
         Float compute_axis_max_displacement();
+        // DIAG: same value, plus the flattened-component argmax (vertex = key/3)
+        Float compute_axis_max_displacement_argmax(SizeT& vertex);
         AABB  compute_vertex_bounding_box();
 
         template <typename T>
@@ -217,6 +220,8 @@ class GlobalVertexManager final : public SimSystem
         cuda_tool::DeviceBuffer<Float>   displacement_norms;
 
         cuda_tool::DeviceVar<Float>   axis_max_disp;
+        cuda_tool::DeviceBuffer<Float> abs_displacements;  // DIAG
+        cub::KeyValuePair<int, Float>  axis_arg_max{};      // DIAG host-side copy
         cuda_tool::DeviceVar<Float>   max_disp_norm;
         cuda_tool::DeviceVar<Vector3> min_pos;
         cuda_tool::DeviceVar<Vector3> max_pos;
@@ -263,6 +268,7 @@ class GlobalVertexManager final : public SimSystem
     void  record_prev_positions();
     void  collect_vertex_displacements();
     Float compute_axis_max_displacement();
+    Float compute_axis_max_displacement_argmax(SizeT& vertex);
 
     AABB compute_vertex_bounding_box();
     void step_forward(Float alpha);
