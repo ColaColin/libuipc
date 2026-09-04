@@ -317,7 +317,7 @@ namespace
             {
                 Matrix12x12 H;
                 PT_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
-                make_spd(H);
+                PT_barrier_make_spd(H, flag, P, T0, T1, T2);
                 DoubletVectorAssembler DVA{PT_Gs};
                 DVA.segment<4>(i * 4).write(PT, G);
                 TripletMatrixAssembler TMA{PT_Hs};
@@ -398,7 +398,7 @@ namespace
             {
                 Matrix9x9 H;
                 PE_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, E0, E1);
-                make_spd(H);
+                PE_barrier_make_spd(H, flag, P, E0, E1);
                 DoubletVectorAssembler DVA{PE_Gs};
                 DVA.segment<3>(i * 3).write(PE, G);
                 TripletMatrixAssembler TMA{PE_Hs};
@@ -430,7 +430,7 @@ namespace
             {
                 Matrix6x6 H;
                 PP_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P0, P1);
-                make_spd(H);
+                PP_barrier_make_spd(H, flag, P0, P1);
                 DoubletVectorAssembler DVA{PP_Gs};
                 DVA.segment<2>(i * 2).write(PP, G);
                 TripletMatrixAssembler TMA{PP_Hs};
