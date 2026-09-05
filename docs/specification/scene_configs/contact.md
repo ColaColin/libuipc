@@ -230,7 +230,8 @@ safe scale for every vertex.
 
 The always-available broad phase is `info_stackless_bvh` (default).
 `stackless_bvh`, `linear_bvh`, and the `info_stackless_bvh_v0` comparison path
-belong to the optional legacy-collision build component. They are present by
+belong to the optional legacy-collision build component (`lbvh` is an alias
+of `linear_bvh`; both select the same LBVH filter). They are present by
 default, but a lean build can disable them with
 `UIPC_WITH_CUDA_LEGACY_COLLISION=OFF` (CMake) or
 `cuda_legacy_collision=false` (XMake); the scene schema then rejects those

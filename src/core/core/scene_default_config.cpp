@@ -307,6 +307,8 @@ static SceneConfigContract make_scene_config_contract()
     collision_methods.push_back("info_stackless_bvh_v0");
     collision_methods.push_back("stackless_bvh");
     collision_methods.push_back("linear_bvh");
+    // "lbvh" is an alias of "linear_bvh" (same LBVHSimplexTrajectoryFilter).
+    collision_methods.push_back("lbvh");
 #else
     constexpr bool legacy_collision_built = false;
 #endif
@@ -320,7 +322,11 @@ static SceneConfigContract make_scene_config_contract()
         Json{{"backend", "cuda"},
              {"buildOption", "UIPC_WITH_CUDA_LEGACY_COLLISION"},
              {"enabled", legacy_collision_built},
-             {"values", Json::array({"info_stackless_bvh_v0", "stackless_bvh", "linear_bvh"})}};
+             {"values",
+              Json::array({"info_stackless_bvh_v0",
+                           "stackless_bvh",
+                           "linear_bvh",
+                           "lbvh"})}};
     add("collision_detection/dcd_candidate_reuse",
         IndexT{0},
         "integer",

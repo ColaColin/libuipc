@@ -1019,7 +1019,8 @@ void LBVHSimplexTrajectoryFilter::do_build(BuildInfo& info)
 {
     auto& config = world().scene().config();
     auto  method = config.find<std::string>("collision_detection/method");
-    if(method->view()[0] != "linear_bvh")
+    // "lbvh" is an alias of "linear_bvh".
+    if(method->view()[0] != "linear_bvh" && method->view()[0] != "lbvh")
     {
         throw SimSystemException("Linear BVH unused");
     }
