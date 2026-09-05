@@ -328,7 +328,7 @@ static SceneConfigContract make_scene_config_contract()
                            "linear_bvh",
                            "lbvh"})}};
     add("collision_detection/dcd_candidate_reuse",
-        IndexT{0},
+        IndexT{1},
         "integer",
         "For Newton iterations past the first, keep the previous line-search "
         "trajectory candidate set as the DCD broadphase candidate set instead "

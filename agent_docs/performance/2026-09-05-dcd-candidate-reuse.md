@@ -1,6 +1,6 @@
 # 2026-09-05 — Certified DCD Broadphase Candidate Reuse Across Newton Iterations
 
-- Status: Accepted behind `collision_detection/dcd_candidate_reuse` (default off)
+- Status: Accepted behind `collision_detection/dcd_candidate_reuse`; the default was flipped to ON the same day after the full-ladder validation below (commit message of the flip records the decision)
 - Workload: samples `88_stiff_gipc_benchmark`, `93_cube_wall_cloth`,
   `34_cloth_stack`, `11_bunny_cloth` (100-frame x 2 end-to-end A/B, clean
   protocol, no `WB_LOG`); 30/30/100-frame certification-verification runs with
@@ -8,7 +8,7 @@
 - Environment: Linux source build, NVIDIA RTX 2070 SUPER (sm_75), CUDA 12.8,
   double precision, default config otherwise
 - Commits: base `82621df3` (branch `perf/newton-cost`), this change
-- Config: `collision_detection/dcd_candidate_reuse` (flag, default 0);
+- Config: `collision_detection/dcd_candidate_reuse` (flag, default 1 since the flip; originally shipped default 0);
   verification instrument `extras/debug/dcd_candidate_reuse_verify` (flag,
   default 0), implemented in
   `src/backends/cuda/collision_detection/candidate_reuse_verify.cu`
