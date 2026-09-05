@@ -5,6 +5,8 @@
 #include <contact_system/global_contact_manager.h>
 #include <collision_detection/info_stackless_bvh.h>
 #include <collision_detection/simplex_trajectory_filter.h>
+#include <array>
+#include <vector>
 
 namespace uipc::backend::cuda
 {
@@ -57,6 +59,12 @@ class InfoStacklessBVHSimplexTrajectoryFilter final : public SimplexTrajectoryFi
         cuda_tool::DeviceBuffer<IndexT> query_counts;
         cuda_tool::DeviceBuffer<IndexT> selected_counts;
 
+        // ---- certified-reuse verification staging
+        // (extras/debug/dcd_candidate_reuse_verify, defined in
+        // candidate_reuse_verify.cu): host copies of the raw broadphase
+        // candidate sets, order PP, PE, EE, PT. ----
+        std::array<std::vector<Vector2i>, 4> reuse_snapshots;
+
         cuda_tool::DeviceBuffer<Vector4i> temp_PTs;
         cuda_tool::DeviceBuffer<Vector4i> temp_EEs;
         cuda_tool::DeviceBuffer<Vector3i> temp_PEs;
@@ -79,6 +87,13 @@ class InfoStacklessBVHSimplexTrajectoryFilter final : public SimplexTrajectoryFi
     virtual cuda_tool::CBufferView<Vector2i> candidate_EEs() const noexcept override;
     virtual cuda_tool::CBufferView<Float> toi_PTs() const noexcept override;
     virtual cuda_tool::CBufferView<Float> toi_EEs() const noexcept override;
+
+    // DIAGNOSTIC (extras/debug/dcd_candidate_reuse_verify): snapshot the raw
+    // broadphase candidate sets / verify + restore them against a fresh DCD
+    // detection. Defined in candidate_reuse_verify.cu; no-op cost when the
+    // flag is off (never called).
+    void  reuse_candidates_snapshot() noexcept;
+    SizeT reuse_candidates_verify(SizeT frame, SizeT newton_iter) noexcept;
 
   private:
     Impl m_impl;

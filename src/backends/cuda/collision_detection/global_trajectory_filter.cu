@@ -1,6 +1,7 @@
 #include <collision_detection/global_trajectory_filter.h>
 #include <collision_detection/trajectory_filter.h>
 #include <collision_detection/simplex_trajectory_filter.h>
+#include <collision_detection/filters/info_stackless_bvh_simplex_trajectory_filter.h>
 #include <contact_system/global_contact_manager.h>
 #include <sim_engine.h>
 
@@ -86,6 +87,35 @@ void GlobalTrajectoryFilter::dump_dcd_candidates(SizeT frame, SizeT newton_iter)
         if(auto simplex = dynamic_cast<SimplexTrajectoryFilter*>(filter))
             simplex->dump_active_pairs(frame, newton_iter);
     }
+}
+
+void GlobalTrajectoryFilter::snapshot_reused_candidates()
+{
+    // DIAGNOSTIC (extras/debug/dcd_candidate_reuse_verify): only the
+    // info_stackless_bvh filter exposes its raw broadphase candidate sets.
+    for(auto filter : m_impl.filters.view())
+    {
+        if(auto bvh = dynamic_cast<InfoStacklessBVHSimplexTrajectoryFilter*>(filter))
+            bvh->reuse_candidates_snapshot();
+        else if(auto simplex = dynamic_cast<SimplexTrajectoryFilter*>(filter))
+            logger::warn("[dcd_candidate_reuse_verify] filter '{}' does not "
+                         "support candidate-set verification; skipping",
+                         simplex->name());
+    }
+}
+
+SizeT GlobalTrajectoryFilter::verify_reused_candidates(SizeT frame, SizeT newton_iter)
+{
+    // DIAGNOSTIC (extras/debug/dcd_candidate_reuse_verify): returns the number
+    // of fresh candidate pairs NOT contained in the reused set (0 = the
+    // certification invariant holds).
+    SizeT missing = 0;
+    for(auto filter : m_impl.filters.view())
+    {
+        if(auto bvh = dynamic_cast<InfoStacklessBVHSimplexTrajectoryFilter*>(filter))
+            missing += bvh->reuse_candidates_verify(frame, newton_iter);
+    }
+    return missing;
 }
 
 Float GlobalTrajectoryFilter::Impl::filter_toi(Float alpha)

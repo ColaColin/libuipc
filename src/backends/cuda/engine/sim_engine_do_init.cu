@@ -62,9 +62,11 @@ void SimEngine::init_scene()
 {
     auto& info     = world().scene().config();
     m_dump_surface = info.find<IndexT>("extras/debug/dump_surface");
-    m_candidate_reuse_oracle = info.find<IndexT>("extras/debug/candidate_reuse_oracle");
-    m_warm_start_oracle      = info.find<IndexT>("extras/debug/warm_start_oracle");
-    m_dump_candidates        = info.find<IndexT>("extras/debug/dump_candidates");
+    m_candidate_reuse_oracle     = info.find<IndexT>("extras/debug/candidate_reuse_oracle");
+    m_warm_start_oracle          = info.find<IndexT>("extras/debug/warm_start_oracle");
+    m_dump_candidates            = info.find<IndexT>("extras/debug/dump_candidates");
+    m_dcd_candidate_reuse        = info.find<IndexT>("collision_detection/dcd_candidate_reuse");
+    m_dcd_candidate_reuse_verify = info.find<IndexT>("extras/debug/dcd_candidate_reuse_verify");
 
     m_newton_velocity_tol = info.find<Float>("newton/velocity_tol");
     m_newton_max_iter     = info.find<IndexT>("newton/max_iter");

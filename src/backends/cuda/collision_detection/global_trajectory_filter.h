@@ -99,6 +99,16 @@ class GlobalTrajectoryFilter final : public SimSystem
     // to every simplex filter so it can dump its per-pair candidate set.
     void dump_dcd_candidates(SizeT frame, SizeT newton_iter);
 
+    // DIAGNOSTIC (extras/debug/dcd_candidate_reuse_verify): snapshot the raw
+    // broadphase candidate sets the certified DCD candidate reuse is about to
+    // reuse; then, after the caller re-ran the fresh DCD detection,
+    // verify_reused_candidates checks the certification invariant (fresh set
+    // contained in the reused set) on the host, logs per-type sizes and any
+    // violation, and restores the reused sets. No-ops for broadphase methods
+    // without raw candidate-set support.
+    void  snapshot_reused_candidates();
+    SizeT verify_reused_candidates(SizeT frame, SizeT newton_iter);
+
   private:
     virtual void do_build() override final;
     virtual void do_apply_recover(RecoverInfo& info) override final;

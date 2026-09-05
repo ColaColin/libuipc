@@ -321,6 +321,19 @@ static SceneConfigContract make_scene_config_contract()
              {"buildOption", "UIPC_WITH_CUDA_LEGACY_COLLISION"},
              {"enabled", legacy_collision_built},
              {"values", Json::array({"info_stackless_bvh_v0", "stackless_bvh", "linear_bvh"})}};
+    add("collision_detection/dcd_candidate_reuse",
+        IndexT{0},
+        "integer",
+        "For Newton iterations past the first, keep the previous line-search "
+        "trajectory candidate set as the DCD broadphase candidate set instead "
+        "of re-running the DCD detection. The reused set is a certified "
+        "superset of the fresh one: the current positions are an interior "
+        "point of the swept AABBs the trajectory detection used, and its "
+        "per-axis swept-box leaf test is a conservative relaxation of the "
+        "exact-distance DCD leaf test, so filter_active reports the identical "
+        "active set either way.",
+        {"src/backends/cuda/engine/advance_ipc.cu"},
+        flag);
     add("sanity_check/enable",
         IndexT{1},
         "integer",
@@ -375,6 +388,19 @@ static SceneConfigContract make_scene_config_contract()
         "offline candidate-persistence predictors for the NN-acceleration "
         "research.",
         {"src/backends/cuda/collision_detection/nn_candidate_dump.cu"},
+        flag);
+    add("extras/debug/dcd_candidate_reuse_verify",
+        IndexT{0},
+        "integer",
+        "DIAGNOSTIC (default off, do not ship enabled): with "
+        "collision_detection/dcd_candidate_reuse active, at every reused "
+        "Newton iteration snapshot the reused raw candidate set, re-run the "
+        "fresh DCD detection, and check on the host that the fresh set is "
+        "contained in the reused one (the certification invariant); logs "
+        "per-iteration sizes and any violation, then restores the reused set. "
+        "Host-side and costly; meant for verification runs only. No-op for "
+        "broadphase methods other than info_stackless_bvh.",
+        {"src/backends/cuda/collision_detection/candidate_reuse_verify.cu"},
         flag);
     add("extras/debug/candidate_reuse_oracle",
         IndexT{0},

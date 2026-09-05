@@ -32,6 +32,42 @@ void SimEngine::advance()
         logger::warn("[candidate_reuse_oracle] ACTIVE: DCD re-detection is "
                      "skipped for newton_iter > 0 (diagnostic only)");
     }
+
+    // ---- FEATURE: certified DCD candidate reuse
+    // (collision_detection/dcd_candidate_reuse, default off) ----
+    // For newton_iter > 0, keep the candidate buffers as filled by the
+    // previous iteration's line-search trajectory detection instead of
+    // re-running the DCD detection. Certification (why this is exact, not
+    // approximate):
+    //
+    //  1. The line-search detection sweeps each primitive over
+    //     [x0, x0 + alpha_detect * dx] and accepts a pair iff the two swept
+    //     boxes, inflated per axis by the pair's expand = d_hat + thickness,
+    //     overlap on every axis (a conservative relaxation of the exact
+    //     distance test).
+    //  2. The line search only ever applies steps alpha <= alpha_detect
+    //     (TOI/CFL filters and halvings shrink it), and positions change
+    //     nowhere else inside a frame. So every vertex's current position
+    //     x0 + alpha * dx is an interior point of its swept box.
+    //  3. If a pair's exact distance at the current positions is < expand
+    //     (i.e. a fresh DCD detection would report it), the closest points
+    //     witness a per-axis gap < expand between the current boxes, hence
+    //     between the (larger) swept boxes: the pair is in the reused set.
+    //  4. Every extra pair of the reused set is >= expand away, outside the
+    //     active window D_range = (thickness, thickness + d_hat], so
+    //     filter_active drops it: the active candidate set handed to contact
+    //     assembly is IDENTICAL to a fresh detection's.
+    const bool certified_candidate_reuse = m_dcd_candidate_reuse->view()[0] != 0;
+    if(certified_candidate_reuse && m_current_frame == 0)
+    {
+        logger::info("[dcd_candidate_reuse] ACTIVE: newton_iter > 0 reuses the "
+                     "certified trajectory candidate set");
+    }
+    const bool reuse_candidates = dcd_candidate_reuse || certified_candidate_reuse;
+    // [dcd_candidate_reuse_verify] re-run the fresh DCD detection at every
+    // reused iteration and check the certification invariant (fresh set
+    // contained in reused set) on the host; default off, costly.
+    const bool reuse_verify = reuse_candidates && m_dcd_candidate_reuse_verify->view()[0] != 0;
     // [warm_start_oracle == 2] replay the captured frame-t positions as the
     // initial Newton iterate of frame t: the ceiling of a perfect learned
     // warm start. Changes the trajectory by construction.
@@ -379,11 +415,28 @@ void SimEngine::advance()
 
 
                 // 2) Build Collision Pairs
-                // DIAGNOSTIC (candidate_reuse_oracle): with the oracle active,
-                // iterations > 0 reuse the previous iteration's candidate
-                // buffers instead of re-running the broadphase detection.
-                if(newton_iter > 0 && !dcd_candidate_reuse)
+                // FEATURE (collision_detection/dcd_candidate_reuse) /
+                // DIAGNOSTIC (candidate_reuse_oracle): with reuse active,
+                // iterations > 0 keep the previous line-search trajectory
+                // candidate set (a certified superset, see the certification
+                // comment above) instead of re-running the DCD detection.
+                // The active set stays fresh: compute_energy re-runs
+                // filter_active at the stepped positions inside the line
+                // search.
+                if(newton_iter > 0 && !reuse_candidates)
+                {
                     detect_dcd_candidates(newton_iter);
+                }
+                else if(newton_iter > 0 && reuse_verify && m_global_trajectory_filter)
+                {
+                    // DIAGNOSTIC (extras/debug/dcd_candidate_reuse_verify):
+                    // snapshot the reused set, run the fresh detection, check
+                    // containment on the host, restore the reused set.
+                    m_global_trajectory_filter->snapshot_reused_candidates();
+                    m_global_trajectory_filter->detect(0.0);
+                    m_global_trajectory_filter->verify_reused_candidates(m_current_frame,
+                                                                          newton_iter);
+                }
 
 
                 // 3) Compute Dynamic Topo Effect Gradient and Hessian => G:Vector3, H:Matrix3x3
