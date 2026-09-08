@@ -35,6 +35,7 @@
 | 30  | [SoftVertexTriangleStitch](./soft_vertex_triangle_stitch.md)            | Inter-primitive: (vertex, triangle) pairs as tetrahedra with StableNeoHookean energy |
 | 31  | [StrainPlasticDiscreteShellBending](./strain_plastic_discrete_shell_bending.md) | Strain-threshold discrete shell bending with plastic rest-angle evolution          |
 | 32  | [StressPlasticDiscreteShellBending](./stress_plastic_discrete_shell_bending.md) | Stress-based ECI discrete shell bending with plastic residual creases              |
+| 4294967297 | [DahlFrictionDiscreteShellBending](./dahl_friction_discrete_shell_bending.md) | Discrete shell bending with Dahl-type internal-friction hysteresis (user-defined UID) |
 | 666 | [AffineBodyExternalForce](./affine_body_external_force.md)              | Affine Body External Force Constitutions                                             |
 | 667 | [AffineBodyPrismaticJointExternalForce](./affine_body_prismatic_joint_external_force.md) | Affine Body Prismatic Joint External Force Constitutions                             |
 | 668 | [AffineBodyRevoluteJointExternalForce](./affine_body_revolute_joint_external_force.md)   | Affine Body Revolute Joint External Force Constitutions                              |

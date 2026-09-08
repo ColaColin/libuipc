@@ -56,5 +56,6 @@ When applying a constitution to a geometry, the `constitution_uid` attribute of 
 | 670 | AffineBodyRevoluteJointLimit | InterAffineBody | `src/constitution/affine_body_revolute_joint_limit.cpp` |
 | 671 | FiniteElementExternalForce | Constraint | `src/constitution/finite_element_external_force.cpp` |
 | 819 | StrainLimitingBaraffWitkinShell | FiniteElement | `src/constitution/strain_limiting_baraff_witkin.cpp` |
+| 4294967297 | DahlFrictionDiscreteShellBending | FiniteElement | `src/constitution/dahl_friction_discrete_shell_bending.cpp` |
 
 <!-- AUTO-GENERATED UID TABLE: END -->
