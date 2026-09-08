@@ -8,6 +8,8 @@ namespace uipc::backend::cuda
 {
 namespace sym::dahl_friction_discrete_shell_bending
 {
+    // Works in both host (g++/MSVC) and device (nvcc) translation units.
+    using std::isfinite;
     // Dahl-style internal-friction bending on the discrete-shell dihedral hinge.
     //
     // Per-edge state (committed at the last accepted frame):
