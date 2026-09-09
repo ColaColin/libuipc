@@ -7,6 +7,7 @@
 #include <utils/matrix_assembler.h>
 #include <utils/dump_utils.h>
 #include <algorithm>
+#include <cmath>
 
 namespace uipc::backend::cuda
 {
@@ -28,6 +29,10 @@ namespace
         Float    bending_stiffness = 0.0;
         Float    moment_per_length = 0.0;
         Float    transition_angle  = 0.0;
+        // optional imported history (dataset cases): committed angle / moment
+        bool  has_history  = false;
+        Float theta_commit = 0.0;
+        Float F_commit     = 0.0;
     };
 
     bool stencil_less(const Vector4i& a, const Vector4i& b)
@@ -286,6 +291,15 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
                 auto ml_view = moment_per_lengths->view();
                 auto ta_view = transition_angles->view();
 
+                // Optional per-edge history import: a stored (crumpled) state
+                // carries the committed Dahl state of every hinge. Both
+                // attributes must be present; otherwise fresh cloth is assumed.
+                auto theta_commit_attr = sc.edges().find<Float>("dahl_theta_commit");
+                auto F_commit_attr = sc.edges().find<Float>("dahl_friction_commit");
+                bool has_history = theta_commit_attr && F_commit_attr;
+                UIPC_ASSERT(!(bool(theta_commit_attr) ^ bool(F_commit_attr)),
+                            "dahl_theta_commit / dahl_friction_commit must be given together");
+
                 for(auto&& [E, stencil_info] : stencil_map)
                 {
                     if(!stencil_info.valid_bending())
@@ -296,12 +310,22 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
                                      E(1),
                                      *stencil_info.oppo_verts.rbegin()};
 
-                    stencil_records.push_back(StencilRecord{
+                    StencilRecord record{
                         .stencil           = stencil.array() + vertex_offset_v,
                         .bending_stiffness = bs_view[stencil_info.edge_index],
                         .moment_per_length = ml_view[stencil_info.edge_index],
                         .transition_angle  = ta_view[stencil_info.edge_index],
-                    });
+                    };
+                    if(has_history)
+                    {
+                        record.has_history  = true;
+                        record.theta_commit = theta_commit_attr->view()[stencil_info.edge_index];
+                        record.F_commit     = F_commit_attr->view()[stencil_info.edge_index];
+                        UIPC_ASSERT(std::isfinite(record.theta_commit) && std::isfinite(record.F_commit),
+                                    "non-finite imported Dahl history on edge {}",
+                                    stencil_info.edge_index);
+                    }
+                    stencil_records.push_back(record);
                 }
             });
 
@@ -313,12 +337,18 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
         h_bending_stiffness.resize(stencil_records.size());
         h_moment_per_length.resize(stencil_records.size());
         h_transition_angle.resize(stencil_records.size());
+        vector<bool>  h_has_history(stencil_records.size());
+        vector<Float> h_theta_commit_init(stencil_records.size());
+        vector<Float> h_F_commit_init(stencil_records.size());
         for(auto&& [i, record] : enumerate(stencil_records))
         {
             h_stencils[i]          = record.stencil;
             h_bending_stiffness[i] = record.bending_stiffness;
             h_moment_per_length[i] = record.moment_per_length;
             h_transition_angle[i]  = record.transition_angle;
+            h_has_history[i]       = record.has_history;
+            h_theta_commit_init[i] = record.theta_commit;
+            h_F_commit_init[i]     = record.F_commit;
         }
 
         auto x_bars      = info.rest_positions();
@@ -352,7 +382,9 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
             h_h_bars[i]             = h_bar;
             h_theta_bars[i]         = theta_bar;
             h_saturation_moments[i] = h_moment_per_length[i] * L0;
-            h_theta_commits[i]      = theta_bar;
+            // imported history (dataset case) or fresh cloth (rest angle, F=0)
+            h_theta_commits[i]      = h_has_history[i] ? h_theta_commit_init[i] : theta_bar;
+            h_F_commits[i]          = h_has_history[i] ? h_F_commit_init[i] : 0.0;
             h_V_bars[i]             = V_bar;
         }
 
