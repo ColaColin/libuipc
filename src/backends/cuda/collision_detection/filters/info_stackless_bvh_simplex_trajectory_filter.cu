@@ -1,3 +1,4 @@
+#include <uipc/common/timer.h>
 #include <collision_detection/filters/info_stackless_bvh_simplex_trajectory_filter.h>
 #include <cuda_tool/cub.h>
 #include <cuda_tool/cuda_tool.h>
@@ -1374,6 +1375,7 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
     // candidate set is the same (every pair of overlapping boxes is reported
     // by any valid tree), only the pair order may differ. A rebuild is forced
     // every `refit_rebuild_every` refits to bound the quality loss.
+    Timer build_timer{"BVH Build/Refit"};  // perf/kernels diag
     const bool topo_ok = lbvh_E.can_refit(Es.size()) && lbvh_T.can_refit(Fs.size())
                          && (codimVs.size() == 0 || lbvh_CodimP.can_refit(codimVs.size()));
     const bool do_refit = bvh_refit_enabled && topo_ok && alpha != 0.0
@@ -1493,6 +1495,8 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
     {
         candidate_AllP_CodimP_pairs.m_cpNum.fill(0);
     }
+    build_timer.~Timer();
+    new(&build_timer) Timer{"BVH Query"};  // perf/kernels diag
     launch_codimp_alle(true);
     launch_alle_alle();
     launch_allp_allt(true);

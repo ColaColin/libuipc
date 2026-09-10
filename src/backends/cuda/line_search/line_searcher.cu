@@ -1,3 +1,4 @@
+#include <string>
 #include <line_search/line_searcher.h>
 #include <uipc/common/enumerate.h>
 #include <uipc/common/zip.h>
@@ -67,6 +68,7 @@ Float LineSearcher::compute_energy(bool is_initial)
         ComputeEnergyInfo info{
             this, cuda_tool::VarView<Float>{m_device_energy_values.data() + i}};
         info.m_is_initial = is_initial;
+        Timer timer{std::string("E ") + std::string(R->name())};  // perf/kernels diag
         R->compute_energy(info);
         UIPC_ASSERT(info.m_energy_set,
                     "Energy[{}] not set by reporter, did you forget to call energy()?",

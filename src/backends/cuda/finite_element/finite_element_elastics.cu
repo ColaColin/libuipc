@@ -1,3 +1,5 @@
+#include <string>
+#include <uipc/common/timer.h>
 #include <finite_element/finite_element_elastics.h>
 #include <finite_element/finite_element_constitution.h>
 #include <finite_element/finite_element_extra_constitution.h>
@@ -86,9 +88,9 @@ void FiniteElementElastics::Impl::assemble(FEMLinearSubsystem::AssembleInfo& inf
 
     for(auto&& [I, c] : enumerate(constitutions))
     {
+        Timer timer{std::string("G/H ") + std::string(c->name())};  // perf/kernels diag
         ComputeGradientHessianInfo this_info{
             this, I, info.gradient_only(), info.dt(), info.gradients(), info.hessians()};
-
         c->compute_gradient_hessian(this_info);
     }
     offset += constitutions.size();
@@ -114,6 +116,7 @@ void FiniteElementElastics::Impl::compute_energy(FEMLineSearchReporter::ComputeE
     auto offset        = 0;
     for(auto&& [I, c] : enumerate(constitutions))
     {
+        Timer timer{std::string("E ") + std::string(c->name())};  // perf/kernels diag
         ComputeEnergyInfo this_info{this, I, info.dt(), info.energies()};
         c->compute_energy(this_info);
     }

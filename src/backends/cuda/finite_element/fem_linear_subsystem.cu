@@ -1,3 +1,4 @@
+#include <uipc/common/timer.h>
 #include <sim_engine.h>
 #include <finite_element/fem_linear_subsystem.h>
 #include <finite_element/fem_linear_subsystem_reporter.h>
@@ -328,14 +329,23 @@ void FEMLinearSubsystem::Impl::assemble(GlobalLinearSystem::DiagInfo& info)
     IndexT hess_offset = 0;
     if(has_complement)
     {
-        _assemble_kinetic(hess_offset, info);
-        _assemble_reporters(hess_offset, info);
+        {
+            Timer timer{"FEM Kinetic G/H"};
+            _assemble_kinetic(hess_offset, info);
+        }
+        {
+            Timer timer{"FEM Reporters G/H"};
+            _assemble_reporters(hess_offset, info);
+        }
     }
 
     if(dytopo_effect_receiver)  // if dytopo_effect enabled
     {
         // DyTopo System will decide the `component_flags` itself
-        _assemble_dytopo_effect(hess_offset, info);
+        {
+            Timer timer{"FEM Dytopo Copy"};
+            _assemble_dytopo_effect(hess_offset, info);
+        }
     }
 
     UIPC_ASSERT(hess_offset == info.hessians().triplet_count(),
