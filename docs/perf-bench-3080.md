@@ -11,3 +11,4 @@ cores and ≥ 0.99 was on offer at the time). Noise floor and baseline
 references are re-established on it (one baseline pair of 120-frame probes
 plus 600-frame baselines and MPS ×3), so every comparison stays within one
 GPU.
+| K8 | radix sorts of the triplet/doublet keys over `bit_width(rows·cols)` bits instead of 64 (key = `row·cols + col`, CUB `begin_bit/end_bit`); global system, symmetric compaction, dytopo matrix and doublet sorts | bit-identical (same order of distinct keys, stable for equal keys) | built as perf11; A/B queued (phase E) |
