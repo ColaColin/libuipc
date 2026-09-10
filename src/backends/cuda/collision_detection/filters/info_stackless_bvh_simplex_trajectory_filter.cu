@@ -3,6 +3,7 @@
 #include <cuda_tool/cuda_tool.h>
 #include <sim_engine.h>
 #include <kernel_cout.h>
+#include <cstdlib>
 #include <utils/distance/distance_flagged.h>
 #include <utils/distance.h>
 #include <utils/codim_thickness.h>
@@ -1201,6 +1202,10 @@ void InfoStacklessBVHSimplexTrajectoryFilter::do_build(BuildInfo&)
 
     m_impl.query_counts.resize(4);
     m_impl.selected_counts.resize(4);
+
+    // perf/kernels: BVH refit for the per-iteration trajectory detects
+    const char* refit_env    = std::getenv("UIPC_BVH_REFIT");
+    m_impl.bvh_refit_enabled = !(refit_env && refit_env[0] == '0');
 }
 
 void InfoStacklessBVHSimplexTrajectoryFilter::do_detect(DetectInfo& info)
@@ -1359,9 +1364,31 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
         }
     }
 
-    lbvh_E.build(edge_aabbs, edge_bids, edge_cids);
-    lbvh_T.build(triangle_aabbs, triangle_bids, triangle_cids);
-
+    // perf/kernels: the hierarchy is rebuilt once per frame (the DCD call,
+    // alpha == 0) and refitted for the per-iteration trajectory calls; the
+    // candidate set is the same (every pair of overlapping boxes is reported
+    // by any valid tree), only the pair order may differ. A rebuild is forced
+    // every `refit_rebuild_every` refits to bound the quality loss.
+    const bool topo_ok = lbvh_E.can_refit(Es.size()) && lbvh_T.can_refit(Fs.size())
+                         && (codimVs.size() == 0 || lbvh_CodimP.can_refit(codimVs.size()));
+    const bool do_refit = bvh_refit_enabled && topo_ok && alpha != 0.0
+                          && refits_since_build < refit_rebuild_every;
+    if(do_refit)
+    {
+        lbvh_E.refit(edge_aabbs, edge_bids, edge_cids);
+        lbvh_T.refit(triangle_aabbs, triangle_bids, triangle_cids);
+        ++refits_since_build;
+    }
+    else
+    {
+        lbvh_E.build(edge_aabbs, edge_bids, edge_cids);
+        lbvh_T.build(triangle_aabbs, triangle_bids, triangle_cids);
+        refits_since_build = 0;
+        candidate_AllP_CodimP_pairs.invalidate();
+        candidate_CodimP_AllE_pairs.invalidate();
+        candidate_AllE_AllE_pairs.invalidate();
+        candidate_AllP_AllT_pairs.invalidate();
+    }
     auto node_pred = InfoStacklessBVHSimplexTrajectoryFilter_detect_node_pred{
         body_self_collisions, cmts.viewer()};
     auto allp_codimp_pred = InfoStacklessBVHSimplexTrajectoryFilter_detect_AllP_CodimP_pred{
@@ -1451,7 +1478,10 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
 
     if(codimVs.size() > 0)
     {
-        lbvh_CodimP.build(codim_point_aabbs, codim_point_bids, codim_point_cids);
+        if(do_refit)
+            lbvh_CodimP.refit(codim_point_aabbs, codim_point_bids, codim_point_cids);
+        else
+            lbvh_CodimP.build(codim_point_aabbs, codim_point_bids, codim_point_cids);
         launch_allp_codimp(true);
     }
     else

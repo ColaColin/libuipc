@@ -390,6 +390,57 @@ namespace
         }
     }
 
+    // perf/kernels: refit kernels. Leaf boxes are gathered in the sorted
+    // order; internal boxes are recomputed with the same bottom-up climb as
+    // the build (flags counter: the second child to arrive continues).
+    __global__ void InfoStacklessBVH_refitExtNodes_kernel(cuda_tool::CBufferView<int> _prim_idx,
+                                                          cuda_tool::CBufferView<AABB> box,
+                                                          cuda_tool::BufferView<AABB> _prim_box,
+                                                          int n)
+    {
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if(idx >= n)
+            return;
+        _prim_box(idx) = box(_prim_idx(idx));
+    }
+
+    __global__ void InfoStacklessBVH_refitIntNodes_kernel(
+        int                              size,
+        cuda_tool::CBufferView<uint32_t> _lvs_par,
+        cuda_tool::CBufferView<AABB>     _lvs_box,
+        cuda_tool::CBufferView<int>      _tks_lc,
+        cuda_tool::CBufferView<int>      _tks_rc,
+        cuda_tool::CBufferView<uint32_t> _tks_mark,
+        cuda_tool::CBufferView<int>      _tks_par,
+        cuda_tool::BufferView<AABB>      _tks_box,
+        cuda_tool::BufferView<uint32_t>  _flag)
+    {
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if(idx >= size)
+            return;
+        if(size == 1)
+            return;
+        int cur = static_cast<int>(_lvs_par(idx));
+        __threadfence();
+        while(atomicAdd(&_flag(cur), 1) == 1)
+        {
+            int      chl = _tks_lc(cur);
+            int      chr = _tks_rc(cur);
+            uint32_t m   = _tks_mark(cur);
+            AABB     b   = (m & 1) ? _lvs_box(chl) : _tks_box(chl);
+            if(m & 2)
+                b.extend(_lvs_box(chr));
+            else
+                b.extend(_tks_box(chr));
+            _tks_box(cur) = b;
+            __threadfence();
+            int par = _tks_par(cur);
+            if(par < 0)
+                break;
+            cur = par;
+        }
+    }
+
     __global__ void InfoStacklessBVH_calcIntNodeOrders_kernel(
         cuda_tool::BufferView<int>      _tks_lc,
         cuda_tool::BufferView<int>      _lcas,
@@ -849,6 +900,49 @@ inline void InfoStacklessBVH::Impl::reorderNode(int int_size)
 
 inline void InfoStacklessBVH::Impl::propagateInformativeMetadata(int) {}
 
+inline void InfoStacklessBVH::Impl::refitExtNodes(cuda_tool::CBufferView<AABB> aabbs)
+{
+    auto k = InfoStacklessBVH_refitExtNodes_kernel;
+    int  n = static_cast<int>(aabbs.size());
+    if(n > 0)
+        k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            ext_idx.view(), aabbs, ext_aabb.view(), n);
+}
+
+inline void InfoStacklessBVH::Impl::refitIntNodes(int size)
+{
+    auto k = InfoStacklessBVH_refitIntNodes_kernel;
+    if(size > 1)
+        k<<<cuda_tool::best_grid_dim(size, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            size,
+            ext_par_orig.view(),
+            ext_aabb.view(),
+            int_lc.view(),
+            int_rc.view(),
+            int_mark.view(),
+            int_par.view(),
+            int_aabb.view(),
+            flags.view());
+}
+
+inline void InfoStacklessBVH::Impl::refit(cuda_tool::CBufferView<AABB>   aabbs,
+                                          cuda_tool::CBufferView<IndexT> _bids,
+                                          cuda_tool::CBufferView<IndexT> _cids)
+{
+    objs          = aabbs;
+    bids          = _bids;
+    cids          = _cids;
+    auto num_objs = aabbs.size();
+    if(num_objs == 0)
+        return;
+    auto num_internal = num_objs - 1;
+    if(num_internal > 0)
+        cudaMemsetAsync(flags.data(), 0, sizeof(uint32_t) * num_internal, nullptr);
+    refitExtNodes(aabbs);
+    refitIntNodes(static_cast<int>(num_objs));
+    reorderNode(static_cast<int>(num_internal));
+}
+
 inline void InfoStacklessBVH::Impl::build(cuda_tool::CBufferView<AABB>   aabbs,
                                           cuda_tool::CBufferView<IndexT> _bids,
                                           cuda_tool::CBufferView<IndexT> _cids)
@@ -910,6 +1004,9 @@ inline void InfoStacklessBVH::Impl::build(cuda_tool::CBufferView<AABB>   aabbs,
     buildIntNodes(num_objs);
     cuda_tool::DeviceScan().ExclusiveSum(count.data(), offsetTable.data(), n);
     calcIntNodeOrders(num_objs);
+    // keep the leaf parents in build ids for refit() before they are remapped
+    ext_par_orig.resize(num_objs);
+    cuda_tool::BufferLaunch().copy<uint32_t>(ext_par_orig.view(), std::as_const(ext_par).view());
     updateBvhExtNodeLinks(num_objs);
     reorderNode(num_internal);
 }
@@ -1038,6 +1135,16 @@ inline void InfoStacklessBVH::build(cuda_tool::CBufferView<AABB>   aabbs,
     m_impl.build(aabbs, BIDs, CIDs);
 }
 
+inline void InfoStacklessBVH::refit(cuda_tool::CBufferView<AABB>   aabbs,
+                                    cuda_tool::CBufferView<IndexT> BIDs,
+                                    cuda_tool::CBufferView<IndexT> CIDs)
+{
+    m_aabbs = aabbs;
+    m_BIDs  = BIDs;
+    m_CIDs  = CIDs;
+    m_impl.refit(aabbs, BIDs, CIDs);
+}
+
 inline void InfoStacklessBVH::build(cuda_tool::CBufferView<AABB> aabbs)
 {
     m_aabbs = aabbs;
@@ -1123,8 +1230,12 @@ inline void InfoStacklessBVH::launch_query(cuda_tool::CBufferView<AABB> query_aa
                 query_aabbs.size(),
                 query_CIDs.size());
 
-    if(rebuild_query)
+    if(rebuild_query && !(qbuffer.m_built && qbuffer.m_built_n == query_aabbs.size()))
+    {
         qbuffer.build(query_aabbs);
+        qbuffer.m_built   = true;
+        qbuffer.m_built_n = query_aabbs.size();
+    }
     m_impl.stacklessOther(np,
                           lp,
                           query_aabbs,

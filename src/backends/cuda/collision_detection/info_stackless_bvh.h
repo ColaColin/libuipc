@@ -93,7 +93,11 @@ class InfoStacklessBVH
         cuda_tool::DeviceBuffer<int>          m_queryId;
         cuda_tool::DeviceBuffer<int>          m_querySortedId;
         cuda_tool::DeviceVar<int>             m_cpNum;
-
+        // perf/kernels: the query morton sort only orders the traversal (any
+        // permutation gives the same pair set); it is rebuilt on demand
+        bool  m_built   = false;
+        SizeT m_built_n = 0;
+        void  invalidate() noexcept { m_built = false; }
         void build(cuda_tool::CBufferView<AABB> aabbs);
     };
 
@@ -118,7 +122,17 @@ class InfoStacklessBVH
                cuda_tool::CBufferView<IndexT> BIDs,
                cuda_tool::CBufferView<IndexT> CIDs);
     void build(cuda_tool::CBufferView<AABB> aabbs);
-
+    // perf/kernels: refit the existing hierarchy (same primitives, moved
+    // boxes): leaf boxes are re-gathered in the sorted order and the internal
+    // boxes recomputed bottom-up; the tree topology / morton order is kept.
+    void refit(cuda_tool::CBufferView<AABB>   aabbs,
+               cuda_tool::CBufferView<IndexT> BIDs,
+               cuda_tool::CBufferView<IndexT> CIDs);
+    bool can_refit(SizeT n) const noexcept
+    {
+        return n > 0 && m_impl.objs.size() == n && m_impl.nodes.size() == 2 * n - 1
+               && m_impl.ext_par_orig.size() == n;
+    }
     template <typename NodePred, typename LeafPred>
     void detect(cuda_tool::CBuffer2DView<IndexT> cmts, NodePred np, LeafPred lp, QueryBuffer& qbuffer);
 
@@ -170,6 +184,11 @@ class InfoStacklessBVH
         void        calcIntNodeOrders(int size);
         void        updateBvhExtNodeLinks(int size);
         void        reorderNode(int intSize);
+        void        refitExtNodes(cuda_tool::CBufferView<AABB> aabbs);
+        void        refitIntNodes(int size);
+        void        refit(cuda_tool::CBufferView<AABB>   aabbs,
+                          cuda_tool::CBufferView<IndexT> bids,
+                          cuda_tool::CBufferView<IndexT> cids);
         void        propagateInformativeMetadata(int intSize);
         void        build(cuda_tool::CBufferView<AABB>   aabbs,
                           cuda_tool::CBufferView<IndexT> bids,
@@ -212,6 +231,7 @@ class InfoStacklessBVH
         cuda_tool::DeviceVector<int>      ext_idx;
         cuda_tool::DeviceVector<int>      ext_lca;
         cuda_tool::DeviceVector<uint32_t> ext_par;
+        cuda_tool::DeviceVector<uint32_t> ext_par_orig;  // leaf parents in build ids (refit)
         cuda_tool::DeviceVector<int>      int_lc;
         cuda_tool::DeviceVector<int>      int_rc;
         cuda_tool::DeviceVector<int>      int_par;

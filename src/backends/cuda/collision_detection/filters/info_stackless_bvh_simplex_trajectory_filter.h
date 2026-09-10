@@ -53,6 +53,10 @@ class InfoStacklessBVHSimplexTrajectoryFilter final : public SimplexTrajectoryFi
         // Used to detect AllP-AllT pairs.
         ThisBVH              lbvh_T;
         ThisBVH::QueryBuffer candidate_AllP_AllT_pairs;
+        // perf/kernels: refit instead of rebuild for the trajectory detects
+        bool  bvh_refit_enabled  = true;   // env UIPC_BVH_REFIT=0 disables
+        int   refit_rebuild_every = 64;
+        int   refits_since_build  = 0;
 
         // Four query counts and four compacted PP/PE/PT/EE counts are each
         // downloaded in one contiguous transfer.
