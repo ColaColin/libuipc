@@ -8,7 +8,6 @@
 #include <uipc/common/zip.h>
 #include <energy_component_flags.h>
 #include <cuda_tool/cub.h>
-#include <cstdlib>
 
 namespace uipc::backend
 {
@@ -139,40 +138,6 @@ namespace
             classified_hessian(offset).write(i, j, H);
         }
     }
-
-    // unsorted distribute (perf/kernels): flag doublets whose i lies in range
-    __global__ void GlobalDyTopoEffectManager_select_gradient_kernel(
-        cuda_tool::BufferView<IndexT>           selected,
-        cuda_tool::Dense<IndexT>                last,
-        cuda_tool::CDoubletVectorView<Float, 3> dytopo_effect_gradient,
-        Vector2i                                range,
-        int                                     n)
-    {
-        int I = blockIdx.x * blockDim.x + threadIdx.x;
-        if(I >= n)
-            return;
-        auto&& [i, G] = dytopo_effect_gradient(I);
-        selected(I)   = (i >= range.x() && i < range.y()) ? 1 : 0;
-        if(I == 0)
-            last = 0;
-    }
-
-    __global__ void GlobalDyTopoEffectManager_fill_gradient_kernel(
-        cuda_tool::CBufferView<IndexT>          selected,
-        cuda_tool::CBufferView<IndexT>          offsets,
-        cuda_tool::CDoubletVectorView<Float, 3> dytopo_effect_gradient,
-        cuda_tool::DoubletVectorView<Float, 3>  classified_gradient,
-        int                                     n)
-    {
-        int I = blockIdx.x * blockDim.x + threadIdx.x;
-        if(I >= n)
-            return;
-        if(selected(I))
-        {
-            auto&& [i, G] = dytopo_effect_gradient(I);
-            classified_gradient(offsets(I)).write(i, G);
-        }
-    }
 }  // namespace
 
 REGISTER_SIM_SYSTEM(GlobalDyTopoEffectManager);
@@ -216,16 +181,6 @@ void GlobalDyTopoEffectManager::Impl::init(WorldVisitor& world)
 
     classified_dytopo_effect_gradients.resize(dytopo_effect_receiver_view.size());
     classified_dytopo_effect_hessians.resize(dytopo_effect_receiver_view.size());
-
-    auto R = dytopo_effect_receiver_view.size();
-    sel_gradient.resize(R);
-    sel_gradient_offsets.resize(R);
-    sel_hessian.resize(R);
-    sel_hessian_offsets.resize(R);
-    sel_counts.resize(2 * R + 1);
-    h_sel_counts.resize(2 * R + 1);
-    const char* sorted_env = std::getenv("UIPC_DYTOPO_SORTED_PATH");
-    use_sorted_path        = sorted_env && sorted_env[0] == '1';
 }
 
 void GlobalDyTopoEffectManager::Impl::compute_dytopo_effect(ComputeDyTopoEffectInfo& info)
@@ -262,143 +217,8 @@ void GlobalDyTopoEffectManager::Impl::compute_dytopo_effect(ComputeDyTopoEffectI
         }
     }
 
-    if(!use_sorted_path)
-    {
-        _distribute_unsorted(info);
-        return;
-    }
-
     _convert_matrix();
     _distribute(info);
-}
-
-void GlobalDyTopoEffectManager::Impl::_distribute_unsorted(ComputeDyTopoEffectInfo& info)
-{
-    Timer timer{"Distribute Dytopo Effect"};
-
-    using namespace cuda_tool;
-
-    auto         vertex_count = global_vertex_manager->positions().size();
-    auto         receivers    = dytopo_effect_receivers.view();
-    const auto   R            = receivers.size();
-    const IndexT Ng = (IndexT)collected_dytopo_effect_gradient.doublet_count();
-    const IndexT Nh = info.m_gradient_only ?
-                          0 :
-                          (IndexT)collected_dytopo_effect_hessian.triplet_count();
-
-    vector<DyTopoClassifyInfo> classify_infos(R);
-    for(auto&& [r, receiver] : enumerate(receivers))
-        receiver->report(classify_infos[r]);
-
-    // 1) flags + exclusive scans for every receiver (no host sync)
-    for(SizeT r = 0; r < R; ++r)
-    {
-        auto& ci = classify_infos[r];
-        if(ci.is_diag() && Ng > 0)
-        {
-            loose_resize(sel_gradient[r], Ng + 1);
-            loose_resize(sel_gradient_offsets[r], Ng + 1);
-            auto k = GlobalDyTopoEffectManager_select_gradient_kernel;
-            int  n = (int)Ng;
-            k<<<best_grid_dim(n, k), best_block_dim(k), 0, nullptr>>>(
-                sel_gradient[r].view(0, Ng).viewer(),
-                VarView<IndexT>{sel_gradient[r].data() + Ng}.viewer(),
-                std::as_const(collected_dytopo_effect_gradient).viewer(),
-                ci.gradient_i_range(),
-                n);
-            DeviceScan().ExclusiveSum(
-                sel_gradient[r].data(), sel_gradient_offsets[r].data(), Ng + 1);
-            cudaMemcpyAsync(sel_counts.data() + 2 * r,
-                            sel_gradient_offsets[r].data() + Ng,
-                            sizeof(IndexT),
-                            cudaMemcpyDeviceToDevice,
-                            nullptr);
-        }
-        else
-        {
-            cudaMemsetAsync(sel_counts.data() + 2 * r, 0, sizeof(IndexT), nullptr);
-        }
-        if(!ci.is_empty() && Nh > 0)
-        {
-            loose_resize(sel_hessian[r], Nh + 1);
-            loose_resize(sel_hessian_offsets[r], Nh + 1);
-            auto k = GlobalDyTopoEffectManager_distribute_k3_kernel;
-            int  n = (int)Nh;
-            k<<<best_grid_dim(n, k), best_block_dim(k), 0, nullptr>>>(
-                sel_hessian[r].view(0, Nh).viewer(),
-                VarView<IndexT>{sel_hessian[r].data() + Nh}.viewer(),
-                collected_dytopo_effect_hessian.cviewer(),
-                ci.hessian_i_range(),
-                ci.hessian_j_range(),
-                n);
-            DeviceScan().ExclusiveSum(
-                sel_hessian[r].data(), sel_hessian_offsets[r].data(), Nh + 1);
-            cudaMemcpyAsync(sel_counts.data() + 2 * r + 1,
-                            sel_hessian_offsets[r].data() + Nh,
-                            sizeof(IndexT),
-                            cudaMemcpyDeviceToDevice,
-                            nullptr);
-        }
-        else
-        {
-            cudaMemsetAsync(sel_counts.data() + 2 * r + 1, 0, sizeof(IndexT), nullptr);
-        }
-    }
-
-    // 2) one readback of all counts
-    sel_counts.view(0, 2 * R).copy_to(h_sel_counts.data());
-
-    // 3) fill + hand over
-    for(auto&& [r, receiver] : enumerate(receivers))
-    {
-        auto&                      ci = classify_infos[r];
-        ClassifiedDyTopoEffectInfo classified_info;
-
-        auto& classified_gradients = classified_dytopo_effect_gradients[r];
-        classified_gradients.reshape(vertex_count);
-        auto& classified_hessians = classified_dytopo_effect_hessians[r];
-        classified_hessians.reshape(vertex_count, vertex_count);
-
-        if(ci.is_diag())
-        {
-            IndexT count = h_sel_counts[2 * r];
-            loose_resize_entries(classified_gradients, count);
-            if(count > 0)
-            {
-                auto k = GlobalDyTopoEffectManager_fill_gradient_kernel;
-                int  n = (int)Ng;
-                k<<<best_grid_dim(n, k), best_block_dim(k), 0, nullptr>>>(
-                    sel_gradient[r].cview(),
-                    sel_gradient_offsets[r].cview(),
-                    std::as_const(collected_dytopo_effect_gradient).viewer(),
-                    classified_gradients.viewer(),
-                    n);
-            }
-            classified_info.m_gradients = classified_gradients.view();
-        }
-
-        if(!info.m_gradient_only && !ci.is_empty())
-        {
-            IndexT count = h_sel_counts[2 * r + 1];
-            loose_resize_entries(classified_hessians, count);
-            if(count > 0)
-            {
-                auto k = GlobalDyTopoEffectManager_distribute_k4_kernel;
-                int  n = (int)Nh;
-                k<<<best_grid_dim(n, k), best_block_dim(k), 0, nullptr>>>(
-                    sel_hessian[r].cview(),
-                    sel_hessian_offsets[r].cview(),
-                    collected_dytopo_effect_hessian.cviewer(),
-                    classified_hessians.viewer(),
-                    ci.hessian_i_range(),
-                    ci.hessian_j_range(),
-                    n);
-            }
-            classified_info.m_hessians = classified_hessians.view();
-        }
-
-        receiver->receive(classified_info);
-    }
 }
 
 void GlobalDyTopoEffectManager::Impl::_assemble(ComputeDyTopoEffectInfo& info)
