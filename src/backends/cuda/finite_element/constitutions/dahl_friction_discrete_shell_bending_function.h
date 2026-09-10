@@ -359,5 +359,61 @@ namespace sym::dahl_friction_discrete_shell_bending
 
         H = dthetadx * ddEddtheta * dthetadx.transpose() + dEdtheta * ddthetaddx;
     }
+
+    // Gradient and Hessian in one pass: identical expressions, in the same
+    // order, as dEdx() followed by ddEddx() above, but the dihedral angle, the
+    // friction response and the angle gradient are evaluated once instead of
+    // twice (perf/kernels, 2026-09-10). Bit-identical to calling both.
+    inline UIPC_GENERIC void dEdx_ddEddx(Vector12&      G,
+                                         Matrix12x12&   H,
+                                         const Vector3& x0,
+                                         const Vector3& x1,
+                                         const Vector3& x2,
+                                         const Vector3& x3,
+                                         Float          L0,
+                                         Float          h_bar,
+                                         Float          theta_bar,
+                                         Float          kappa,
+                                         Float          M_e,
+                                         Float          ell_e,
+                                         Float          theta_commit,
+                                         Float          F_commit)
+    {
+        namespace DFDSB = sym::dahl_friction_discrete_shell_bending;
+        Float theta     = 0.0;
+        if(!DFDSB::safe_dihedral_angle(x0, x1, x2, x3, theta))
+        {
+            G.setZero();
+            H.setZero();
+            return;
+        }
+
+        const Float del = DFDSB::angle_delta(theta, theta_bar);
+        const Float d   = DFDSB::angle_delta(theta, theta_commit);
+
+        Float W     = 0.0;
+        Float dWdd  = 0.0;
+        Float ddWdd = 0.0;
+        if(!DFDSB::friction_response(d, F_commit, M_e, ell_e, W, dWdd, ddWdd))
+        {
+            G.setZero();
+            H.setZero();
+            return;
+        }
+
+        const Float w          = L0 / h_bar;
+        const Float dEdtheta   = 2.0 * kappa * w * del + dWdd;
+        const Float ddEddtheta = 2.0 * kappa * w + ddWdd;
+
+        Vector12 dthetadx;
+        dihedral_angle_gradient(x0, x1, x2, x3, dthetadx);
+
+        G = dEdtheta * dthetadx;
+
+        Matrix12x12 ddthetaddx;
+        dihedral_angle_hessian(x0, x1, x2, x3, ddthetaddx);
+
+        H = dthetadx * ddEddtheta * dthetadx.transpose() + dEdtheta * ddthetaddx;
+    }
 }  // namespace sym::dahl_friction_discrete_shell_bending
 }  // namespace uipc::backend::cuda

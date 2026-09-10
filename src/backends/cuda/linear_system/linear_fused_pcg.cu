@@ -659,7 +659,9 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
 
             if(m_graph.ready())
             {
-                m_graph.launch_sync();  // replay, then host-check below
+                // replay; the blocking D2H read of d_rz_new below orders after
+                // the graph (blocking launch stream), no explicit wait needed
+                m_graph.launch_async();
             }
             else  // capture failed: plain path
             {

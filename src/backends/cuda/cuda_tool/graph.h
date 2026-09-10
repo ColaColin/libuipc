@@ -118,6 +118,18 @@ class GraphCapture
         cudaStreamSynchronize(m_launch_stream);
     }
 
+    // Replay without the explicit host wait. The launch stream is a *blocking*
+    // stream, so a later legacy-default-stream operation (e.g. the synchronous
+    // D2H read of the convergence scalar) is ordered after the graph anyway;
+    // the explicit cudaStreamSynchronize in launch_sync() is then redundant
+    // (perf/kernels, 2026-09-10).
+    void launch_async()
+    {
+        if(!m_launch_stream)
+            cudaStreamCreateWithFlags(&m_launch_stream, cudaStreamDefault);
+        cudaGraphLaunch(m_exec, m_launch_stream);
+    }
+
     bool ready() const { return m_exec != nullptr; }
     bool disabled() const { return m_disabled; }
 

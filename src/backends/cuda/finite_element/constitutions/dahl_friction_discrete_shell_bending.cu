@@ -132,15 +132,22 @@ namespace
         Vector12    G12;
         Matrix12x12 H12x12;
 
-        DFDSB::dEdx(G12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit);
+        if(gradient_only)
+        {
+            DFDSB::dEdx(G12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit);
+            G12 *= Vdt2;
+            DoubletVectorAssembler DVA{G3s};
+            DVA.segment<StencilSize>(I * StencilSize).write(stencil, G12);
+            return;
+        }
+
+        // one evaluation of the dihedral angle / friction response / angle
+        // gradient for both G and H (bit-identical to dEdx + ddEddx)
+        DFDSB::dEdx_ddEddx(G12, H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit);
         G12 *= Vdt2;
         DoubletVectorAssembler DVA{G3s};
         DVA.segment<StencilSize>(I * StencilSize).write(stencil, G12);
 
-        if(gradient_only)
-            return;
-
-        DFDSB::ddEddx(H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit);
         H12x12 *= Vdt2;
         make_spd(H12x12);
 
