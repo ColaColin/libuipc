@@ -122,6 +122,12 @@ class GlobalDyTopoEffectManager final : public SimSystem
         void _assemble(ComputeDyTopoEffectInfo& info);
         void _convert_matrix();
         void _distribute(ComputeDyTopoEffectInfo& info);
+        // perf/kernels (2026-09-10): range-select every receiver's entries straight
+        // from the unsorted collected arrays (no radix sort / reduce here: the
+        // GlobalLinearSystem converter sorts and reduces the raw entries anyway)
+        // with a single host readback of all counts.
+        void _distribute_unsorted(ComputeDyTopoEffectInfo& info);
+        bool use_sorted_path = false;  // env UIPC_DYTOPO_SORTED_PATH=1 restores the old path
 
         SimSystemSlot<GlobalVertexManager> global_vertex_manager;
 
@@ -159,6 +165,15 @@ class GlobalDyTopoEffectManager final : public SimSystem
 
         vector<cuda_tool::DeviceTripletMatrix<Float, 3>> classified_dytopo_effect_hessians;
         vector<cuda_tool::DeviceDoubletVector<Float, 3>> classified_dytopo_effect_gradients;
+
+        // unsorted distribute: per-receiver selection flags / exclusive offsets
+        // (size N+1, the last offset is the count) and one gathered count array
+        vector<cuda_tool::DeviceBuffer<IndexT>> sel_gradient;
+        vector<cuda_tool::DeviceBuffer<IndexT>> sel_gradient_offsets;
+        vector<cuda_tool::DeviceBuffer<IndexT>> sel_hessian;
+        vector<cuda_tool::DeviceBuffer<IndexT>> sel_hessian_offsets;
+        cuda_tool::DeviceBuffer<IndexT>         sel_counts;
+        vector<IndexT>                          h_sel_counts;
 
         void loose_resize_entries(cuda_tool::DeviceTripletMatrix<Float, 3>& m, SizeT size);
         void loose_resize_entries(cuda_tool::DeviceDoubletVector<Float, 3>& v, SizeT size);
