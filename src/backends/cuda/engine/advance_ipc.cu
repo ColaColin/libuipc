@@ -11,6 +11,7 @@
 #include <diff_sim/global_diff_sim_manager.h>
 #include <newton_tolerance/newton_tolerance_manager.h>
 #include <time_integrator/time_integrator_manager.h>
+#include <cstdlib>
 
 namespace uipc::backend::cuda
 {
@@ -404,6 +405,18 @@ void SimEngine::advance()
             auto newton_min_iter = m_newton_min_iter->view()[0];
             beta                 = 1.0;
             IndexT newton_iter   = 0;
+            // perf/kernels (K6): the accepted line-search trial of iteration k
+            // evaluated the energy at exactly the positions iteration k+1
+            // starts from (x0 = x, frozen friction/kinetic targets, same active
+            // contact set) -> reuse it as E0 instead of re-evaluating.
+            // UIPC_REUSE_E0=0 disables (A/B).
+            static const bool reuse_e0 = []
+            {
+                const char* e = std::getenv("UIPC_REUSE_E0");
+                return !(e && e[0] == '0');
+            }();
+            bool  have_prev_E = false;
+            Float prev_E      = 0.0;
             for(; newton_iter < newton_max_iter; ++newton_iter)
             {
                 Timer timer{"Newton Iteration"};
@@ -485,7 +498,9 @@ void SimEngine::advance()
                     detect_trajectory_candidates(alpha);
 
                     // Compute Current Energy => E_0
-                    Float E0 = m_line_searcher->compute_energy(true);  // initial energy
+                    Float E0 = (reuse_e0 && have_prev_E) ?
+                                   prev_E :
+                                   m_line_searcher->compute_energy(true);  // initial energy
 
                     // CCD filter
                     alpha = filter_toi(alpha);
@@ -535,6 +550,9 @@ void SimEngine::advance()
 
                     // Check Line Search Iteration: report warnings or throw exceptions if needed
                     check_line_search_iter(line_search_iter, E0, last_E);
+                    // the state now sits at the last trial; its energy is next E0
+                    prev_E      = last_E;
+                    have_prev_E = m_line_searcher->max_iter() > 0;
 
                     // newton/min_iter is a pure hard floor (default 0 = off);
                     // the semi-implicit Kmin lives in newton/semi_implicit/K_min
