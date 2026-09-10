@@ -1,6 +1,7 @@
 #include <newton_tolerance/newton_tolerance_checker.h>
 #include <global_geometry/global_vertex_manager.h>
 #include <uipc/geometry/attribute_slot.h>
+#include <uipc/common/logger.h>
 
 namespace uipc::backend::cuda
 {
@@ -47,7 +48,16 @@ class MaxTranslationChecker : public NewtonToleranceChecker
         if(velocity_tol_relative > 0.0)
             vel_tol = velocity_tol_relative * vertex_manager->scene_diagonal();
         abs_tol          = vel_tol * dt_attr->view()[0];
-        res              = vertex_manager->compute_axis_max_displacement_argmax(arg_vertex);
+        // perf/kernels: the argmax variant runs an extra abs-components kernel
+        // + ArgMax only to name the vertex in the info-level report; the plain
+        // max-abs reduction yields the identical residual value.
+        if(logger::get_level() <= Logger::Level::info)
+            res = vertex_manager->compute_axis_max_displacement_argmax(arg_vertex);
+        else
+        {
+            res        = vertex_manager->compute_axis_max_displacement();
+            arg_vertex = static_cast<SizeT>(-1);
+        }
         auto newton_iter = info.newton_iter();
         if(newton_iter == 0)
             res0 = res;  // record the initial residual
