@@ -4,6 +4,7 @@
 #include <uipc/builtin/attribute_name.h>
 #include <finite_element/constitutions/dahl_friction_discrete_shell_bending_function.h>
 #include <utils/make_spd.h>
+#include <cstdlib>
 #include <utils/matrix_assembler.h>
 #include <utils/dump_utils.h>
 #include <algorithm>
@@ -106,6 +107,7 @@ namespace
         cuda_tool::TripletMatrixView<Float, 3> H3x3s,
         Float                                  dt,
         bool                                   gradient_only,
+        bool                                   reduced_spd,
         int                                    n)
     {
         int I = blockIdx.x * blockDim.x + threadIdx.x;
@@ -149,7 +151,10 @@ namespace
         DVA.segment<StencilSize>(I * StencilSize).write(stencil, G12);
 
         H12x12 *= Vdt2;
-        make_spd(H12x12);
+        if(reduced_spd)
+            make_spd_translation_free_4x3(H12x12);  // K7: 9x9 eigen-solve
+        else
+            make_spd(H12x12);
 
         TripletMatrixAssembler TMA{H3x3s};
         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
@@ -243,7 +248,15 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
     cuda_tool::DeviceBuffer<Float>    F_commits;
     cuda_tool::DeviceBuffer<Float>    V_bars;
 
-    virtual void do_build(BuildInfo& info) override {}
+    // perf/kernels (K7): translation-free 9x9 PSD projection of the hinge
+    // Hessian (UIPC_DAHL_REDUCED_SPD=0 restores the 12x12 eigen-solve)
+    bool m_reduced_spd = true;
+
+    virtual void do_build(BuildInfo& info) override
+    {
+        const char* e  = std::getenv("UIPC_DAHL_REDUCED_SPD");
+        m_reduced_spd  = !(e && e[0] == '0');
+    }
 
     virtual void do_init(FilteredInfo& info) override
     {
@@ -483,6 +496,7 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
                 info.hessians(),
                 info.dt(),
                 info.gradient_only(),
+                m_reduced_spd,
                 n);
         }
     }
