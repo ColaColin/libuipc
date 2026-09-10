@@ -4,6 +4,9 @@
 #include <sim_engine.h>
 #include <kernel_cout.h>
 #include <cstdlib>
+#include <algorithm>
+#include <vector>
+#include <iterator>
 #include <utils/distance/distance_flagged.h>
 #include <utils/distance.h>
 #include <utils/codim_thickness.h>
@@ -1206,6 +1209,8 @@ void InfoStacklessBVHSimplexTrajectoryFilter::do_build(BuildInfo&)
     // perf/kernels: BVH refit for the per-iteration trajectory detects
     const char* refit_env    = std::getenv("UIPC_BVH_REFIT");
     m_impl.bvh_refit_enabled = !(refit_env && refit_env[0] == '0');
+    const char* verify_env   = std::getenv("UIPC_BVH_REFIT_VERIFY");
+    m_impl.bvh_refit_verify  = verify_env && verify_env[0] == '1';
 }
 
 void InfoStacklessBVHSimplexTrajectoryFilter::do_detect(DetectInfo& info)
@@ -1510,6 +1515,89 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
         launch_alle_alle();
     if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, host_counts[3]))
         launch_allp_allt(false);
+
+    // DIAGNOSTIC (env UIPC_BVH_REFIT_VERIFY=1): after a refit, rebuild the
+    // trees from scratch, redo the queries and compare the candidate pair
+    // sets on the host (order-agnostic). Logs a warning on any difference.
+    if(do_refit && bvh_refit_verify)
+    {
+        auto snapshot = [&](std::array<std::vector<Vector2i>, 4>& out)
+        {
+            const InfoStacklessBVH::QueryBuffer* qs[4] = {&candidate_AllP_CodimP_pairs,
+                                                          &candidate_CodimP_AllE_pairs,
+                                                          &candidate_AllE_AllE_pairs,
+                                                          &candidate_AllP_AllT_pairs};
+            for(int k = 0; k < 4; ++k)
+            {
+                auto v = qs[k]->view();
+                out[k].resize(v.size());
+                if(v.size() > 0)
+                    v.copy_to(out[k].data());
+                std::sort(out[k].begin(), out[k].end(), [](const Vector2i& a, const Vector2i& b)
+                          { return a.x() != b.x() ? a.x() < b.x() : a.y() < b.y(); });
+                out[k].erase(std::unique(out[k].begin(), out[k].end()), out[k].end());
+            }
+        };
+        std::array<std::vector<Vector2i>, 4> refit_sets, build_sets;
+        snapshot(refit_sets);
+
+        lbvh_E.build(edge_aabbs, edge_bids, edge_cids);
+        lbvh_T.build(triangle_aabbs, triangle_bids, triangle_cids);
+        if(codimVs.size() > 0)
+            lbvh_CodimP.build(codim_point_aabbs, codim_point_bids, codim_point_cids);
+        refits_since_build = 0;
+        candidate_AllP_CodimP_pairs.invalidate();
+        candidate_CodimP_AllE_pairs.invalidate();
+        candidate_AllE_AllE_pairs.invalidate();
+        candidate_AllP_AllT_pairs.invalidate();
+        if(codimVs.size() > 0)
+            launch_allp_codimp(true);
+        else
+            candidate_AllP_CodimP_pairs.m_cpNum.fill(0);
+        launch_codimp_alle(true);
+        launch_alle_alle();
+        launch_allp_allt(true);
+        InfoStacklessBVHSimplexTrajectoryFilter_collect_query_counts_kernel<<<1, 1>>>(
+            candidate_AllP_CodimP_pairs.m_cpNum.cview(),
+            candidate_CodimP_AllE_pairs.m_cpNum.cview(),
+            candidate_AllE_AllE_pairs.m_cpNum.cview(),
+            candidate_AllP_AllT_pairs.m_cpNum.cview(),
+            query_counts.view());
+        std::array<IndexT, 4> counts2{};
+        query_counts.copy_to(counts2.data());
+        if(lbvh_CodimP.prepare_query_result(candidate_AllP_CodimP_pairs, counts2[0]))
+            launch_allp_codimp(false);
+        if(lbvh_E.prepare_query_result(candidate_CodimP_AllE_pairs, counts2[1]))
+            launch_codimp_alle(false);
+        if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, counts2[2]))
+            launch_alle_alle();
+        if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, counts2[3]))
+            launch_allp_allt(false);
+        snapshot(build_sets);
+
+        static const char* names[4] = {"AllP-CodimP", "CodimP-AllE", "AllE-AllE", "AllP-AllT"};
+        for(int k = 0; k < 4; ++k)
+        {
+            if(refit_sets[k] != build_sets[k])
+            {
+                std::vector<Vector2i> only_refit, only_build;
+                auto cmp = [](const Vector2i& a, const Vector2i& b)
+                { return a.x() != b.x() ? a.x() < b.x() : a.y() < b.y(); };
+                std::set_difference(refit_sets[k].begin(), refit_sets[k].end(), build_sets[k].begin(),
+                                    build_sets[k].end(), std::back_inserter(only_refit), cmp);
+                std::set_difference(build_sets[k].begin(), build_sets[k].end(), refit_sets[k].begin(),
+                                    refit_sets[k].end(), std::back_inserter(only_build), cmp);
+                logger::warn("BVH refit verify [{}] alpha={} : refit {} pairs, build {} pairs, only-refit {}, only-build {}",
+                             names[k], alpha, refit_sets[k].size(), build_sets[k].size(),
+                             only_refit.size(), only_build.size());
+                ++bvh_refit_verify_mismatches;
+            }
+        }
+        ++bvh_refit_verify_calls;
+        if(bvh_refit_verify_calls % 200 == 0)
+            logger::warn("BVH refit verify: {} calls, {} set mismatches so far",
+                         bvh_refit_verify_calls, bvh_refit_verify_mismatches);
+    }
 }
 
 void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveInfo& info)
