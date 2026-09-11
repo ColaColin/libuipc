@@ -36,17 +36,17 @@ TEST_CASE("cuda_tool DeviceVector growth policies", "[cuda][cuda_tool][buffer]")
         values.resize_discard(10);
 
         REQUIRE(values.size() == 10);
-        REQUIRE(values.capacity() == 15);
+        REQUIRE(values.capacity() == 12);  // 10 + 25 % headroom (K19, UIPC_BUFFER_GROWTH default 1.25; was 15 at 1.5x)
 
         auto* pointer = values.data();
         values.resize_discard(3);
         values.resize_discard(12);
         REQUIRE(values.data() == pointer);
-        REQUIRE(values.capacity() == 15);
+        REQUIRE(values.capacity() == 12);  // 10 + 25 % headroom (K19, UIPC_BUFFER_GROWTH default 1.25; was 15 at 1.5x)
 
         values.resize_discard(16);
         REQUIRE(values.size() == 16);
-        REQUIRE(values.capacity() == 24);
+        REQUIRE(values.capacity() == 20);  // 16 + 25 % (K19; was 24 at 1.5x)
     }
 
     SECTION("preserve resize retains the previous logical range")
@@ -56,7 +56,7 @@ TEST_CASE("cuda_tool DeviceVector growth policies", "[cuda][cuda_tool][buffer]")
         values.resize_preserve(10);
 
         REQUIRE(values.size() == 10);
-        REQUIRE(values.capacity() == 15);
+        REQUIRE(values.capacity() == 12);  // 10 + 25 % headroom (K19, UIPC_BUFFER_GROWTH default 1.25; was 15 at 1.5x)
 
         std::vector<int> host(4);
         values.cview(0, 4).copy_to(host.data());
@@ -70,7 +70,7 @@ TEST_CASE("cuda_tool DeviceVector growth policies", "[cuda][cuda_tool][buffer]")
         values.reserve_amortized(10);
 
         REQUIRE(values.size() == 4);
-        REQUIRE(values.capacity() == 15);
+        REQUIRE(values.capacity() == 12);  // 10 + 25 % headroom (K19, UIPC_BUFFER_GROWTH default 1.25; was 15 at 1.5x)
 
         std::vector<int> host;
         values.copy_to(host);
