@@ -3,6 +3,9 @@
 #include <cuda_tool/view.h>
 #include <cuda_tool/view_nd.h>
 #include <cuda_tool/launch.h>
+#include <uipc/common/demangle.h>
+#include <cstdio>
+#include <cstdlib>
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
@@ -361,6 +364,26 @@ class DeviceVector
         T* p = nullptr;
         if(capacity > 0)
             CUDA_TOOL_CHECK(cudaMalloc(&p, capacity * sizeof(T)));
+        // perf/kernels diag: UIPC_ALLOC_LOG_MB=<n> logs every device buffer
+        // (re)allocation of at least n MB with its element type and the
+        // device memory in use, to attribute the per-process peak.
+        static const double log_mb = []
+        {
+            const char* e = std::getenv("UIPC_ALLOC_LOG_MB");
+            return e ? std::atof(e) : -1.0;
+        }();
+        if(log_mb >= 0.0 && capacity > 0
+           && static_cast<double>(capacity) * sizeof(T) >= log_mb * 1048576.0)
+        {
+            size_t fr = 0, tot = 0;
+            cudaMemGetInfo(&fr, &tot);
+            std::fprintf(stderr,
+                         "[uipc alloc] %8.1f MB  %s x %zu  (device used %.0f MB)\n",
+                         static_cast<double>(capacity) * sizeof(T) / 1048576.0,
+                         uipc::demangle<T>().c_str(),
+                         capacity,
+                         static_cast<double>(tot - fr) / 1048576.0);
+        }
         if(preserve && m_data && m_size)
             CUDA_TOOL_CHECK(cudaMemcpyAsync(
                 p, m_data, m_size * sizeof(T), cudaMemcpyDeviceToDevice, s));
