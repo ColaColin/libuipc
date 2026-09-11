@@ -1,4 +1,5 @@
 #include <finite_element/mas_preconditioner_engine.h>
+#include <cstdlib>
 #include <cuda_tool/cub.h>
 #include <cuda_tool/cuda_tool.h>
 #include <uipc/common/log.h>
@@ -1384,7 +1385,22 @@ void MASPreconditionerEngine::set_preconditioner(cuda_tool::CBufferView<Eigen::M
         multi_level_Z.resize(m_total_num_clusters);
     }
 
-    cluster_hessians.view(0, num_cluster_blocks).fill(ClusterMatrixSym{});
+    // perf/kernels (K12): ClusterMatrixSym{} is all zero bytes, so clear the
+    // assembly buffer with a memset instead of the generic fill kernel (one
+    // 1.7 KB struct per thread, 0.33 ms per Newton iteration on the 2070S).
+    // UIPC_MAS_FILL_KERNEL=1 restores the fill kernel (A/B).
+    static const bool use_fill_kernel = []
+    {
+        const char* e = std::getenv("UIPC_MAS_FILL_KERNEL");
+        return e && e[0] == '1';
+    }();
+    if(use_fill_kernel)
+        cluster_hessians.view(0, num_cluster_blocks).fill(ClusterMatrixSym{});
+    else
+        CUDA_TOOL_CHECK(cudaMemsetAsync(cluster_hessians.data(),
+                                        0,
+                                        sizeof(ClusterMatrixSym) * num_cluster_blocks,
+                                        nullptr));
 
     // Scatter BCOO Hessian blocks into cluster matrices
     scatter_hessian_to_clusters(triplet_values, row_ids, col_ids, dof_offset);
