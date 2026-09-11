@@ -1370,5 +1370,9 @@ jacket+shorts, four runs on the final kernel code): `837ce898` 7.42 / 15.77 /
 19.14 vs 28136dc3 7.93 / 18.11 / 20.85 (−6 / −13 / −8 %) and vs baseline e1eed4b9
 9.28 / 20.09 / 23.60 (−20 / −22 / −19 %); MPS ×3 aggregate +28 / +31 / +27 % vs
 baseline. `7af10021` adds the default-off allocation logger `UIPC_ALLOC_LOG_MB`
-(tshirt peak 1.33 GB: 0.43 GB context + 3×3-block triplet buffers up to 64 MB each). Test follow-up `3cb741fb` (internal-cull proof expects
+(tshirt peak 1.33 GB: 0.43 GB context + 3×3-block triplet buffers up to 64 MB each);
+`4a8e2bfb` (K18) frees a discarded buffer before allocating its replacement
+(bit-identical; removes the old+new growth transient). Final: `4a8e2bfb`, five-run
+means 7.42 / 15.86 / 19.10 ms per Newton iteration (−6 / −12 / −8 % vs 28136dc3,
+−20 / −21 / −19 % vs e1eed4b9). Test follow-up `3cb741fb` (internal-cull proof expects
 n−1 root visits). Recommendation: build the next wheel from `837ce898`.

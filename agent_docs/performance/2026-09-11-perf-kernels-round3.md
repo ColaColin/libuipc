@@ -1,8 +1,8 @@
 # 2026-09-11 — perf/kernels round 3: contact G+H split, EE reduced SPD, BVH self-cull, MAS memset, ABD side stream
 
-- Status: Accepted (K9, K10, K11, K12, K13, K16); K14 rejected at build time, K15 and K17 rejected by verifier / A/B
+- Status: Accepted (K9, K10, K11, K12, K13, K16, K18); K14 rejected at build time, K15 and K17 rejected by verifier / A/B
 - Before commit: `28136dc3` (perf/kernels = f4a0b415 + K6 substep fix)
-- After commit: `837ce898` (kernel code; docs/test commits in between)
+- After commit: `4a8e2bfb` (kernel code; docs/test/diag commits in between)
 - Benchmark: cloth-dataset drum benchmark (`dataset/bench/drum_bench.py`, specs
   `dataset/bench/specs.json`: towel c002217 468 v / tshirt c002007 3.8 k /
   jacket+shorts c002014 5.9 k), 600 frames single process, metric = ms per
@@ -84,8 +84,8 @@ c002007 / jacket+shorts c002014); probes accepted at every step.
 | baseline e1eed4b9 (`t_base_n`, `t_base_n2` same night; `t_base` night before) | — | 9.64 / 20.36 / 23.94; 9.52 / 19.94 / 23.25; 8.69 / 19.98 / 23.61 (mean 9.28 / 20.09 / 23.60) | — |
 | MPS ×3 aggregate frames/s, 120 frames, two pairs | final vs baseline | 45.8 / 6.40 / 4.94 and 43.7 / 6.77 / 5.39 vs 37.0 / 5.14 / 4.44 and 35.1 / 5.20 / 4.62 (**+24 / +27 / +14 %** on the pair means) | — |
 
-Final build 837ce898 (four-run means) vs 28136dc3: **−6 / −13 / −8 %**; vs the
-baseline (three-run mean): **−20 / −22 / −19 %** (the K9–K13 build alone: −4 / −10 /
+Final kernel code (837ce898 + K18 4a8e2bfb, five-run means 7.42 / 15.86 / 19.10) vs
+28136dc3: **−6 / −12 / −8 %**; vs the baseline (three-run mean): **−20 / −21 / −19 %** (the K9–K13 build alone: −4 / −10 /
 −6 % and −18 / −19 / −17 %). The towel's 600-frame numbers scatter
 ±5–8 % run to run (7.39–8.98 across the perf builds, 8.69–9.64 for the
 baseline); only the two large loads resolve single steps.
@@ -104,6 +104,7 @@ baseline); only the two large loads resolve single steps.
 | spill pass (stretch 2) | `-Xptxas -v` over membrane, friction, half-plane contact, trajectory filter, contact energies | no spills beyond 8–48 B; the hinge (5.0 KB after K16) and contact PT+EE (3.5 KB) spills are structural |
 | launch census, towel (stretch 2) | nsys, 60 frames | 191 kernels + 56 memcpy/memset per Newton iteration, GPU 87 % busy: contact G+H 18 %, CUB two-launch idioms, 20 host sync copies; no exact merge of our own kernels |
 | memory attribution (stretch 2) | `UIPC_ALLOC_LOG_MB` (diag commit 7af10021, off by default), tshirt 30 frames | 431 MB after engine init (context), 1331 MB peak: 3×3-block Hessian triplet buffers (64 MB max, 56 reallocations), CUB temp 16 MB, Vector3 10 MB, converter pairs/keys 7 MB each, int index arrays |
+| **K18 4a8e2bfb** | `reallocate(preserve=false)` frees the old block before allocating the new one (no old+new transient on discard growth); `UIPC_DISCARD_FREE_FIRST=0` = old | bit-identical (cudaFree synchronises the device in either order); logged device-used maximum at an allocation 1333 → 1315 MB; probe inside band; 600 frames 7.45 / 16.23 / 18.93 |
 
 ## Interpretation
 
@@ -128,12 +129,13 @@ are 91 % GPU-busy compute windows (no idle gaps to fuse away).
 
 Accepted and committed on `perf/kernels`: K9 d54728df, K10 9d2012d8, K11
 aa3c9e09, K12 adda87be, K13 6b1cfac8 (+ test follow-up 3cb741fb), K16
-837ce898; diagnostic logger 7af10021. K14 (`__launch_bounds__(256, 2)` on the
+837ce898, K18 4a8e2bfb; diagnostic logger 7af10021. K14 (`__launch_bounds__(256, 2)` on the
 PE+PP contact part) rejected: ptxas refuses the 128-register cap because a
 non-inlined Eigen callee (`selfadjoint_matrix_vector_product`) needs 142
 registers; never committed. Every step has an env switch back to the previous
 path (`UIPC_CONTACT_SPLIT`, `UIPC_EE_REDUCED_SPD`, `UIPC_BVH_SELF_RANGE_CULL`,
-`UIPC_MAS_FILL_KERNEL`, `UIPC_ABD_DIAG_SIDE_STREAM`, `UIPC_DAHL_BLOCKED_PROJ`).
+`UIPC_MAS_FILL_KERNEL`, `UIPC_ABD_DIAG_SIDE_STREAM`, `UIPC_DAHL_BLOCKED_PROJ`,
+`UIPC_DISCARD_FREE_FIRST`).
 
 ## Reproduction and artifacts
 

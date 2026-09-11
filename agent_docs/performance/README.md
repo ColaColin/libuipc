@@ -22,7 +22,7 @@ when iteration counts change. Report both and state which is the primary signal.
 
 | Record | Status | Scope |
 |---|---|---|
-| [2026-09-11 perf/kernels round 3](2026-09-11-perf-kernels-round3.md) | Accepted (K9–K13, K16), K14/K15/K17 rejected | Contact G+H split into two overlapped launches, EE reduced 9×9 PSD projection, BVH self-query subtree cull, MAS memset clear, ABD diag inverse on a side stream; cloth-dataset drum protocol on the 2070S: −6 / −13 / −8 % per Newton iteration vs 28136dc3, −20 / −22 / −19 % vs e1eed4b9 (four-run means) |
+| [2026-09-11 perf/kernels round 3](2026-09-11-perf-kernels-round3.md) | Accepted (K9–K13, K16, K18), K14/K15/K17 rejected | Contact G+H split into two overlapped launches, EE reduced 9×9 PSD projection, BVH self-query subtree cull, MAS memset clear, ABD diag inverse on a side stream; cloth-dataset drum protocol on the 2070S: −6 / −12 / −8 % per Newton iteration vs 28136dc3, −20 / −21 / −19 % vs e1eed4b9 (five-run means) |
 | [2026-09-05 `lbvh` alias + broadphase methods](2026-09-05-lbvh-alias-broadphase-methods.md) | Alias accepted, default unchanged | `collision_detection/method="lbvh"` abort diagnosed (unknown enum value, not a kernel crash), alias fix, first `linear_bvh` measurement, 3-method 4-scene A/B, gates |
 | [2026-09-05 DCD candidate reuse](2026-09-05-dcd-candidate-reuse.md) | Accepted, flag default off | Certified reuse of the line-search swept candidate set across Newton iterations; containment proof, 4-scene A/B, accuracy gates |
 | [2026-09-01 cross-domain main baseline](2026-09-01-cross-domain-baseline.md) | Current reference | Three-run ABD, FEM/MAS, cloth/contact envelope and synchronized stage diagnostics |
