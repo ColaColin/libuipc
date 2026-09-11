@@ -417,6 +417,14 @@ void SimEngine::advance()
             }();
             bool  have_prev_E = false;
             Float prev_E      = 0.0;
+            // K6 fix: the animator's substep ratio advances per Newton
+            // iteration (dst = prev + ratio * (aim - prev)), which moves the
+            // constraint targets and changes the energy at unchanged
+            // positions -> the cached trial energy is stale whenever the
+            // ratio changed since the previous iteration (found by
+            // apps/tests/sim_case/30_fem_animiator_substep: line search
+            // failed at frame 1 with E_last/E0 = 59x).
+            Float prev_substep_ratio = -1.0;
             for(; newton_iter < newton_max_iter; ++newton_iter)
             {
                 Timer timer{"Newton Iteration"};
@@ -425,6 +433,13 @@ void SimEngine::advance()
 
                 // 1) Compute animation substep ratio
                 compute_animation_substep_ratio(newton_iter);
+                if(m_global_animator)
+                {
+                    const Float ratio = m_global_animator->substep_ratio();
+                    if(ratio != prev_substep_ratio)
+                        have_prev_E = false;  // targets moved: re-evaluate E0
+                    prev_substep_ratio = ratio;
+                }
 
 
                 // 2) Build Collision Pairs
