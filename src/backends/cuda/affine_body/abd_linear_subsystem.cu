@@ -11,6 +11,7 @@
 #include <affine_body/affine_body_kinetic.h>
 #include <affine_body/affine_body_constitution.h>
 #include <utils/report_extent_check.h>
+#include <cstdlib>
 
 namespace uipc::backend::cuda
 {
@@ -286,6 +287,161 @@ namespace
                    H12x12);
     }
 
+    // ---- s03: per-body-pair pre-reduction of the dytopo effect hessians ----
+    // The old path (k2 above) expands every contact 3x3 block into 16 raw
+    // 3x3 triplets of the global matrix (16 x C triplets, C ~ 2e5 on the
+    // wrecking balls), which the global converter then sorts and reduces back
+    // to a few thousand unique blocks. Here the contacts are grouped by
+    // (body_i, body_j) pair first: the 12x12 contributions of one pair are
+    // accumulated into one per-pair 12x12 and only the P distinct pairs are
+    // expanded (16 x P triplets, P ~ 1e3). Same values up to summation order.
+
+    // #1: (L, R) pair key per contact block, L <= R
+    __global__ void abd_linear_subsystem_dytopo_pair_key_kernel(
+        cuda_tool::CBufferView<int>     g_row_indices,
+        cuda_tool::CBufferView<int>     g_col_indices,
+        cuda_tool::CBufferView<IndexT>  v2b,
+        cuda_tool::BufferView<uint64_t> keys,
+        cuda_tool::BufferView<int>      indices,
+        IndexT                          vertex_offset,
+        uint64_t                        body_count,
+        int                             n)
+    {
+        int I = blockIdx.x * blockDim.x + threadIdx.x;
+        if(I >= n)
+            return;
+        auto     i      = g_row_indices(I) - vertex_offset;
+        auto     j      = g_col_indices(I) - vertex_offset;
+        uint64_t body_i = v2b(i);
+        uint64_t body_j = v2b(j);
+        uint64_t L      = body_i < body_j ? body_i : body_j;
+        uint64_t R      = body_i < body_j ? body_j : body_i;
+        keys(I)         = L * body_count + R;
+        indices(I)      = I;
+    }
+
+    // #2: segment heads of the sorted keys
+    __global__ void abd_linear_subsystem_dytopo_pair_head_kernel(
+        cuda_tool::CBufferView<uint64_t> sorted_keys,
+        cuda_tool::BufferView<int>       head,
+        int                              n)
+    {
+        int I = blockIdx.x * blockDim.x + threadIdx.x;
+        if(I >= n)
+            return;
+        head(I) = (I == 0 || sorted_keys(I) != sorted_keys(I - 1)) ? 1 : 0;
+    }
+
+    // #3: scatter the pair id back to contact order, record the key per pair
+    __global__ void abd_linear_subsystem_dytopo_pair_scatter_kernel(
+        cuda_tool::CBufferView<uint64_t> sorted_keys,
+        cuda_tool::CBufferView<int>      perm,
+        cuda_tool::CBufferView<int>      head,
+        cuda_tool::CBufferView<int>      seg_inclusive,  // incl. scan of head
+        cuda_tool::BufferView<int>       contact_to_pair,
+        cuda_tool::BufferView<uint64_t>  pair_key,
+        int                              n)
+    {
+        int I = blockIdx.x * blockDim.x + threadIdx.x;
+        if(I >= n)
+            return;
+        int pair                 = seg_inclusive(I) - 1;
+        contact_to_pair(perm(I)) = pair;
+        if(head(I))
+            pair_key(pair) = sorted_keys(I);
+    }
+
+    // #4: J^T H J per contact block, accumulated into its pair's 12x12
+    __global__ void abd_linear_subsystem_assemble_dytopo_effect_pair_k2_kernel(
+        cuda_tool::CTripletMatrixView<Float, 3, 3> dytopo_effect_hessian,
+        cuda_tool::BufferView<Matrix12x12>         pair_hessian,
+        cuda_tool::CBufferView<int>                contact_to_pair,
+        cuda_tool::CBufferView<IndexT>             v2b,
+        cuda_tool::CBufferView<ABDJacobi>          Js,
+        cuda_tool::CBufferView<IndexT>             is_fixed,
+        IndexT                                     vertex_offset,
+        int                                        n)
+    {
+        int I = blockIdx.x * blockDim.x + threadIdx.x;
+        if(I >= n)
+            return;
+        const auto& [g_i, g_j, H3x3] = dytopo_effect_hessian(I);
+
+        auto i = g_i - vertex_offset;
+        auto j = g_j - vertex_offset;
+
+        auto body_i = v2b(i);
+        auto body_j = v2b(j);
+
+        // fixed bodies contribute an exact zero: nothing to accumulate
+        if(is_fixed(body_i) || is_fixed(body_j))
+            return;
+
+        auto& J_i = Js(i);
+        auto& J_j = Js(j);
+
+        Matrix12x12 H12x12;
+
+        // same expressions as the k2 kernel above (rows of the pair = min body)
+        if(body_i < body_j)
+        {
+            H12x12 = ABDJacobi::JT_H_J(J_i.T(), H3x3, J_j);
+        }
+        else if(body_i > body_j)
+        {
+            H12x12 = ABDJacobi::JT_H_J(J_j.T(), H3x3.transpose(), J_i);
+        }
+        else  // body_i == body_j
+        {
+            if(i != j)
+            {
+                H12x12 = ABDJacobi::JT_H_J(J_i.T(), H3x3, J_j)
+                         + ABDJacobi::JT_H_J(J_j.T(), H3x3.transpose(), J_i);
+            }
+            else  // i == j
+            {
+                H12x12 = ABDJacobi::JT_H_J(J_i.T(), H3x3, J_j);
+            }
+        }
+
+        eigen::atomic_add(pair_hessian(contact_to_pair(I)), H12x12);
+    }
+
+    // #5: one pair -> 16 triplets (+ the diagonal-pair block into diag_hessian)
+    __global__ void abd_linear_subsystem_assemble_dytopo_effect_pair_k3_kernel(
+        cuda_tool::TripletMatrixView<Float, 3>  dst,
+        cuda_tool::CBufferView<Matrix12x12>     pair_hessian,
+        cuda_tool::CBufferView<uint64_t>        pair_key,
+        cuda_tool::BufferView<Matrix12x12>      diag_hessian,
+        uint64_t                                body_count,
+        int                                     n)
+    {
+        int p = blockIdx.x * blockDim.x + threadIdx.x;
+        if(p >= n)
+            return;
+        uint64_t key = pair_key(p);
+        IndexT   L   = (IndexT)(key / body_count);
+        IndexT   R   = (IndexT)(key - (uint64_t)L * body_count);
+
+        Matrix12x12 H12x12 = pair_hessian(p);
+
+        if(L == R)
+        {
+            // Fill diagonal hessian for diag-inv preconditioner (one add per
+            // body instead of 144 atomics per intra-body contact block)
+            diag_hessian(L) += H12x12;
+
+            // Since body_i == body_j, we only fill the upper triangle part
+            zero_out_lower(H12x12);
+        }
+
+        TripletMatrixUnpacker MU{dst};
+        MU.block<4, 4>(p * 4 * 4)  // triplet range of [p*16, (p+1)*16)
+            .write(L * 4,          // begin row
+                   R * 4,          // begin col
+                   H12x12);
+    }
+
     __global__ void abd_linear_subsystem_retrieve_solution_kernel(
         cuda_tool::BufferView<Vector12> dq, cuda_tool::CDenseVectorView<Float> x, int n)
     {
@@ -327,6 +483,33 @@ namespace
 
 namespace uipc::backend::cuda
 {
+namespace
+{
+    // s03 env switch, read once: UIPC_ABD_PAIR_REDUCE=0 restores the
+    // 16-triplets-per-contact path
+    bool abd_dytopo_pair_reduce_enabled()
+    {
+        static const bool enabled = []
+        {
+            const char* e = std::getenv("UIPC_ABD_PAIR_REDUCE");
+            return !(e && e[0] == '0');
+        }();
+        return enabled;
+    }
+
+    // number of radix bits needed for keys in [0, max_key]
+    int abd_dytopo_pair_key_bits(uint64_t max_key)
+    {
+        int bits = 0;
+        while(max_key > 0)
+        {
+            ++bits;
+            max_key >>= 1;
+        }
+        return bits > 0 ? bits : 1;
+    }
+}  // namespace
+
 REGISTER_SIM_SYSTEM(ABDLinearSubsystem);
 
 // ref: https://github.com/spiriMirror/libuipc/issues/271
@@ -340,6 +523,7 @@ void ABDLinearSubsystem::do_build(DiagLinearSubsystem::BuildInfo& info)
     UIPC_ASSERT(m_impl.dt_attr, "Scene config must have a 'dt' attribute.");
 
     m_impl.dytopo_effect_receiver = find<ABDDyTopoEffectReceiver>();
+    m_impl.dytopo_pair_reduce     = abd_dytopo_pair_reduce_enabled();
 }
 
 void ABDLinearSubsystem::Impl::init()
@@ -438,7 +622,10 @@ void ABDLinearSubsystem::Impl::report_extent(GlobalLinearSystem::DiagExtentInfo&
 
     if(dytopo_effect_receiver && !info.gradient_only())
     {
-        H12x12_count += dytopo_effect_receiver->hessians().triplet_count();
+        if(dytopo_pair_reduce)
+            H12x12_count += _prepare_dytopo_pairs();
+        else
+            H12x12_count += dytopo_effect_receiver->hessians().triplet_count();
     }
 
 
@@ -598,6 +785,87 @@ void ABDLinearSubsystem::Impl::_assemble_reporters(IndexT& offset,
     }
 }
 
+SizeT ABDLinearSubsystem::Impl::_prepare_dytopo_pairs()
+{
+    using namespace cuda_tool;
+
+    auto hessians = dytopo_effect_receiver->hessians();
+    int  C        = (int)hessians.triplet_count();
+    dytopo_pair_count = 0;
+    if(C == 0)
+        return 0;
+
+    const uint64_t N             = (uint64_t)abd().body_count();
+    IndexT         vertex_offset = affine_body_vertex_reporter->vertex_offset();
+
+    dytopo_pair_key_in.resize_discard(C);
+    dytopo_pair_key_sorted.resize_discard(C);
+    dytopo_pair_idx_in.resize_discard(C);
+    dytopo_pair_perm.resize_discard(C);
+    dytopo_pair_head.resize_discard(C);
+    dytopo_pair_seg.resize_discard(C);
+    dytopo_contact_to_pair.resize_discard(C);
+
+    {
+        auto k = abd_linear_subsystem_dytopo_pair_key_kernel;
+        k<<<cuda_tool::best_grid_dim(C, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            hessians.row_indices(),
+            hessians.col_indices(),
+            abd().vertex_id_to_body_id.cview(),
+            dytopo_pair_key_in.view(),
+            dytopo_pair_idx_in.view(),
+            vertex_offset,
+            N,
+            C);
+    }
+
+    DeviceRadixSort().SortPairs(dytopo_pair_key_in.data(),
+                                dytopo_pair_key_sorted.data(),
+                                dytopo_pair_idx_in.data(),
+                                dytopo_pair_perm.data(),
+                                C,
+                                0,
+                                abd_dytopo_pair_key_bits(N * N - 1));
+
+    {
+        auto k = abd_linear_subsystem_dytopo_pair_head_kernel;
+        k<<<cuda_tool::best_grid_dim(C, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            dytopo_pair_key_sorted.cview(), dytopo_pair_head.view(), C);
+    }
+
+    DeviceScan().InclusiveSum(
+        dytopo_pair_head.data(), dytopo_pair_seg.data(), C);
+
+    // the pair count is needed on the host (it sizes this subsystem's triplet
+    // range): one D2H sync per Newton iteration, like the converter's counts
+    int P = 0;
+    CUDA_TOOL_CHECK(cudaMemcpy(&P,
+                               dytopo_pair_seg.data() + (C - 1),
+                               sizeof(int),
+                               cudaMemcpyDeviceToHost));
+    UIPC_ASSERT(P > 0 && P <= C,
+                "invalid dytopo pair count {} for {} contacts",
+                P,
+                C);
+
+    dytopo_pair_key.resize_discard(P);
+
+    {
+        auto k = abd_linear_subsystem_dytopo_pair_scatter_kernel;
+        k<<<cuda_tool::best_grid_dim(C, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            dytopo_pair_key_sorted.cview(),
+            dytopo_pair_perm.cview(),
+            dytopo_pair_head.cview(),
+            dytopo_pair_seg.cview(),
+            dytopo_contact_to_pair.view(),
+            dytopo_pair_key.view(),
+            C);
+    }
+
+    dytopo_pair_count = (SizeT)P;
+    return dytopo_pair_count;
+}
+
 void ABDLinearSubsystem::Impl::_assemble_dytopo_effect(IndexT& offset,
                                                        GlobalLinearSystem::DiagInfo& info)
 {
@@ -631,6 +899,48 @@ void ABDLinearSubsystem::Impl::_assemble_dytopo_effect(IndexT& offset,
     SizeT dytopo_effect_hessian_count = 0;
     if(dytopo_effect_receiver)
         dytopo_effect_hessian_count = dytopo_effect_receiver->hessians().triplet_count();
+
+    if(dytopo_pair_reduce)
+    {
+        // s03: pairs prepared in report_extent() for this Newton iteration
+        auto P          = dytopo_pair_count;
+        auto H3x3_count = P * (4 * 4);
+        auto pair_H3x3  = info.hessians().subview(offset, H3x3_count);
+
+        if(P > 0 && dytopo_effect_hessian_count > 0)
+        {
+            dytopo_pair_hessian.resize_discard(P);
+            dytopo_pair_hessian.fill(Matrix12x12::Zero());
+
+            {
+                auto k = abd_linear_subsystem_assemble_dytopo_effect_pair_k2_kernel;
+                int  n = (int)dytopo_effect_hessian_count;
+                k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+                    dytopo_effect_receiver->hessians(),
+                    dytopo_pair_hessian.view(),
+                    dytopo_contact_to_pair.cview(),
+                    abd().vertex_id_to_body_id.cview(),
+                    abd().vertex_id_to_J.cview(),
+                    abd().body_id_to_is_fixed.cview(),
+                    vertex_offset,
+                    n);
+            }
+            {
+                auto k = abd_linear_subsystem_assemble_dytopo_effect_pair_k3_kernel;
+                int  n = (int)P;
+                k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+                    pair_H3x3,
+                    dytopo_pair_hessian.cview(),
+                    dytopo_pair_key.cview(),
+                    diag_hessian.view(),
+                    (uint64_t)abd().body_count(),
+                    n);
+            }
+        }
+
+        offset += H3x3_count;
+        return;
+    }
 
     auto H3x3_count         = dytopo_effect_hessian_count * (4 * 4);
     auto dytopo_effect_H3x3 = info.hessians().subview(offset, H3x3_count);

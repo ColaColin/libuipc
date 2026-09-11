@@ -98,6 +98,9 @@ class ABDLinearSubsystem final : public DiagLinearSubsystem
         void _assemble_kinetic_shape(IndexT& offset, GlobalLinearSystem::DiagInfo& info);
         void _assemble_reporters(IndexT& offset, GlobalLinearSystem::DiagInfo& info);
         void _assemble_dytopo_effect(IndexT& offset, GlobalLinearSystem::DiagInfo& info);
+        // s03: group the dytopo (contact) 3x3 blocks by (body_i, body_j) pair;
+        // returns the number of distinct pairs (each expands to 16 triplets)
+        SizeT _prepare_dytopo_pairs();
 
         void  accuracy_check(GlobalLinearSystem::AccuracyInfo& info);
         void  retrieve_solution(GlobalLinearSystem::SolutionInfo& info);
@@ -126,6 +129,20 @@ class ABDLinearSubsystem final : public DiagLinearSubsystem
 
         // diag hessian for preconditioner
         cuda_tool::DeviceBuffer<Matrix12x12> diag_hessian;
+
+        // s03: per-body-pair pre-reduction of the dytopo effect hessians
+        // (UIPC_ABD_PAIR_REDUCE=0 restores the 16-triplets-per-contact path)
+        bool                                 dytopo_pair_reduce = true;
+        SizeT                                dytopo_pair_count  = 0;
+        cuda_tool::DeviceBuffer<uint64_t>    dytopo_pair_key_in;
+        cuda_tool::DeviceBuffer<uint64_t>    dytopo_pair_key_sorted;
+        cuda_tool::DeviceBuffer<int>         dytopo_pair_idx_in;
+        cuda_tool::DeviceBuffer<int>         dytopo_pair_perm;
+        cuda_tool::DeviceBuffer<int>         dytopo_pair_head;
+        cuda_tool::DeviceBuffer<int>         dytopo_pair_seg;
+        cuda_tool::DeviceBuffer<int>         dytopo_contact_to_pair;
+        cuda_tool::DeviceBuffer<uint64_t>    dytopo_pair_key;
+        cuda_tool::DeviceBuffer<Matrix12x12> dytopo_pair_hessian;
         cuda_tool::DeviceBuffer<Float>       block_norm;
         cuda_tool::DeviceVar<Float>          reduced_norm;
 
