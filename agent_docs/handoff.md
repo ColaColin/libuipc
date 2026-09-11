@@ -1643,3 +1643,9 @@ n−1 root visits). Recommendation: build the next wheel from `837ce898`.
   `lbvh` alias of `linear_bvh` (schema enum since `8398dfb8`) and failed on
   `REQUIRE_FALSE(expected.empty())`; the alias now maps to
   `LBVHSimplexTrajectoryFilter` like `linear_bvh`.
+- `scripts/run_benchmark.py`: `resolve_python()` followed symlinks
+  (`Path.resolve()`), so a venv's `bin/python` ran the scene with the base
+  interpreter outside the venv; it now keeps the given path (`absolute()`).
+  The raw `.log` was written before `output/benchmark-runs/` existed, so the
+  first run in a fresh checkout failed; the directory is created first.
+  Regression tests in `scripts/tests/test_benchmark_manifest.py`.

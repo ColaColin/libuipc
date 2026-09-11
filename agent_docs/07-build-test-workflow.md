@@ -130,6 +130,11 @@ python scripts/run_benchmark.py run mas-bunny --frames 100
 python scripts/run_benchmark.py run cube-wall-cloth --frames 100
 ```
 
+`--python` accepts an interpreter path or command name. The path is made
+absolute but symlinks are kept, so a virtual environment's `bin/python` runs
+the scene inside that environment. The record directory
+(`output/benchmark-runs/`, ignored) is created on demand.
+
 Each run writes command, environment overrides, repo/submodule revisions,
 GPU/driver/CUDA/Python facts, the complete frame-time distribution, structured
 Newton/line-search/linear-solver counts, final-state observables, an approximate

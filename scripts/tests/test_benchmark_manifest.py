@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import argparse
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -18,6 +21,7 @@ from scripts.run_benchmark import (
     parse_overrides,
     percentile,
     resolve_python,
+    run_benchmark,
 )
 
 
@@ -63,6 +67,53 @@ class BenchmarkManifestTests(unittest.TestCase):
                 self.assertEqual(
                     missing_required_paths(entry), [root / "missing.txt"]
                 )
+
+    def test_python_symlink_keeps_virtual_environment_interpreter(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            link = Path(directory).resolve() / "venv" / "bin" / "python"
+            link.parent.mkdir(parents=True)
+            link.symlink_to(sys.executable)
+            self.assertEqual(resolve_python(str(link)), str(link))
+        with self.assertRaises(ValueError):
+            resolve_python("no-such-python-executable")
+
+    def test_run_creates_record_directory_before_writing_log(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "scene.py").write_text(
+                "print('TOTAL frames=1 mean=2.0ms median=2.0ms')\n",
+                encoding="utf-8",
+            )
+            entry = {
+                "name": "smoke",
+                "description": "smoke",
+                "entrypoint": "scene.py",
+                "workingDirectory": ".",
+                "arguments": [],
+                "defaultFrames": 1,
+                "quickFrames": 1,
+                "requiredPaths": ["scene.py"],
+                "metadataOutput": "output/benchmark-runs/smoke.json",
+            }
+            args = argparse.Namespace(
+                name="smoke",
+                quick=True,
+                frames=None,
+                python=sys.executable,
+                env=[],
+                dry_run=False,
+            )
+            with patch("scripts.run_benchmark.REPO_ROOT", root), patch(
+                "scripts.run_benchmark.runtime_facts", return_value={}
+            ), patch(
+                "scripts.run_benchmark.query_gpu_memory_mib", return_value=None
+            ), contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(run_benchmark(args, {"smoke": entry}), 0)
+            records = root / "output" / "benchmark-runs"
+            self.assertTrue((records / "smoke.json").exists())
+            logs = list(records.glob("smoke-*.log"))
+            self.assertEqual(len(logs), 1)
+            self.assertIn("TOTAL frames=1", logs[0].read_text(encoding="utf-8"))
 
     def test_canonical_environment_removes_noncanonical_variants(self) -> None:
         entry = {

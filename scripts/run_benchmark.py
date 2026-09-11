@@ -115,7 +115,9 @@ def build_environment(
 def resolve_python(value: str) -> str:
     path = Path(value)
     if path.exists():
-        return str(path.resolve())
+        # Do not resolve symlinks: a virtual environment's bin/python links to
+        # the base interpreter, which would run the scene outside the venv.
+        return str(path.absolute())
     resolved = shutil.which(value)
     if resolved is None:
         raise ValueError(f"Python executable not found: {value}")
@@ -426,6 +428,7 @@ def run_benchmark(args: argparse.Namespace, registry: Mapping[str, dict[str, Any
         f"{metadata_path.stem}-{metadata['runId']}{metadata_path.suffix}"
     )
     log_path = archive_path.with_suffix(".log")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(output, encoding="utf-8")
     write_metadata(archive_path, metadata)
     write_metadata(metadata_path, metadata)
