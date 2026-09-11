@@ -108,6 +108,7 @@ namespace
         Float                                  dt,
         bool                                   gradient_only,
         bool                                   reduced_spd,
+        bool                                   blocked_proj,
         int                                    n)
     {
         int I = blockIdx.x * blockDim.x + threadIdx.x;
@@ -151,7 +152,9 @@ namespace
         DVA.segment<StencilSize>(I * StencilSize).write(stencil, G12);
 
         H12x12 *= Vdt2;
-        if(reduced_spd)
+        if(reduced_spd && blocked_proj)
+            make_spd_translation_free_4x3_blocked(H12x12);  // K16: block-assembled K7 projection
+        else if(reduced_spd)
             make_spd_translation_free_4x3(H12x12);  // K7: 9x9 eigen-solve
         else
             make_spd(H12x12);
@@ -251,11 +254,16 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
     // perf/kernels (K7): translation-free 9x9 PSD projection of the hinge
     // Hessian (UIPC_DAHL_REDUCED_SPD=0 restores the 12x12 eigen-solve)
     bool m_reduced_spd = true;
+    // perf/kernels (K16): K7 projection assembled from 3x3 blocks
+    // (UIPC_DAHL_BLOCKED_PROJ=0 = the dense 12x9 basis products)
+    bool m_blocked_proj = true;
 
     virtual void do_build(BuildInfo& info) override
     {
         const char* e  = std::getenv("UIPC_DAHL_REDUCED_SPD");
         m_reduced_spd  = !(e && e[0] == '0');
+        const char* b  = std::getenv("UIPC_DAHL_BLOCKED_PROJ");
+        m_blocked_proj = !(b && b[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -497,6 +505,7 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
                 info.dt(),
                 info.gradient_only(),
                 m_reduced_spd,
+                m_blocked_proj,
                 n);
         }
     }
