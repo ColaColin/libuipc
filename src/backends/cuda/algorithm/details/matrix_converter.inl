@@ -44,8 +44,8 @@ namespace
         auto hash      = ij_hash(i);
         auto row_index = static_cast<int>(hash / cols);
         auto col_index = static_cast<int>(hash - static_cast<uint64_t>(row_index) * cols);
-        ij_pairs(i).x  = row_index;
-        ij_pairs(i).y  = col_index;
+        ij_pairs(i).x = row_index;
+        ij_pairs(i).y = col_index;
     }
 
     // MatrixConverter::_radix_sort_indices_and_blocks(from, to) #3: sort the block values
@@ -62,9 +62,9 @@ namespace
         if(i >= n)
             return;
         const MatrixConverterBlockT<T, N>* __restrict__ src = src_blocks.data();
-        const int* __restrict__           perm            = sort_index.data();
-        MatrixConverterBlockT<T, N>* __restrict__ dst     = dst_blocks.data();
-        dst[i] = src[perm[i]];
+        const int* __restrict__ perm                        = sort_index.data();
+        MatrixConverterBlockT<T, N>* __restrict__ dst       = dst_blocks.data();
+        dst[i]                                              = src[perm[i]];
     }
 
     // MatrixConverter::_radix_sort_indices_and_blocks(to) #1: hash ij
@@ -115,14 +115,14 @@ namespace
         if(i >= n)
             return;
         const MatrixConverterBlockT<T, N>* __restrict__ src = src_blocks.data();
-        const int* __restrict__           perm            = sort_index.data();
-        const MatrixConverterIntPair* __restrict__ ij     = ij_pairs.data();
-        int* __restrict__                  row             = dst_row.data();
-        int* __restrict__                  col             = dst_col.data();
-        MatrixConverterBlockT<T, N>* __restrict__ dst      = dst_blocks.data();
-        dst[i] = src[perm[i]];
-        row[i] = ij[i].x;
-        col[i] = ij[i].y;
+        const int* __restrict__ perm                        = sort_index.data();
+        const MatrixConverterIntPair* __restrict__ ij       = ij_pairs.data();
+        int* __restrict__ row                               = dst_row.data();
+        int* __restrict__ col                               = dst_col.data();
+        MatrixConverterBlockT<T, N>* __restrict__ dst       = dst_blocks.data();
+        dst[i]                                              = src[perm[i]];
+        row[i]                                              = ij[i].x;
+        col[i]                                              = ij[i].y;
     }
 
     // MatrixConverter::_make_unique_indices(triplet -> bcoo) #1
@@ -266,17 +266,17 @@ namespace
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
             return;
-        const int* __restrict__ row          = row_indices.data();
-        const int* __restrict__ col          = col_indices.data();
-        MatrixConverterIntPair* __restrict__ ij    = ij_pairs.data();
+        const int* __restrict__ row             = row_indices.data();
+        const int* __restrict__ col             = col_indices.data();
+        MatrixConverterIntPair* __restrict__ ij = ij_pairs.data();
         const MatrixConverterBlockT<T, N>* __restrict__ src = blocks.data();
         MatrixConverterBlockT<T, N>* __restrict__ dst       = block_temp.data();
-        int* __restrict__ cnt                       = counts.data();
+        int* __restrict__ cnt                               = counts.data();
 
-        cnt[i]    = row[i] <= col[i] ? 1 : 0;
-        ij[i].x   = row[i];
-        ij[i].y   = col[i];
-        dst[i]    = src[i];
+        cnt[i]  = row[i] <= col[i] ? 1 : 0;
+        ij[i].x = row[i];
+        ij[i].y = col[i];
+        dst[i]  = src[i];
     }
 
     // MatrixConverter::ge2sym(triplet) #2: compact the upper triangular part
@@ -295,11 +295,11 @@ namespace
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
             return;
-        MatrixConverterBlockT<T, N>* __restrict__ dst = dst_blocks.data();
+        MatrixConverterBlockT<T, N>* __restrict__ dst       = dst_blocks.data();
         const MatrixConverterBlockT<T, N>* __restrict__ src = src_blocks.data();
-        const MatrixConverterIntPair* __restrict__ ij = ij_pairs.data();
-        int* __restrict__ row                          = row_indices.data();
-        int* __restrict__ col                          = col_indices.data();
+        const MatrixConverterIntPair* __restrict__ ij       = ij_pairs.data();
+        int* __restrict__ row = row_indices.data();
+        int* __restrict__ col = col_indices.data();
 
         auto count  = counts(i);
         auto offset = offsets(i);
@@ -679,7 +679,8 @@ void MatrixConverter<T, N>::_radix_sort_indices_and_segments(
                                 segments_sorted.data(),
                                 src_indices.size(),
                                 0,
-                                matrix_converter_key_bits(static_cast<uint64_t>(from.count() > 0 ? from.count() - 1 : 0)));
+                                matrix_converter_key_bits(static_cast<uint64_t>(
+                                    from.count() > 0 ? from.count() - 1 : 0)));
 }
 
 template <typename T, int N>

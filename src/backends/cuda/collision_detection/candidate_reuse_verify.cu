@@ -63,26 +63,25 @@ void InfoStacklessBVHSimplexTrajectoryFilter::reuse_candidates_snapshot() noexce
     download(I.candidate_AllP_AllT_pairs, I.reuse_snapshots[3]);
 }
 
-SizeT InfoStacklessBVHSimplexTrajectoryFilter::reuse_candidates_verify(
-    SizeT frame, SizeT newton_iter) noexcept
+SizeT InfoStacklessBVHSimplexTrajectoryFilter::reuse_candidates_verify(SizeT frame, SizeT newton_iter) noexcept
 {
     auto& I = m_impl;
 
-    InfoStacklessBVH::QueryBuffer* qbs[4] = {&I.candidate_AllP_CodimP_pairs,
-                                             &I.candidate_CodimP_AllE_pairs,
-                                             &I.candidate_AllE_AllE_pairs,
-                                             &I.candidate_AllP_AllT_pairs};
-    const char* names[4]                  = {"PP", "PE", "EE", "PT"};
+    InfoStacklessBVH::QueryBuffer* qbs[4]   = {&I.candidate_AllP_CodimP_pairs,
+                                               &I.candidate_CodimP_AllE_pairs,
+                                               &I.candidate_AllE_AllE_pairs,
+                                               &I.candidate_AllP_AllT_pairs};
+    const char*                    names[4] = {"PP", "PE", "EE", "PT"};
 
-    SizeT     total_reused  = 0;
-    SizeT     total_fresh   = 0;
-    SizeT     total_missing = 0;
+    SizeT       total_reused  = 0;
+    SizeT       total_fresh   = 0;
+    SizeT       total_missing = 0;
     std::string per_type;
 
     for(int t = 0; t < 4; ++t)
     {
-        auto&                     snap = I.reuse_snapshots[t];
-        InfoStacklessBVH::QueryBuffer* q   = qbs[t];
+        auto&                          snap = I.reuse_snapshots[t];
+        InfoStacklessBVH::QueryBuffer* q    = qbs[t];
 
         std::vector<Vector2i> fresh;
         download(*q, fresh);
@@ -113,13 +112,14 @@ SizeT InfoStacklessBVHSimplexTrajectoryFilter::reuse_candidates_verify(
 
         if(missing > 0)
         {
-            logger::error("[DCDReuseVerify] VIOLATION f={} k={} type={} pair=({},{}) "
-                          "is in the fresh DCD set but not in the reused one",
-                          frame,
-                          newton_iter,
-                          names[t],
-                          first_missing(0),
-                          first_missing(1));
+            logger::error(
+                "[DCDReuseVerify] VIOLATION f={} k={} type={} pair=({},{}) "
+                "is in the fresh DCD set but not in the reused one",
+                frame,
+                newton_iter,
+                names[t],
+                first_missing(0),
+                first_missing(1));
         }
 
         // Restore the reused set so the verification pass leaves the pipeline

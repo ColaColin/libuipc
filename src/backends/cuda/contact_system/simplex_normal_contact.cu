@@ -40,7 +40,7 @@ void SimplexNormalContact::do_report_energy_extent(GlobalContactManager::EnergyE
 
 void SimplexNormalContact::do_compute_energy(GlobalContactManager::EnergyInfo& info)
 {
-    Timer timer{"Contact Normal E"};  // perf/kernels diag
+    Timer      timer{"Contact Normal E"};  // perf/kernels diag
     EnergyInfo this_info{&m_impl};
 
     auto energies = info.energies();
@@ -98,7 +98,7 @@ void SimplexNormalContact::do_report_gradient_hessian_extent(GlobalContactManage
 
 void SimplexNormalContact::do_assemble(GlobalContactManager::GradientHessianInfo& info)
 {
-    Timer timer{"Contact Normal G/H"};  // perf/kernels diag
+    Timer       timer{"Contact Normal G/H"};  // perf/kernels diag
     ContactInfo this_info{&m_impl};
     this_info.m_gradient_only = info.gradient_only();
     // gradient

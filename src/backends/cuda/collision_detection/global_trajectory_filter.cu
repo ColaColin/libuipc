@@ -98,9 +98,10 @@ void GlobalTrajectoryFilter::snapshot_reused_candidates()
         if(auto bvh = dynamic_cast<InfoStacklessBVHSimplexTrajectoryFilter*>(filter))
             bvh->reuse_candidates_snapshot();
         else if(auto simplex = dynamic_cast<SimplexTrajectoryFilter*>(filter))
-            logger::warn("[dcd_candidate_reuse_verify] filter '{}' does not "
-                         "support candidate-set verification; skipping",
-                         simplex->name());
+            logger::warn(
+                "[dcd_candidate_reuse_verify] filter '{}' does not "
+                "support candidate-set verification; skipping",
+                simplex->name());
     }
 }
 

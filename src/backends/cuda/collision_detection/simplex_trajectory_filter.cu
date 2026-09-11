@@ -73,12 +73,11 @@ void SimplexTrajectoryFilter::do_build()
     m_impl.global_body_manager    = require<GlobalBodyManager>();
     const auto constitution =
         world().scene().config().find<std::string>("contact/constitution")->view()[0];
-    m_impl.toi_safety_margin       = constitution == "al-ipc" ? 0.001 : 0.1;
+    m_impl.toi_safety_margin = constitution == "al-ipc" ? 0.001 : 0.1;
 
     // DIAGNOSTIC: per-pair candidate dump switch (default off)
     m_impl.candidate_dump_on =
-        world().scene().config().find<IndexT>("extras/debug/dump_candidates")->view()[0]
-        != 0;
+        world().scene().config().find<IndexT>("extras/debug/dump_candidates")->view()[0] != 0;
 
     auto& global_trajectory_filter = require<GlobalTrajectoryFilter>();
 

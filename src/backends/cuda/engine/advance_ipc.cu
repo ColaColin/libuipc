@@ -30,8 +30,9 @@ void SimEngine::advance()
     const bool dcd_candidate_reuse = m_candidate_reuse_oracle->view()[0] != 0;
     if(dcd_candidate_reuse && m_current_frame == 0)  // announce once per run
     {
-        logger::warn("[candidate_reuse_oracle] ACTIVE: DCD re-detection is "
-                     "skipped for newton_iter > 0 (diagnostic only)");
+        logger::warn(
+            "[candidate_reuse_oracle] ACTIVE: DCD re-detection is "
+            "skipped for newton_iter > 0 (diagnostic only)");
     }
 
     // ---- FEATURE: certified DCD candidate reuse
@@ -61,14 +62,16 @@ void SimEngine::advance()
     const bool certified_candidate_reuse = m_dcd_candidate_reuse->view()[0] != 0;
     if(certified_candidate_reuse && m_current_frame == 0)
     {
-        logger::info("[dcd_candidate_reuse] ACTIVE: newton_iter > 0 reuses the "
-                     "certified trajectory candidate set");
+        logger::info(
+            "[dcd_candidate_reuse] ACTIVE: newton_iter > 0 reuses the "
+            "certified trajectory candidate set");
     }
     const bool reuse_candidates = dcd_candidate_reuse || certified_candidate_reuse;
     // [dcd_candidate_reuse_verify] re-run the fresh DCD detection at every
     // reused iteration and check the certification invariant (fresh set
     // contained in reused set) on the host; default off, costly.
-    const bool reuse_verify = reuse_candidates && m_dcd_candidate_reuse_verify->view()[0] != 0;
+    const bool reuse_verify =
+        reuse_candidates && m_dcd_candidate_reuse_verify->view()[0] != 0;
     // [warm_start_oracle == 2] replay the captured frame-t positions as the
     // initial Newton iterate of frame t: the ceiling of a perfect learned
     // warm start. Changes the trajectory by construction.
@@ -89,8 +92,7 @@ void SimEngine::advance()
             // DIAGNOSTIC (extras/debug/dump_candidates): per-pair candidate
             // dump; no-op unless the flag is set.
             if(m_dump_candidates->view()[0])
-                m_global_trajectory_filter->dump_dcd_candidates(m_current_frame,
-                                                                newton_iter);
+                m_global_trajectory_filter->dump_dcd_candidates(m_current_frame, newton_iter);
         }
     };
 
@@ -462,8 +464,7 @@ void SimEngine::advance()
                     // containment on the host, restore the reused set.
                     m_global_trajectory_filter->snapshot_reused_candidates();
                     m_global_trajectory_filter->detect(0.0);
-                    m_global_trajectory_filter->verify_reused_candidates(m_current_frame,
-                                                                          newton_iter);
+                    m_global_trajectory_filter->verify_reused_candidates(m_current_frame, newton_iter);
                 }
 
 

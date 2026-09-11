@@ -322,12 +322,14 @@ namespace
                 else
                 {
                     Matrix12x12 H;
-                    PT_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
+                    PT_barrier_gradient_hessian(
+                        G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
                     PT_barrier_make_spd(H, flag, P, T0, T1, T2);
                     DoubletVectorAssembler DVA{PT_Gs};
                     DVA.segment<4>(i * 4).write(PT, G);
                     TripletMatrixAssembler TMA{PT_Hs};
-                    TMA.half_block<4>(i * SimplexNormalContact::PTHalfHessianSize).write(PT, H);
+                    TMA.half_block<4>(i * SimplexNormalContact::PTHalfHessianSize)
+                        .write(PT, H);
                 }
                 return;
             }
@@ -383,7 +385,8 @@ namespace
                     DoubletVectorAssembler DVA{EE_Gs};
                     DVA.segment<4>(i * 4).write(EE, G);
                     TripletMatrixAssembler TMA{EE_Hs};
-                    TMA.half_block<4>(i * SimplexNormalContact::EEHalfHessianSize).write(EE, H);
+                    TMA.half_block<4>(i * SimplexNormalContact::EEHalfHessianSize)
+                        .write(EE, H);
                 }
                 return;
             }
@@ -401,8 +404,8 @@ namespace
                 const auto& E0 = Ps(PE[1]);
                 const auto& E1 = Ps(PE[2]);
 
-                Float thickness =
-                    PE_thickness(thicknesses(PE(0)), thicknesses(PE(1)), thicknesses(PE(2)));
+                Float thickness = PE_thickness(
+                    thicknesses(PE(0)), thicknesses(PE(1)), thicknesses(PE(2)));
                 Float d_hat = PE_d_hat(d_hats(PE(0)), d_hats(PE(1)), d_hats(PE(2)));
                 Vector3i flag = distance::point_edge_distance_flag(P, E0, E1);
 
@@ -421,7 +424,8 @@ namespace
                     DoubletVectorAssembler DVA{PE_Gs};
                     DVA.segment<3>(i * 3).write(PE, G);
                     TripletMatrixAssembler TMA{PE_Hs};
-                    TMA.half_block<3>(i * SimplexNormalContact::PEHalfHessianSize).write(PE, H);
+                    TMA.half_block<3>(i * SimplexNormalContact::PEHalfHessianSize)
+                        .write(PE, H);
                 }
                 return;
             }
@@ -454,7 +458,8 @@ namespace
                     DoubletVectorAssembler DVA{PP_Gs};
                     DVA.segment<2>(i * 2).write(PP, G);
                     TripletMatrixAssembler TMA{PP_Hs};
-                    TMA.half_block<2>(i * SimplexNormalContact::PPHalfHessianSize).write(PP, H);
+                    TMA.half_block<2>(i * SimplexNormalContact::PPHalfHessianSize)
+                        .write(PP, H);
                 }
             }
         }
@@ -476,13 +481,13 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // stream, so the rare expensive pairs overlap the bulk instead of
     // serialising behind it. UIPC_CONTACT_SPLIT=0 restores the fused
     // launch, =1 runs the two launches back to back on the default stream.
-    int          m_split       = 2;
+    int m_split = 2;
     // perf/kernels (K10): EE Hessian PSD projection on the translation-free
     // 9x9 subspace (UIPC_EE_REDUCED_SPD=0 restores the 12x12 eigen-solve)
     bool         m_ee_reduced_spd = true;
-    cudaStream_t m_side_stream = nullptr;
-    cudaEvent_t  m_fork        = nullptr;
-    cudaEvent_t  m_join        = nullptr;
+    cudaStream_t m_side_stream    = nullptr;
+    cudaEvent_t  m_fork           = nullptr;
+    cudaEvent_t  m_join           = nullptr;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -494,8 +499,7 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             m_ee_reduced_spd = !(e[0] == '0');
         if(m_split == 2)
         {
-            CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream,
-                                                      cudaStreamNonBlocking));
+            CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream, cudaStreamNonBlocking));
             CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_fork, cudaEventDisableTiming));
             CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_join, cudaEventDisableTiming));
         }
@@ -641,8 +645,7 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             {
                 // gradient-only is lean already (144 registers); a single
                 // non-empty part needs no split either
-                launch.operator()<GradientOnly, 0>(
-                    ee_offset, pe_offset, pp_offset, total, nullptr);
+                launch.operator()<GradientOnly, 0>(ee_offset, pe_offset, pp_offset, total, nullptr);
                 return;
             }
             cudaStream_t side = nullptr;
@@ -652,8 +655,7 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 CUDA_TOOL_CHECK(cudaEventRecord(m_fork, nullptr));
                 CUDA_TOOL_CHECK(cudaStreamWaitEvent(side, m_fork, 0));
             }
-            launch.operator()<GradientOnly, 1>(
-                pt_count, n_ptee, n_ptee, n_ptee, side);
+            launch.operator()<GradientOnly, 1>(pt_count, n_ptee, n_ptee, n_ptee, side);
             launch.operator()<GradientOnly, 2>(0, 0, pe_count, n_pepp, nullptr);
             if(m_split == 2)
             {

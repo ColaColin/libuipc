@@ -219,12 +219,12 @@ class GlobalVertexManager final : public SimSystem
         cuda_tool::DeviceBuffer<Vector3> displacements;
         cuda_tool::DeviceBuffer<Float>   displacement_norms;
 
-        cuda_tool::DeviceVar<Float>   axis_max_disp;
+        cuda_tool::DeviceVar<Float>    axis_max_disp;
         cuda_tool::DeviceBuffer<Float> abs_displacements;  // DIAG
-        cub::KeyValuePair<int, Float>  axis_arg_max{};      // DIAG host-side copy
-        cuda_tool::DeviceVar<Float>   max_disp_norm;
-        cuda_tool::DeviceVar<Vector3> min_pos;
-        cuda_tool::DeviceVar<Vector3> max_pos;
+        cub::KeyValuePair<int, Float>  axis_arg_max{};  // DIAG host-side copy
+        cuda_tool::DeviceVar<Float>    max_disp_norm;
+        cuda_tool::DeviceVar<Vector3>  min_pos;
+        cuda_tool::DeviceVar<Vector3>  max_pos;
 
 
         SimSystemSlot<GlobalTrajectoryFilter>   global_trajectory_filter;

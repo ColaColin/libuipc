@@ -508,10 +508,10 @@ namespace
             escape >>= 1;
             leaf.escape = escape + (b_leaf ? int_size : 0);
         }
-        leaf.bound             = _lvs_box(idx);
-        leaf.bid               = _lvs_bid(idx);
-        leaf.cid               = _lvs_cid(idx);
-        _nodes(idx + int_size) = leaf;
+        leaf.bound                    = _lvs_box(idx);
+        leaf.bid                      = _lvs_bid(idx);
+        leaf.cid                      = _lvs_cid(idx);
+        _nodes(idx + int_size)        = leaf;
         _node_range_y(idx + int_size) = idx;  // K11: a leaf is its own range
 
         if(idx >= int_size)
@@ -531,9 +531,9 @@ namespace
             ie >>= 1;
             n.escape = ie + (b_leaf ? int_size : 0);
         }
-        n.bid          = _int_bid(idx);
-        n.cid          = _int_cid(idx);
-        _nodes(new_id) = n;
+        n.bid                 = _int_bid(idx);
+        n.cid                 = _int_cid(idx);
+        _nodes(new_id)        = n;
         _node_range_y(new_id) = _int_range_y(idx);  // K11
     }
 
@@ -1024,7 +1024,8 @@ inline void InfoStacklessBVH::Impl::build(cuda_tool::CBufferView<AABB>   aabbs,
     calcIntNodeOrders(num_objs);
     // keep the leaf parents in build ids for refit() before they are remapped
     ext_par_orig.resize(num_objs);
-    cuda_tool::BufferLaunch().copy<uint32_t>(ext_par_orig.view(), std::as_const(ext_par).view());
+    cuda_tool::BufferLaunch().copy<uint32_t>(ext_par_orig.view(),
+                                             std::as_const(ext_par).view());
     updateBvhExtNodeLinks(num_objs);
     reorderNode(num_internal);
 }
@@ -1116,8 +1117,8 @@ inline InfoStacklessBVH::InfoStacklessBVH(cuda_tool::Stream& stream) noexcept
 {
     (void)stream;
     // perf/kernels (K11)
-    const char* e           = std::getenv("UIPC_BVH_SELF_RANGE_CULL");
-    m_impl.self_range_cull  = !(e && e[0] == '0');
+    const char* e          = std::getenv("UIPC_BVH_SELF_RANGE_CULL");
+    m_impl.self_range_cull = !(e && e[0] == '0');
 }
 
 inline void InfoStacklessBVH::QueryBuffer::build(cuda_tool::CBufferView<AABB> aabbs)

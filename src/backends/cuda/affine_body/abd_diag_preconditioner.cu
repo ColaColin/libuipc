@@ -68,8 +68,7 @@ class ABDDiagPreconditioner final : public LocalPreconditioner
             m_side = !(e[0] == '0');
         if(m_side)
         {
-            CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream,
-                                                      cudaStreamNonBlocking));
+            CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream, cudaStreamNonBlocking));
             CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_fork, cudaEventDisableTiming));
             CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_join, cudaEventDisableTiming));
         }

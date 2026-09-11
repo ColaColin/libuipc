@@ -1208,11 +1208,11 @@ void InfoStacklessBVHSimplexTrajectoryFilter::do_build(BuildInfo&)
     m_impl.selected_counts.resize(4);
 
     // perf/kernels: BVH refit for the per-iteration trajectory detects
-    const char* refit_env    = std::getenv("UIPC_BVH_REFIT");
-    m_impl.bvh_refit_enabled = !(refit_env && refit_env[0] == '0');
-    const char* verify_env   = std::getenv("UIPC_BVH_REFIT_VERIFY");
-    m_impl.bvh_refit_verify  = verify_env && verify_env[0] == '1';
-    const char* cull_verify_env    = std::getenv("UIPC_BVH_SELF_CULL_VERIFY");
+    const char* refit_env       = std::getenv("UIPC_BVH_REFIT");
+    m_impl.bvh_refit_enabled    = !(refit_env && refit_env[0] == '0');
+    const char* verify_env      = std::getenv("UIPC_BVH_REFIT_VERIFY");
+    m_impl.bvh_refit_verify     = verify_env && verify_env[0] == '1';
+    const char* cull_verify_env = std::getenv("UIPC_BVH_SELF_CULL_VERIFY");
     m_impl.bvh_self_cull_verify = cull_verify_env && cull_verify_env[0] == '1';
 }
 
@@ -1377,9 +1377,10 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
     // candidate set is the same (every pair of overlapping boxes is reported
     // by any valid tree), only the pair order may differ. A rebuild is forced
     // every `refit_rebuild_every` refits to bound the quality loss.
-    Timer build_timer{"BVH Build/Refit"};  // perf/kernels diag
-    const bool topo_ok = lbvh_E.can_refit(Es.size()) && lbvh_T.can_refit(Fs.size())
-                         && (codimVs.size() == 0 || lbvh_CodimP.can_refit(codimVs.size()));
+    Timer      build_timer{"BVH Build/Refit"};  // perf/kernels diag
+    const bool topo_ok =
+        lbvh_E.can_refit(Es.size()) && lbvh_T.can_refit(Fs.size())
+        && (codimVs.size() == 0 || lbvh_CodimP.can_refit(codimVs.size()));
     const bool do_refit = bvh_refit_enabled && topo_ok && alpha != 0.0
                           && refits_since_build < refit_rebuild_every;
     if(do_refit)
@@ -1534,7 +1535,9 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
             out.resize(v.size());
             if(v.size() > 0)
                 v.copy_to(out.data());
-            std::sort(out.begin(), out.end(), [](const Vector2i& a, const Vector2i& b)
+            std::sort(out.begin(),
+                      out.end(),
+                      [](const Vector2i& a, const Vector2i& b)
                       { return a.x() != b.x() ? a.x() < b.x() : a.y() < b.y(); });
             out.erase(std::unique(out.begin(), out.end()), out.end());
         };
@@ -1562,13 +1565,16 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
         if(cull_set != full_set)
         {
             logger::warn("BVH self cull verify [AllE-AllE] alpha={} : cull {} pairs, no-cull {} pairs",
-                         alpha, cull_set.size(), full_set.size());
+                         alpha,
+                         cull_set.size(),
+                         full_set.size());
             ++bvh_self_cull_verify_mismatches;
         }
         ++bvh_self_cull_verify_calls;
         if(bvh_self_cull_verify_calls % 200 == 0)
             logger::warn("BVH self cull verify: {} calls, {} set mismatches so far",
-                         bvh_self_cull_verify_calls, bvh_self_cull_verify_mismatches);
+                         bvh_self_cull_verify_calls,
+                         bvh_self_cull_verify_mismatches);
     }
 
     // DIAGNOSTIC (env UIPC_BVH_REFIT_VERIFY=1): after a refit, rebuild the
@@ -1588,8 +1594,11 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
                 out[k].resize(v.size());
                 if(v.size() > 0)
                     v.copy_to(out[k].data());
-                std::sort(out[k].begin(), out[k].end(), [](const Vector2i& a, const Vector2i& b)
-                          { return a.x() != b.x() ? a.x() < b.x() : a.y() < b.y(); });
+                std::sort(out[k].begin(),
+                          out[k].end(),
+                          [](const Vector2i& a, const Vector2i& b) {
+                              return a.x() != b.x() ? a.x() < b.x() : a.y() < b.y();
+                          });
                 out[k].erase(std::unique(out[k].begin(), out[k].end()), out[k].end());
             }
         };
@@ -1638,20 +1647,33 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
                 std::vector<Vector2i> only_refit, only_build;
                 auto cmp = [](const Vector2i& a, const Vector2i& b)
                 { return a.x() != b.x() ? a.x() < b.x() : a.y() < b.y(); };
-                std::set_difference(refit_sets[k].begin(), refit_sets[k].end(), build_sets[k].begin(),
-                                    build_sets[k].end(), std::back_inserter(only_refit), cmp);
-                std::set_difference(build_sets[k].begin(), build_sets[k].end(), refit_sets[k].begin(),
-                                    refit_sets[k].end(), std::back_inserter(only_build), cmp);
+                std::set_difference(refit_sets[k].begin(),
+                                    refit_sets[k].end(),
+                                    build_sets[k].begin(),
+                                    build_sets[k].end(),
+                                    std::back_inserter(only_refit),
+                                    cmp);
+                std::set_difference(build_sets[k].begin(),
+                                    build_sets[k].end(),
+                                    refit_sets[k].begin(),
+                                    refit_sets[k].end(),
+                                    std::back_inserter(only_build),
+                                    cmp);
                 logger::warn("BVH refit verify [{}] alpha={} : refit {} pairs, build {} pairs, only-refit {}, only-build {}",
-                             names[k], alpha, refit_sets[k].size(), build_sets[k].size(),
-                             only_refit.size(), only_build.size());
+                             names[k],
+                             alpha,
+                             refit_sets[k].size(),
+                             build_sets[k].size(),
+                             only_refit.size(),
+                             only_build.size());
                 ++bvh_refit_verify_mismatches;
             }
         }
         ++bvh_refit_verify_calls;
         if(bvh_refit_verify_calls % 200 == 0)
             logger::warn("BVH refit verify: {} calls, {} set mismatches so far",
-                         bvh_refit_verify_calls, bvh_refit_verify_mismatches);
+                         bvh_refit_verify_calls,
+                         bvh_refit_verify_mismatches);
     }
 }
 

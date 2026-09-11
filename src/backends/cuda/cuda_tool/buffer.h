@@ -361,7 +361,8 @@ class DeviceVector
             return (g >= 1.0 && g <= 4.0) ? g - 1.0 : 0.25;
         }();
         const size_t growth =
-            std::max(static_cast<size_t>(static_cast<double>(required) * extra), size_t{1});
+            std::max(static_cast<size_t>(static_cast<double>(required) * extra),
+                     size_t{1});
         if(required > std::numeric_limits<size_t>::max() - growth)
             throw std::length_error{"DeviceVector capacity overflow"};
         return required + growth;

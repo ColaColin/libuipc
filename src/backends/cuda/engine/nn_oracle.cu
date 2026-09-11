@@ -37,10 +37,10 @@ static std::string oracle_positions_path(const std::string& dir)
 // member, which is GlobalVertexManager's friend) hands us the Impl.
 static SizeT fem_vertex_offset(GlobalVertexManager::Impl& gvm, bool& found)
 {
-    auto reporters = gvm.vertex_reporters.view();
-    auto counts    = gvm.reporter_vertex_offsets_counts.counts();
-    SizeT offset   = 0;
-    found = false;
+    auto  reporters = gvm.vertex_reporters.view();
+    auto  counts    = gvm.reporter_vertex_offsets_counts.counts();
+    SizeT offset    = 0;
+    found           = false;
     for(SizeT i = 0; i < reporters.size(); ++i)
     {
         if(dynamic_cast<const FiniteElementVertexReporter*>(reporters[i]) != nullptr)
@@ -77,13 +77,13 @@ void SimEngine::init_warm_start_oracle()
         // a fresh run appends; report what was already on disk
         std::error_code ec;
         auto size = std::filesystem::file_size(oracle_positions_path(m_oracle_dir), ec);
-        m_oracle_frames =
-            ec ? 0 : size / (sizeof(Vector3) * m_oracle_vertex_count);
-        logger::warn("[warm_start_oracle] capture ACTIVE: {} vertices, {} "
-                     "existing records in {}",
-                     m_oracle_vertex_count,
-                     m_oracle_frames,
-                     oracle_positions_path(m_oracle_dir));
+        m_oracle_frames = ec ? 0 : size / (sizeof(Vector3) * m_oracle_vertex_count);
+        logger::warn(
+            "[warm_start_oracle] capture ACTIVE: {} vertices, {} "
+            "existing records in {}",
+            m_oracle_vertex_count,
+            m_oracle_frames,
+            oracle_positions_path(m_oracle_dir));
         return;
     }
 
@@ -95,8 +95,7 @@ void SimEngine::init_warm_start_oracle()
     }
 
     bool found_fem = false;
-    m_oracle_fem_offset =
-        fem_vertex_offset(m_global_vertex_manager->m_impl, found_fem);
+    m_oracle_fem_offset = fem_vertex_offset(m_global_vertex_manager->m_impl, found_fem);
     const SizeT fem_vertices = m_finite_element_method->xs().size();
     if(!found_fem || m_oracle_fem_offset + fem_vertices > m_oracle_vertex_count)
     {
@@ -123,16 +122,17 @@ void SimEngine::init_warm_start_oracle()
     const SizeT record = sizeof(Vector3) * m_oracle_vertex_count;
     if(bytes < 0 || static_cast<SizeT>(bytes) % record != 0)
     {
-        logger::error("[warm_start_oracle] {} has {} bytes, not a multiple of "
-                      "the {}-byte record of this scene; disabled.",
-                      oracle_positions_path(m_oracle_dir),
-                      static_cast<long long>(bytes),
-                      static_cast<long long>(record));
+        logger::error(
+            "[warm_start_oracle] {} has {} bytes, not a multiple of "
+            "the {}-byte record of this scene; disabled.",
+            oracle_positions_path(m_oracle_dir),
+            static_cast<long long>(bytes),
+            static_cast<long long>(record));
         return;
     }
 
-    m_oracle_frames   = static_cast<SizeT>(bytes) / record;
-    SizeT to_load     = m_oracle_frames * m_oracle_vertex_count;
+    m_oracle_frames = static_cast<SizeT>(bytes) / record;
+    SizeT to_load   = m_oracle_frames * m_oracle_vertex_count;
     m_oracle_host.resize(to_load);
     in.read(reinterpret_cast<char*>(m_oracle_host.data()),
             static_cast<std::streamsize>(to_load * sizeof(Vector3)));
@@ -144,13 +144,14 @@ void SimEngine::init_warm_start_oracle()
         return;
     }
 
-    logger::warn("[warm_start_oracle] replay ACTIVE: {} vertices (FEM block at "
-                 "{}, {}) x {} frames from {}",
-                 m_oracle_vertex_count,
-                 m_oracle_fem_offset,
-                 fem_vertices,
-                 m_oracle_frames,
-                 oracle_positions_path(m_oracle_dir));
+    logger::warn(
+        "[warm_start_oracle] replay ACTIVE: {} vertices (FEM block at "
+        "{}, {}) x {} frames from {}",
+        m_oracle_vertex_count,
+        m_oracle_fem_offset,
+        fem_vertices,
+        m_oracle_frames,
+        oracle_positions_path(m_oracle_dir));
 }
 
 void SimEngine::oracle_capture_frame()
@@ -169,15 +170,12 @@ void SimEngine::oracle_capture_frame()
         m_oracle_dir.clear();  // give up after the first failure
         return;
     }
-    const SizeT n = std::fwrite(m_oracle_frame.data(),
-                                sizeof(Vector3),
-                                m_oracle_frame.size(),
-                                f);
+    const SizeT n =
+        std::fwrite(m_oracle_frame.data(), sizeof(Vector3), m_oracle_frame.size(), f);
     std::fclose(f);
     if(n != m_oracle_frame.size())
     {
-        logger::error("[warm_start_oracle] short write on frame {}.",
-                      m_current_frame);
+        logger::error("[warm_start_oracle] short write on frame {}.", m_current_frame);
         m_oracle_dir.clear();
         return;
     }
@@ -192,14 +190,14 @@ void SimEngine::oracle_inject_frame()
     const SizeT idx = m_current_frame - 1;  // frame is 1-based
     if(idx >= m_oracle_frames)
     {
-        logger::warn("[warm_start_oracle] no record for frame {}; keeping the "
-                     "normal iterate.",
-                     m_current_frame);
+        logger::warn(
+            "[warm_start_oracle] no record for frame {}; keeping the "
+            "normal iterate.",
+            m_current_frame);
         return;
     }
 
-    const Vector3* src =
-        m_oracle_host.data() + idx * m_oracle_vertex_count;
+    const Vector3* src = m_oracle_host.data() + idx * m_oracle_vertex_count;
 
     // 1) FEM xs: the buffer the Newton loop actually iterates on (needs the
     //    mutable buffer; the public xs() accessor returns a read-only view).

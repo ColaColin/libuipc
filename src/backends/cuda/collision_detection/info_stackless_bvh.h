@@ -98,7 +98,7 @@ class InfoStacklessBVH
         bool  m_built   = false;
         SizeT m_built_n = 0;
         void  invalidate() noexcept { m_built = false; }
-        void build(cuda_tool::CBufferView<AABB> aabbs);
+        void  build(cuda_tool::CBufferView<AABB> aabbs);
     };
 
     struct Node
@@ -251,9 +251,9 @@ class InfoStacklessBVH
         cuda_tool::DeviceVector<Node>     nodes;
         // perf/kernels (K11): last leaf (sorted position) under each node,
         // indexed like `nodes`; leaves map to their own position
-        cuda_tool::DeviceVector<int>      node_range_y;
-        bool                              self_range_cull = true;
-        Config                            config;
+        cuda_tool::DeviceVector<int> node_range_y;
+        bool                         self_range_cull = true;
+        Config                       config;
     };
 
   private:

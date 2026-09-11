@@ -323,10 +323,7 @@ static SceneConfigContract make_scene_config_contract()
              {"buildOption", "UIPC_WITH_CUDA_LEGACY_COLLISION"},
              {"enabled", legacy_collision_built},
              {"values",
-              Json::array({"info_stackless_bvh_v0",
-                           "stackless_bvh",
-                           "linear_bvh",
-                           "lbvh"})}};
+              Json::array({"info_stackless_bvh_v0", "stackless_bvh", "linear_bvh", "lbvh"})}};
     add("collision_detection/dcd_candidate_reuse",
         IndexT{1},
         "integer",

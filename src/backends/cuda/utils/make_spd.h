@@ -34,9 +34,9 @@ UIPC_GENERIC void make_spd(Matrix<Float, N, N>& H)
 // the hinge kernel. Same math, different summation order (rounding-level).
 inline UIPC_GENERIC void make_spd_translation_free_4x3_blocked(Matrix12x12& H)
 {
-    constexpr Float r2  = 0.70710678118654752440;
-    constexpr Float r6  = 0.40824829046386301637;
-    constexpr Float r12 = 0.28867513459481288225;
+    constexpr Float r2      = 0.70710678118654752440;
+    constexpr Float r6      = 0.40824829046386301637;
+    constexpr Float r12     = 0.28867513459481288225;
     constexpr Float h[3][4] = {{r2, -r2, 0.0, 0.0},
                                {r6, r6, -2.0 * r6, 0.0},
                                {r12, r12, r12, -3.0 * r12}};
@@ -74,13 +74,13 @@ inline UIPC_GENERIC void make_spd_translation_free_4x3_blocked(Matrix12x12& H)
 inline UIPC_GENERIC void make_spd_translation_free_4x3(Matrix12x12& H)
 {
     // Helmert rows: orthonormal, each orthogonal to (1,1,1,1)
-    constexpr Float r2 = 0.70710678118654752440;   // 1/sqrt(2)
-    constexpr Float r6 = 0.40824829046386301637;   // 1/sqrt(6)
-    constexpr Float r12 = 0.28867513459481288225;  // 1/sqrt(12)
-    constexpr Float h[3][4] = {{r2, -r2, 0.0, 0.0},
-                               {r6, r6, -2.0 * r6, 0.0},
-                               {r12, r12, r12, -3.0 * r12}};
-    Eigen::Matrix<Float, 12, 9> Q = Eigen::Matrix<Float, 12, 9>::Zero();
+    constexpr Float             r2      = 0.70710678118654752440;  // 1/sqrt(2)
+    constexpr Float             r6      = 0.40824829046386301637;  // 1/sqrt(6)
+    constexpr Float             r12     = 0.28867513459481288225;  // 1/sqrt(12)
+    constexpr Float             h[3][4] = {{r2, -r2, 0.0, 0.0},
+                                           {r6, r6, -2.0 * r6, 0.0},
+                                           {r12, r12, r12, -3.0 * r12}};
+    Eigen::Matrix<Float, 12, 9> Q       = Eigen::Matrix<Float, 12, 9>::Zero();
     for(int j = 0; j < 3; ++j)
         for(int a = 0; a < 4; ++a)
             for(int k = 0; k < 3; ++k)

@@ -532,7 +532,7 @@ namespace sym::codim_ipc_simplex_contact
         Vector3 nh = gap.normalized();
 
         //tex: $$ \text{any orthonormal tangent frame } (t_1, t_2) \perp \hat n$$
-        Vector3 a  = Vector3(1.0, 0.0, 0.0);
+        Vector3 a = Vector3(1.0, 0.0, 0.0);
         if(std::abs(nh[0]) >= Float(0.9))
             a = Vector3(0.0, 1.0, 0.0);
         Vector3 t1 = (a - nh.dot(a) * nh).normalized();
@@ -570,10 +570,10 @@ namespace sym::codim_ipc_simplex_contact
     // active vertex blocks at slots `act` are non-zero) to the (M+1)x(M+1)
     // eigenproblem carried by the basis Q of `barrier_range_basis`.
     template <int N, int M>
-    inline __device__ void make_spd_contact(Matrix<Float, N, N>&      H,
+    inline __device__ void make_spd_contact(Matrix<Float, N, N>&     H,
                                             const Vector<IndexT, M>& act,
-                                            const Vector<Float, M>&   s,
-                                            const Vector3&            gap)
+                                            const Vector<Float, M>&  s,
+                                            const Vector3&           gap)
     {
         constexpr int NM = 3 * M;
 
@@ -597,7 +597,7 @@ namespace sym::codim_ipc_simplex_contact
     }
 
     //tex: $$ \text{reduced } make\_spd \text{ of the PT barrier Hessian (12x12)}$$
-    inline __device__ void PT_barrier_make_spd(Matrix12x12&   H,
+    inline __device__ void PT_barrier_make_spd(Matrix12x12&    H,
                                                const Vector4i& flag,
                                                const Vector3&  P,
                                                const Vector3&  T0,
@@ -618,25 +618,25 @@ namespace sym::codim_ipc_simplex_contact
         else if(dim == 3)
         {
             //tex: $$ \text{closest point } E_0 + t (E_1 - E_0) \text{ on the active edge}$$
-            Vector3i act  = detail::pe_from_pt(flag);
-            Vector3  e    = X[act[2]] - X[act[1]];
-            Float    t    = (X[act[0]] - X[act[1]]).dot(e) / e.squaredNorm();
-            Vector3  s    = {1.0, t - 1.0, -t};
-            Vector3  gap  = X[act[0]] - (X[act[1]] + t * e);
+            Vector3i act = detail::pe_from_pt(flag);
+            Vector3  e   = X[act[2]] - X[act[1]];
+            Float    t   = (X[act[0]] - X[act[1]]).dot(e) / e.squaredNorm();
+            Vector3  s   = {1.0, t - 1.0, -t};
+            Vector3  gap = X[act[0]] - (X[act[1]] + t * e);
             make_spd_contact<12, 3>(H, act, s, gap);
         }
         else
         {
             //tex: $$ \text{plane projection } T_0 + u (T_1 - T_0) + v (T_2 - T_0)$$
-            Vector3 e1 = T1 - T0;
-            Vector3 e2 = T2 - T0;
-            Vector3 w  = P - T0;
-            Float   a  = e1.dot(e1);
-            Float   b  = e1.dot(e2);
-            Float   c  = e2.dot(e2);
-            Float   u  = (c * e1.dot(w) - b * e2.dot(w)) / (a * c - b * b);
-            Float   v  = (a * e2.dot(w) - b * e1.dot(w)) / (a * c - b * b);
-            Vector4 s   = {1.0, u + v - 1.0, -u, -v};
+            Vector3  e1  = T1 - T0;
+            Vector3  e2  = T2 - T0;
+            Vector3  w   = P - T0;
+            Float    a   = e1.dot(e1);
+            Float    b   = e1.dot(e2);
+            Float    c   = e2.dot(e2);
+            Float    u   = (c * e1.dot(w) - b * e2.dot(w)) / (a * c - b * b);
+            Float    v   = (a * e2.dot(w) - b * e1.dot(w)) / (a * c - b * b);
+            Vector4  s   = {1.0, u + v - 1.0, -u, -v};
             Vector4i act = {0, 1, 2, 3};
             make_spd_contact<12, 4>(H, act, s, w - u * e1 - v * e2);
         }
@@ -663,9 +663,9 @@ namespace sym::codim_ipc_simplex_contact
         else
         {
             //tex: $$ \text{closest point } E_0 + t (E_1 - E_0) \text{ on the edge}$$
-            Vector3 e   = E1 - E0;
-            Float   t   = (P - E0).dot(e) / e.squaredNorm();
-            Vector3 s   = {1.0, t - 1.0, -t};
+            Vector3  e   = E1 - E0;
+            Float    t   = (P - E0).dot(e) / e.squaredNorm();
+            Vector3  s   = {1.0, t - 1.0, -t};
             Vector3i act = {0, 1, 2};
             make_spd_contact<9, 3>(H, act, s, P - (E0 + t * e));
         }

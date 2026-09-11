@@ -745,18 +745,18 @@ namespace
 
         for(int row = 0; row < MAT_DIM; row++)
         {
-            int node_row = row / 3;
-            int node_col = col / 3;
+            int   node_row = row / 3;
+            int   node_col = col / 3;
             float v;
             if(node_col >= node_row)
             {
                 int si = sym_index(node_row, node_col);
-                v      = static_cast<float>(cluster_hess(mat_id).M[si](row % 3, col % 3));
+                v = static_cast<float>(cluster_hess(mat_id).M[si](row % 3, col % 3));
             }
             else
             {
                 int si = sym_index(node_col, node_row);
-                v      = static_cast<float>(cluster_hess(mat_id).M[si](col % 3, row % 3));
+                v = static_cast<float>(cluster_hess(mat_id).M[si](col % 3, row % 3));
             }
             s_mat(row, col) = v;
             if(row == col && v == 0.0f)
@@ -1397,10 +1397,8 @@ void MASPreconditionerEngine::set_preconditioner(cuda_tool::CBufferView<Eigen::M
     if(use_fill_kernel)
         cluster_hessians.view(0, num_cluster_blocks).fill(ClusterMatrixSym{});
     else
-        CUDA_TOOL_CHECK(cudaMemsetAsync(cluster_hessians.data(),
-                                        0,
-                                        sizeof(ClusterMatrixSym) * num_cluster_blocks,
-                                        nullptr));
+        CUDA_TOOL_CHECK(cudaMemsetAsync(
+            cluster_hessians.data(), 0, sizeof(ClusterMatrixSym) * num_cluster_blocks, nullptr));
 
     // Scatter BCOO Hessian blocks into cluster matrices
     scatter_hessian_to_clusters(triplet_values, row_ids, col_ids, dof_offset);

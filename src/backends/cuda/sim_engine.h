@@ -164,11 +164,11 @@ class SimEngine final : public backend::SimEngine
     CAS<IndexT> m_dcd_candidate_reuse_verify;
 
     // warm-start-oracle state (diagnostic only)
-    std::string                 m_oracle_dir;
-    std::vector<Vector3>        m_oracle_host;   // replay: all captured frames
-    std::vector<Vector3>        m_oracle_frame;  // capture/download staging
-    SizeT                       m_oracle_vertex_count = 0;
-    SizeT                       m_oracle_fem_offset   = 0;
-    SizeT                       m_oracle_frames = 0;
+    std::string          m_oracle_dir;
+    std::vector<Vector3> m_oracle_host;   // replay: all captured frames
+    std::vector<Vector3> m_oracle_frame;  // capture/download staging
+    SizeT                m_oracle_vertex_count = 0;
+    SizeT                m_oracle_fem_offset   = 0;
+    SizeT                m_oracle_frames       = 0;
 };
 }  // namespace uipc::backend::cuda

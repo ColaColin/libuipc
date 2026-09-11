@@ -108,21 +108,21 @@ namespace
         // kernel's register footprint small enough to avoid the
         // 1.7 KB/thread stack spill of the explicit 9x9 version.
         const Float J = F.determinant();
-        Matrix3x3    U, V;
-        Vector3      S;
+        Matrix3x3   U, V;
+        Vector3     S;
         math::qr_svd(F, S, U, V);
 
-        const Float evScale = lambda * (J - 1.0) - mu;
-        const Matrix3x3 sV  = V * Float(0.70710678118654752440);
+        const Float     evScale = lambda * (J - 1.0) - mu;
+        const Matrix3x3 sV      = V * Float(0.70710678118654752440);
 
         // stretch-block eigensystem (identical to SNH::ddEddF_spd's)
         Vector3   block_values;
         Matrix3x3 block_vectors;
         {
             Matrix3x3 A;
-            A(0, 0) = mu + lambda * S(1) * S(1) * S(2) * S(2);
-            A(1, 1) = mu + lambda * S(0) * S(0) * S(2) * S(2);
-            A(2, 2) = mu + lambda * S(0) * S(0) * S(1) * S(1);
+            A(0, 0)              = mu + lambda * S(1) * S(1) * S(2) * S(2);
+            A(1, 1)              = mu + lambda * S(0) * S(0) * S(2) * S(2);
+            A(2, 2)              = mu + lambda * S(0) * S(0) * S(1) * S(1);
             const Float evScale2 = lambda * (2.0 * J - 1.0) - mu;
             A(0, 1) = A(1, 0) = evScale2 * S(2);
             A(0, 2) = A(2, 0) = evScale2 * S(1);
@@ -136,7 +136,8 @@ namespace
         for(int i = 0; i < StencilSize; ++i)
 #pragma unroll
             for(int k = 0; k < 3; ++k)
-                sa[i][k] = sV(0, k) * shape_gradients(0, i) + sV(1, k) * shape_gradients(1, i)
+                sa[i][k] = sV(0, k) * shape_gradients(0, i)
+                           + sV(1, k) * shape_gradients(1, i)
                            + sV(2, k) * shape_gradients(2, i);
 
         // column pairs of the twist/flip eigenvectors (U.col(p2)*sV.col(p1)^T
@@ -162,8 +163,8 @@ namespace
 #pragma unroll
                 for(int m = 0; m < 3; ++m)
                 {
-                    const int p1 = TwistFlipPairs[m][0];
-                    const int p2 = TwistFlipPairs[m][1];
+                    const int     p1 = TwistFlipPairs[m][0];
+                    const int     p2 = TwistFlipPairs[m][1];
                     const Vector3 Up1{U(0, p1), U(1, p1), U(2, p1)};
                     const Vector3 Up2{U(0, p2), U(1, p2), U(2, p2)};
 #pragma unroll
@@ -172,9 +173,10 @@ namespace
                         Float l = (mu + (sgn ? -S(m) : S(m)) * evScale) * Vdt2;
                         if(l < 0.0)
                             l = 0.0;
-                        const Float s  = sgn ? 1.0 : -1.0;
+                        const Float s = sgn ? 1.0 : -1.0;
                         const Vector3 w_l = Up2 * sa[left][p1] + s * Up1 * sa[left][p2];
-                        const Vector3 w_r = Up2 * sa[right][p1] + s * Up1 * sa[right][p2];
+                        const Vector3 w_r =
+                            Up2 * sa[right][p1] + s * Up1 * sa[right][p2];
                         H += (l * w_l) * w_r.transpose();
                     }
                 }

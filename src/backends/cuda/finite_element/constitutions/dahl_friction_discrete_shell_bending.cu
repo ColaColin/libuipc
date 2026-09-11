@@ -146,7 +146,8 @@ namespace
 
         // one evaluation of the dihedral angle / friction response / angle
         // gradient for both G and H (bit-identical to dEdx + ddEddx)
-        DFDSB::dEdx_ddEddx(G12, H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit);
+        DFDSB::dEdx_ddEddx(
+            G12, H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit);
         G12 *= Vdt2;
         DoubletVectorAssembler DVA{G3s};
         DVA.segment<StencilSize>(I * StencilSize).write(stencil, G12);
@@ -346,10 +347,12 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
                     };
                     if(has_history)
                     {
-                        record.has_history  = true;
-                        record.theta_commit = theta_commit_attr->view()[stencil_info.edge_index];
-                        record.F_commit     = F_commit_attr->view()[stencil_info.edge_index];
-                        UIPC_ASSERT(std::isfinite(record.theta_commit) && std::isfinite(record.F_commit),
+                        record.has_history = true;
+                        record.theta_commit =
+                            theta_commit_attr->view()[stencil_info.edge_index];
+                        record.F_commit = F_commit_attr->view()[stencil_info.edge_index];
+                        UIPC_ASSERT(std::isfinite(record.theta_commit)
+                                        && std::isfinite(record.F_commit),
                                     "non-finite imported Dahl history on edge {}",
                                     stencil_info.edge_index);
                     }
@@ -411,9 +414,9 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
             h_theta_bars[i]         = theta_bar;
             h_saturation_moments[i] = h_moment_per_length[i] * L0;
             // imported history (dataset case) or fresh cloth (rest angle, F=0)
-            h_theta_commits[i]      = h_has_history[i] ? h_theta_commit_init[i] : theta_bar;
-            h_F_commits[i]          = h_has_history[i] ? h_F_commit_init[i] : 0.0;
-            h_V_bars[i]             = V_bar;
+            h_theta_commits[i] = h_has_history[i] ? h_theta_commit_init[i] : theta_bar;
+            h_F_commits[i] = h_has_history[i] ? h_F_commit_init[i] : 0.0;
+            h_V_bars[i]    = V_bar;
         }
 
         stencils.resize(h_stencils.size());

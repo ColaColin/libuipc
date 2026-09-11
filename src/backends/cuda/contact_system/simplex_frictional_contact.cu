@@ -48,7 +48,7 @@ void SimplexFrictionalContact::do_report_energy_extent(GlobalContactManager::Ene
 
 void SimplexFrictionalContact::do_compute_energy(GlobalContactManager::EnergyInfo& info)
 {
-    Timer timer{"Contact Friction E"};  // perf/kernels diag
+    Timer      timer{"Contact Friction E"};  // perf/kernels diag
     EnergyInfo this_info{&m_impl};
 
     auto energies = info.energies();
@@ -106,7 +106,7 @@ void SimplexFrictionalContact::do_report_gradient_hessian_extent(GlobalContactMa
 
 void SimplexFrictionalContact::do_assemble(GlobalContactManager::GradientHessianInfo& info)
 {
-    Timer timer{"Contact Friction G/H"};  // perf/kernels diag
+    Timer       timer{"Contact Friction G/H"};  // perf/kernels diag
     ContactInfo this_info{&m_impl};
     this_info.m_gradient_only = info.gradient_only();
     // gradient

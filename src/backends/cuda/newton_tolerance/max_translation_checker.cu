@@ -47,7 +47,7 @@ class MaxTranslationChecker : public NewtonToleranceChecker
         Float vel_tol = newton_velocity_tol;
         if(velocity_tol_relative > 0.0)
             vel_tol = velocity_tol_relative * vertex_manager->scene_diagonal();
-        abs_tol          = vel_tol * dt_attr->view()[0];
+        abs_tol = vel_tol * dt_attr->view()[0];
         // perf/kernels: the argmax variant runs an extra abs-components kernel
         // + ArgMax only to name the vertex in the info-level report; the plain
         // max-abs reduction yields the identical residual value.

@@ -45,14 +45,12 @@ namespace
     }
 
     __global__ void GlobalVertexManager_abs_components_kernel(
-        cuda_tool::CBufferView<Vector3> disp,
-        cuda_tool::BufferView<Float>    abs_disp,
-        int                             n)
+        cuda_tool::CBufferView<Vector3> disp, cuda_tool::BufferView<Float> abs_disp, int n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
             return;
-        Vector3 d = disp(i);
+        Vector3 d           = disp(i);
         abs_disp(i * 3 + 0) = std::abs(d[0]);
         abs_disp(i * 3 + 1) = std::abs(d[1]);
         abs_disp(i * 3 + 2) = std::abs(d[2]);

@@ -68,14 +68,14 @@ namespace
     }
 
     template <typename PairT>
-    void fill_common(CandidateRecord&            r,
-                     const PairT&                ids,
-                     const Vector3*              dxs,
-                     const Float*                d_hats,
-                     const Float*                thicknesses,
-                     const IndexT*               body_ids,
-                     SizeT                       n_prim_a,
-                     SizeT                       n_prim_b)
+    void fill_common(CandidateRecord& r,
+                     const PairT&     ids,
+                     const Vector3*   dxs,
+                     const Float*     d_hats,
+                     const Float*     thicknesses,
+                     const IndexT*    body_ids,
+                     SizeT            n_prim_a,
+                     SizeT            n_prim_b)
     {
         for(SizeT j = 0; j < 4; ++j)
             r.v[j] = j < SizeT(ids.size()) ? int32_t(ids[j]) : -1;
@@ -113,8 +113,9 @@ void SimplexTrajectoryFilter::Impl::dump_candidate_pairs(SizeT frame, SizeT newt
         const char* dir = std::getenv("UIPC_ORACLE_DIR");
         if(dir == nullptr || *dir == '\0')
         {
-            logger::error("[dump_candidates] extras/debug/dump_candidates is set "
-                          "but UIPC_ORACLE_DIR is empty; the dump is disabled.");
+            logger::error(
+                "[dump_candidates] extras/debug/dump_candidates is set "
+                "but UIPC_ORACLE_DIR is empty; the dump is disabled.");
             candidate_dump_on = false;
             return;
         }
@@ -131,9 +132,10 @@ void SimplexTrajectoryFilter::Impl::dump_candidate_pairs(SizeT frame, SizeT newt
         const int32_t header[4] = {
             CandidateDumpMagic, CandidateDumpVersion, CandidateDumpRecordBytes, 4};
         std::fwrite(header, sizeof(int32_t), 4, candidate_dump_file);
-        logger::warn("[dump_candidates] ACTIVE: writing per-pair candidates of every "
-                     "DCD detection to {} (diagnostic only, expect large files)",
-                     candidate_dump_path);
+        logger::warn(
+            "[dump_candidates] ACTIVE: writing per-pair candidates of every "
+            "DCD detection to {} (diagnostic only, expect large files)",
+            candidate_dump_path);
     }
 
     auto gvm = global_vertex_manager;
@@ -174,7 +176,8 @@ void SimplexTrajectoryFilter::Impl::dump_candidate_pairs(SizeT frame, SizeT newt
     {
         CandidateRecord r{};
         fill_common(r, PT, DX, d_hats.data(), thicknesses.data(), body_ids.data(), 1, 3);
-        Vector4i flag = distance::point_triangle_distance_flag(P[PT[0]], P[PT[1]], P[PT[2]], P[PT[3]]);
+        Vector4i flag = distance::point_triangle_distance_flag(
+            P[PT[0]], P[PT[1]], P[PT[2]], P[PT[3]]);
         Float D = 0.0;
         distance::point_triangle_distance2(flag, P[PT[0]], P[PT[1]], P[PT[2]], P[PT[3]], D);
         r.dist2 = float(D);
@@ -185,7 +188,8 @@ void SimplexTrajectoryFilter::Impl::dump_candidate_pairs(SizeT frame, SizeT newt
     {
         CandidateRecord r{};
         fill_common(r, EE, DX, d_hats.data(), thicknesses.data(), body_ids.data(), 2, 2);
-        Vector4i flag = distance::edge_edge_distance_flag(P[EE[0]], P[EE[1]], P[EE[2]], P[EE[3]]);
+        Vector4i flag =
+            distance::edge_edge_distance_flag(P[EE[0]], P[EE[1]], P[EE[2]], P[EE[3]]);
         Float D = 0.0;
         distance::edge_edge_distance2(flag, P[EE[0]], P[EE[1]], P[EE[2]], P[EE[3]], D);
         r.dist2 = float(D);
@@ -196,7 +200,8 @@ void SimplexTrajectoryFilter::Impl::dump_candidate_pairs(SizeT frame, SizeT newt
     {
         CandidateRecord r{};
         fill_common(r, PE, DX, d_hats.data(), thicknesses.data(), body_ids.data(), 1, 2);
-        Vector3i flag = distance::point_edge_distance_flag(P[PE[0]], P[PE[1]], P[PE[2]]);
+        Vector3i flag =
+            distance::point_edge_distance_flag(P[PE[0]], P[PE[1]], P[PE[2]]);
         Float D = 0.0;
         distance::point_edge_distance2(flag, P[PE[0]], P[PE[1]], P[PE[2]], D);
         r.dist2 = float(D);
