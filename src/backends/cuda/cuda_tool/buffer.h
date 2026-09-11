@@ -350,7 +350,18 @@ class DeviceVector
         if(required == 0)
             return 0;
 
-        const size_t growth = std::max(required / 2, size_t{1});
+        // perf/kernels (K19): growth headroom 1.25x instead of 1.5x — the
+        // per-iteration triplet/BCOO buffers otherwise carry up to 50 % (65 %
+        // with the dytopo manager's own 1.1x) of dead capacity at the peak.
+        // Capacity only; UIPC_BUFFER_GROWTH=1.5 restores the old policy.
+        static const double extra = []
+        {
+            const char* e = std::getenv("UIPC_BUFFER_GROWTH");
+            double      g = e ? std::atof(e) : 1.25;
+            return (g >= 1.0 && g <= 4.0) ? g - 1.0 : 0.25;
+        }();
+        const size_t growth =
+            std::max(static_cast<size_t>(static_cast<double>(required) * extra), size_t{1});
         if(required > std::numeric_limits<size_t>::max() - growth)
             throw std::length_error{"DeviceVector capacity overflow"};
         return required + growth;
