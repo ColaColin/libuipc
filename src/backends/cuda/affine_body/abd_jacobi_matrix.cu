@@ -54,54 +54,6 @@ UIPC_GENERIC Matrix3x12 ABDJacobi::to_mat() const
     return ret;
 }
 
-UIPC_GENERIC Matrix12x12 ABDJacobi::JT_H_J(const ABDJacobiT& lhs_J_T,
-                                           const Matrix3x3&  Hessian,
-                                           const ABDJacobi&  rhs_J)
-{
-    //tex:
-    //$$
-    //\begin{bmatrix}
-    //\mathbf{H} & \mathbf{c}_1\cdot\bar{\mathbf{y}}^{T} & \mathbf{c}_2\cdot\bar{\mathbf{y}}^{T} & \mathbf{c}_3\cdot\bar{\mathbf{y}}^{T}\\
-    //\bar{\mathbf{x}}\cdot\mathbf{r}_1 & H_{11}\cdot\bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T}  & H_{12}\cdot \bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T} & H_{13}\cdot \bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T}\\
-    //\bar{\mathbf{x}}\cdot\mathbf{r}_2 & H_{21}\cdot \bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T} & H_{22}\cdot \bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T} & H_{23}\cdot \bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T}\\
-    //\bar{\mathbf{x}}\cdot\mathbf{r}_3 & H_{31}\cdot \bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T} & H_{32}\cdot \bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T} & H_{33}\cdot \bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T}\\
-    //\end{bmatrix}
-    //$$
-
-    Matrix12x12 ret       = Matrix12x12::Zero();
-    auto        x         = lhs_J_T.J().x_bar();
-    auto        y         = rhs_J.x_bar();
-    ret.block<3, 3>(0, 0) = Hessian;
-
-    // Hessian Col * y
-    ret.block<3, 3>(0, 3) = Hessian.block<3, 1>(0, 0) * y.transpose();
-    ret.block<3, 3>(0, 6) = Hessian.block<3, 1>(0, 1) * y.transpose();
-    ret.block<3, 3>(0, 9) = Hessian.block<3, 1>(0, 2) * y.transpose();
-
-    // x * Hessian Row
-    ret.block<3, 3>(3, 0) = x * Hessian.block<1, 3>(0, 0);
-    ret.block<3, 3>(6, 0) = x * Hessian.block<1, 3>(1, 0);
-    ret.block<3, 3>(9, 0) = x * Hessian.block<1, 3>(2, 0);
-
-    Matrix3x3 x_y = x * y.transpose();
-
-    // kronecker product
-    //tex: $$ \mathbf{H} \otimes (\bar{\mathbf{x}}\cdot\bar{\mathbf{y}}^{T})$$
-    ret.block<3, 3>(3, 3) = x_y * Hessian(0, 0);
-    ret.block<3, 3>(3, 6) = x_y * Hessian(0, 1);
-    ret.block<3, 3>(3, 9) = x_y * Hessian(0, 2);
-
-    ret.block<3, 3>(6, 3) = x_y * Hessian(1, 0);
-    ret.block<3, 3>(6, 6) = x_y * Hessian(1, 1);
-    ret.block<3, 3>(6, 9) = x_y * Hessian(1, 2);
-
-    ret.block<3, 3>(9, 3) = x_y * Hessian(2, 0);
-    ret.block<3, 3>(9, 6) = x_y * Hessian(2, 1);
-    ret.block<3, 3>(9, 9) = x_y * Hessian(2, 2);
-
-    return ret;
-}
-
 UIPC_GENERIC Vector12 operator*(const ABDJacobiDyadicMass& JTJ, const Vector12& p)
 {
     Vector12    ret;
