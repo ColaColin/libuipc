@@ -1,0 +1,16 @@
+{
+ "id": 50602520,
+ "start_date_utc": "2026-09-11T14:41:00Z",
+ "elapsed_h": 1.173,
+ "dph_total": 0.42222222222222217,
+ "dph_base": 0.39999999999999997,
+ "storage_cost_per_h": 0.20000000000000004,
+ "est_cost_usd": 0.495,
+ "gpu": "RTX 5090",
+ "driver": "580.173.02",
+ "cpu": "AMD EPYC 7K62 48-Core Processor",
+ "image": "nvidia/cuda:12.8.1-devel-ubuntu24.04",
+ "host_id": 623333,
+ "machine_id": 145598,
+ "geolocation": "California, US"
+}

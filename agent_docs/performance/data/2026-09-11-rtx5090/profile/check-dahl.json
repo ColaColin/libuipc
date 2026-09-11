@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "baseline": "/work/results/profile/baseline-4d1f3f34.json",
+  "errors": [],
+  "benchmarks": {
+    "cube-wall-cloth": {
+      "passed": true,
+      "errors": [],
+      "environment_mismatches": [],
+      "metrics": {
+        "wall_time_ms_per_frame": {
+          "baseline": 109.52505462999397,
+          "actual": 90.56301436015929,
+          "limit": 120.47756009299339,
+          "unit": "ms/frame",
+          "regression_percent": -17.312970382798458,
+          "enforce": true,
+          "passed": true
+        },
+        "newton_iterations_median": {
+          "baseline": 5.0,
+          "actual": 4.0,
+          "limit": 5.5,
+          "unit": "iterations/frame",
+          "regression_percent": -20.0,
+          "enforce": false,
+          "passed": true
+        },
+        "line_search_trials_median": {
+          "baseline": 5.0,
+          "actual": 4.0,
+          "limit": 5.5,
+          "unit": "trials/frame",
+          "regression_percent": -20.0,
+          "enforce": false,
+          "passed": true
+        },
+        "linear_solver_iterations_median": {
+          "baseline": 170.0,
+          "actual": 162.5,
+          "limit": 187.00000000000003,
+          "unit": "iterations/frame",
+          "regression_percent": -4.411764705882353,
+          "enforce": false,
+          "passed": true
+        }
+      }
+    },
+    "mas-bunny": {
+      "passed": true,
+      "errors": [],
+      "environment_mismatches": [],
+      "metrics": {
+        "wall_time_ms_per_frame": {
+          "baseline": 51.78539798980637,
+          "actual": 45.30588827976317,
+          "limit": 56.963937788787014,
+          "unit": "ms/frame",
+          "regression_percent": -12.512233103467995,
+          "enforce": true,
+          "passed": true
+        },
+        "newton_iterations_median": {
+          "baseline": 5.0,
+          "actual": 5.0,
+          "limit": 5.5,
+          "unit": "iterations/frame",
+          "regression_percent": 0.0,
+          "enforce": false,
+          "passed": true
+        },
+        "line_search_trials_median": {
+          "baseline": 5.0,
+          "actual": 5.0,
+          "limit": 5.5,
+          "unit": "trials/frame",
+          "regression_percent": 0.0,
+          "enforce": false,
+          "passed": true
+        },
+        "linear_solver_iterations_median": {
+          "baseline": 370.0,
+          "actual": 370.0,
+          "limit": 407.00000000000006,
+          "unit": "iterations/frame",
+          "regression_percent": 0.0,
+          "enforce": false,
+          "passed": true
+        }
+      }
+    },
+    "rigid-wrecking-balls": {
+      "passed": true,
+      "errors": [],
+      "environment_mismatches": [],
+      "metrics": {
+        "wall_time_ms_per_frame": {
+          "baseline": 118.2317735672162,
+          "actual": 98.56056533341568,
+          "limit": 130.05495092393784,
+          "unit": "ms/frame",
+          "regression_percent": -16.637835702106923,
+          "enforce": true,
+          "passed": true
+        },
+        "newton_iterations_median": {
+          "baseline": 3.0,
+          "actual": 3.0,
+          "limit": 3.3000000000000003,
+          "unit": "iterations/frame",
+          "regression_percent": 0.0,
+          "enforce": false,
+          "passed": true
+        },
+        "line_search_trials_median": {
+          "baseline": 3.0,
+          "actual": 3.0,
+          "limit": 3.3000000000000003,
+          "unit": "trials/frame",
+          "regression_percent": 0.0,
+          "enforce": false,
+          "passed": true
+        },
+        "linear_solver_iterations_median": {
+          "baseline": 110.0,
+          "actual": 110.0,
+          "limit": 121.00000000000001,
+          "unit": "iterations/frame",
+          "regression_percent": 0.0,
+          "enforce": false,
+          "passed": true
+        }
+      }
+    },
+    "stiff-gipc-case2": {
+      "passed": true,
+      "errors": [],
+      "environment_mismatches": [],
+      "metrics": {
+        "wall_time_ms_per_frame": {
+          "baseline": 186.55560684012016,
+          "actual": 138.50215761183063,
+          "limit": 205.2111675241322,
+          "unit": "ms/frame",
+          "regression_percent": -25.758244441010973,
+          "enforce": true,
+          "passed": true
+        },
+        "newton_iterations_median": {
+          "baseline": 7.0,
+          "actual": 7.0,
+          "limit": 7.700000000000001,
+          "unit": "iterations/frame",
+          "regression_percent": 0.0,
+          "enforce": false,
+          "passed": true
+        },
+        "line_search_trials_median": {
+          "baseline": 7.0,
+          "actual": 7.0,
+          "limit": 7.700000000000001,
+          "unit": "trials/frame",
+          "regression_percent": 0.0,
+          "enforce": false,
+          "passed": true
+        },
+        "linear_solver_iterations_median": {
+          "baseline": 255.0,
+          "actual": 265.0,
+          "limit": 280.5,
+          "unit": "iterations/frame",
+          "regression_percent": 3.9215686274509802,
+          "enforce": false,
+          "passed": true
+        }
+      }
+    }
+  }
+}

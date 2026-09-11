@@ -1,0 +1,47 @@
+/work/results/tests/base_lbvh_1.log-/work/libuipc-base/apps/tests/backends/cuda/lbvh.cu:678
+/work/results/tests/base_lbvh_1.log-...............................................................................
+/work/results/tests/base_lbvh_1.log-
+/work/results/tests/base_lbvh_1.log:/work/libuipc-base/apps/tests/backends/cuda/lbvh.cu:255: FAILED:
+/work/results/tests/base_lbvh_1.log-  CHECK( diff.empty() )
+/work/results/tests/base_lbvh_1.log-with expansion:
+/work/results/tests/base_lbvh_1.log-  false
+/work/results/tests/base_lbvh_1.log-
+/work/results/tests/base_lbvh_1.log-test.size()=101802
+/work/results/tests/base_lbvh_1.log-ground_truth.size()=94728
+/work/results/tests/base_lbvh_1.log-diff:
+/work/results/tests/base_lbvh_1.log-0 7925
+/work/results/tests/base_lbvh_1.log-0 7932
+/work/results/tests/base_lbvh_1.log-0 7933
+/work/results/tests/base_lbvh_1.log-0 7943
+/work/results/tests/base_lbvh_1.log-0 7944
+--
+/work/results/tests/base_lbvh_2.log-/work/libuipc-base/apps/tests/backends/cuda/lbvh.cu:678
+/work/results/tests/base_lbvh_2.log-...............................................................................
+/work/results/tests/base_lbvh_2.log-
+/work/results/tests/base_lbvh_2.log:/work/libuipc-base/apps/tests/backends/cuda/lbvh.cu:255: FAILED:
+/work/results/tests/base_lbvh_2.log-  CHECK( diff.empty() )
+/work/results/tests/base_lbvh_2.log-with expansion:
+/work/results/tests/base_lbvh_2.log-  false
+/work/results/tests/base_lbvh_2.log-
+/work/results/tests/base_lbvh_2.log-test.size()=101802
+/work/results/tests/base_lbvh_2.log-ground_truth.size()=94728
+/work/results/tests/base_lbvh_2.log-diff:
+/work/results/tests/base_lbvh_2.log-0 7925
+/work/results/tests/base_lbvh_2.log-0 7932
+/work/results/tests/base_lbvh_2.log-0 7933
+/work/results/tests/base_lbvh_2.log-0 7943
+/work/results/tests/base_lbvh_2.log-0 7944
+--
+/work/results/tests/base_lbvh_3.log-/work/libuipc-base/apps/tests/backends/cuda/lbvh.cu:678
+/work/results/tests/base_lbvh_3.log-...............................................................................
+/work/results/tests/base_lbvh_3.log-
+/work/results/tests/base_lbvh_3.log:/work/libuipc-base/apps/tests/backends/cuda/lbvh.cu:255: FAILED:
+/work/results/tests/base_lbvh_3.log-  CHECK( diff.empty() )
+/work/results/tests/base_lbvh_3.log-with expansion:
+-rw-r--r-- 1 root root 903750 Sep 11 15:50 /work/tests_results.tgz
+NVIDIA GeForce RTX 5090, 580.173.02, 32607 MiB, 4, 16
+2304000 100000
+183565811712
+b3a954ec74508d8319df959a1e26269901b0cf802532d1fe5ccab5c3a7387b67  /work/libuipc-base/build/Release/bin/libuipc_backend_cuda.so
+4d3737b443a47f2b5535a9bee26d8137c65ae2c248365ebeec465f85d87273cb  /work/libuipc-dahl/build/Release/bin/libuipc_backend_cuda.so
+aeb61c1e6980ebec0b76d24d3ddb7e2b4fcfdd82a497b90ec2469c16e25d45e0  /work/libuipc-head/build/Release/bin/libuipc_backend_cuda.so

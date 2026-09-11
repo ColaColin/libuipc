@@ -1,0 +1,55 @@
+== base_lbvh_1.log
+===============================================================================
+test cases:  1 |  0 passed | 1 failed
+assertions: 72 | 71 passed | 1 failed
+
+== base_lbvh_2.log
+===============================================================================
+test cases:  1 |  0 passed | 1 failed
+assertions: 72 | 71 passed | 1 failed
+
+== base_lbvh_3.log
+===============================================================================
+test cases:  1 |  0 passed | 1 failed
+assertions: 72 | 71 passed | 1 failed
+
+== base_simcase_74_abd_revolute_joint_external_force.log
+[2026-09-11 15:49:58.223] [info] Cuda Backend Shutdown Success.
+===============================================================================
+All tests passed (401 assertions in 1 test case)
+
+== base_simcase_80_abd_revolute_joint_driving_and_external_torque.log
+(0|1)-(0|640):<warn>torque_to_F: affine matrix is near-singular (det=1.000000, row_norm_prod=1.000000); dropping joint torque
+===============================================================================
+All tests passed (1201 assertions in 1 test case)
+
+== head_lbvh_1.log
+                          *update_aabbs                   |     0.055808 ms |            1
+===============================================================================
+All tests passed (72 assertions in 1 test case)
+
+== head_lbvh_2.log
+===============================================================================
+test cases:  1 |  0 passed | 1 failed
+assertions: 72 | 71 passed | 1 failed
+
+== head_lbvh_3.log
+                          *update_aabbs                   |     0.047729 ms |            1
+===============================================================================
+All tests passed (72 assertions in 1 test case)
+
+== head_simcase_74_abd_revolute_joint_external_force.log
+[2026-09-11 15:49:00.338] [info] Cuda Backend Shutdown Success.
+===============================================================================
+All tests passed (401 assertions in 1 test case)
+
+== head_simcase_80_abd_revolute_joint_driving_and_external_torque.log
+(0|1)-(0|640):<warn>torque_to_F: affine matrix is near-singular (det=1.000000, row_norm_prod=1.000000); dropping joint torque
+===============================================================================
+All tests passed (1201 assertions in 1 test case)
+
+== tests.log
+assertions: 72 | 71 passed | 1 failed
+
+Build cuda_12.8.r12.8/compiler.35583870_0
+TESTS_DONE

@@ -22,6 +22,7 @@ when iteration counts change. Report both and state which is the primary signal.
 
 | Record | Status | Scope |
 |---|---|---|
+| [2026-09-11 RTX 5090 official benchmarks: main vs upstream](2026-09-11-rtx5090-official-benchmarks.md) | Measured (rented 5090, Linux, CUDA 12.8) | Four canonical `run_benchmark.py` scenes, 3 trees × 5 runs: main `df57bfb8` −21/−34/−17/−25 % ms/frame vs upstream `4d1f3f34` at equal Newton/PCG counts; raw records under `data/2026-09-11-rtx5090/` |
 | [2026-09-11 perf/kernels round 3](2026-09-11-perf-kernels-round3.md) | Accepted (K9–K13, K16, K18, K19), K14/K15/K17 rejected | Contact G+H split into two overlapped launches, EE reduced 9×9 PSD projection, BVH self-query subtree cull, MAS memset clear, ABD diag inverse on a side stream; cloth-dataset drum protocol on the 2070S: −6 / −12 / −8 % per Newton iteration vs 28136dc3, −20 / −21 / −19 % vs e1eed4b9 (five-run means) |
 | [2026-09-05 `lbvh` alias + broadphase methods](2026-09-05-lbvh-alias-broadphase-methods.md) | Alias accepted, default unchanged | `collision_detection/method="lbvh"` abort diagnosed (unknown enum value, not a kernel crash), alias fix, first `linear_bvh` measurement, 3-method 4-scene A/B, gates |
 | [2026-09-05 DCD candidate reuse](2026-09-05-dcd-candidate-reuse.md) | Accepted, flag default off | Certified reuse of the line-search swept candidate set across Newton iterations; containment proof, 4-scene A/B, accuracy gates |
