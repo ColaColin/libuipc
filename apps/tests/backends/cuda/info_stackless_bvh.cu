@@ -412,7 +412,11 @@ void run_internal_cull_proof_case()
                  h_leaf_pair_calls,
                  h_pairs);
 
-    CHECK(h_node_cull_calls == n);
+    // perf/kernels (K11): the self query skips subtrees whose last leaf (in
+    // sorted order) is <= the query's own position before any predicate runs,
+    // so the query at the last sorted position (no partner to its right)
+    // never reaches the root: n - 1 root visits, each culled by node_cull.
+    CHECK(h_node_cull_calls == n - 1);
     CHECK(h_leaf_pair_calls == 0);
     CHECK(h_pairs == 0);
 }
