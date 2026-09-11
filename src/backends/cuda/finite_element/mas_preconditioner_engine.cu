@@ -9,6 +9,7 @@
 #include <uipc/common/json.h>
 #include <fstream>
 #include <vector>
+#include <cstring>
 
 namespace uipc::backend::cuda
 {
@@ -457,6 +458,222 @@ namespace
         }
 
         coarse_table(idx) = ctable;
+    }
+
+
+    // ---- s08: warp-aggregated 3x3 FP64 atomic add --------------------------
+    // The scatter kernel below adds one 3x3 double block per (triplet, level)
+    // into cluster_hess.  At the coarse levels of the MAS hierarchy there are
+    // only a handful of clusters (bunny: 75 / 5 / 1 / 1 clusters at levels
+    // 1..4), so tens of thousands of threads hammer the same ~136 block
+    // addresses with 9 same-address FP64 atomics each.  Lanes of a warp that
+    // target the same destination block are combined first (MATCH.ANY +
+    // shuffle reduction, Westphal's peer reduction), so only one lane per
+    // distinct destination issues the 9 atomics.  Same set of additions,
+    // different summation order -> rounding-level (the old path was already
+    // nondeterministic through its atomics).
+    //
+    // Every lane of the warp must call this (a lane with nothing to add passes
+    // dst == nullptr); the collectives use the full warp mask.
+    __device__ inline void mas_warp_agg_atomic_add_3x3(double* dst, double v[9])
+    {
+        constexpr unsigned FULL = 0xffffffffu;
+
+        int lane = threadIdx.x & 31;
+        // Idle lanes get a per-lane unique key so that they do not form one
+        // large peer group and force extra reduction rounds.
+        unsigned long long key = dst ? reinterpret_cast<unsigned long long>(dst) :
+                                       (unsigned long long)(lane + 1);
+
+        unsigned peers = __match_any_sync(FULL, key);
+
+        int      rel_pos = __popc(peers & ((1u << lane) - 1u));
+        bool     leader  = (rel_pos == 0);
+        unsigned rest = peers & (0xfffffffeu << lane);  // strictly higher peers
+        int      counter = rel_pos;
+
+        while(__any_sync(FULL, rest != 0u))
+        {
+            int    next = __ffs(rest);  // 1-based lane index, 0 if none left
+            double t[9];
+#pragma unroll
+            for(int k = 0; k < 9; ++k)
+                t[k] = __shfl_sync(FULL, v[k], next - 1);
+            if(next)
+            {
+#pragma unroll
+                for(int k = 0; k < 9; ++k)
+                    v[k] += t[k];
+            }
+            unsigned done = (unsigned)(counter & 1);
+            rest &= ~__ballot_sync(FULL, done);
+            counter >>= 1;
+        }
+
+        if(dst && leader)
+        {
+#pragma unroll
+            for(int k = 0; k < 9; ++k)
+                atomicAdd(dst + k, v[k]);
+        }
+    }
+
+    // Warp-aggregated variant of the pass-1 scatter.  Structurally identical to
+    // the reference kernel below, but no lane ever returns early (an inactive
+    // lane carries dst == nullptr) so that the warp stays converged for the
+    // aggregation collectives.
+    __global__ void MASPreconditionerEngine_scatter_hessian_to_clusters_k1_agg_kernel(
+        int                                     offset,
+        int                                     level_num,
+        cuda_tool::CBufferView<int>             going_next,
+        cuda_tool::CBufferView<Int2>            level_size,
+        cuda_tool::BufferView<ClusterMatrixSym> cluster_hess,
+        cuda_tool::CBufferView<int>             real_to_part,
+        cuda_tool::CBufferView<Eigen::Matrix3d> triplet_values,
+        cuda_tool::CBufferView<int>             row_ids,
+        cuda_tool::CBufferView<int>             col_ids,
+        int                                     total_nodes,
+        int                                     n)
+    {
+        using namespace cuda_tool;
+
+        int I = blockIdx.x * blockDim.x + threadIdx.x;
+
+        bool            live     = (I < n);
+        int             row_real = 0, col_real = 0;
+        Eigen::Matrix3d H = Eigen::Matrix3d::Zero();
+
+        if(live)
+        {
+            row_real = row_ids(I) - offset;
+            col_real = col_ids(I) - offset;
+            H        = triplet_values(I);
+            if(row_real < 0 || row_real >= total_nodes || col_real < 0 || col_real >= total_nodes)
+                live = false;
+        }
+
+        int vert_row = -1, vert_col = -1;
+        if(live)
+        {
+            vert_col = real_to_part(col_real);
+            vert_row = real_to_part(row_real);
+            if(vert_col < 0 || vert_row < 0)
+                live = false;
+        }
+
+        const double* Hd = H.data();  // column major: (i,j) -> Hd[3*j + i]
+
+        // ---- level 0 ----
+        bool    fine_hit = live && (vert_col / BANKSIZE == vert_row / BANKSIZE);
+        double* dst      = nullptr;
+        double  v[9];
+#pragma unroll
+        for(int k = 0; k < 9; ++k)
+            v[k] = 0.0;
+
+        if(fine_hit)
+        {
+            int cluster_id = vert_col / BANKSIZE;
+            if(vert_col >= vert_row)
+            {
+                int si = sym_index(vert_row % BANKSIZE, vert_col % BANKSIZE);
+                dst    = cluster_hess(cluster_id).M[si].data();
+#pragma unroll
+                for(int k = 0; k < 9; ++k)
+                    v[k] = Hd[k];
+            }
+            else
+            {
+                int si = sym_index(vert_col % BANKSIZE, vert_row % BANKSIZE);
+                dst    = cluster_hess(cluster_id).M[si].data();
+#pragma unroll
+                for(int i = 0; i < 3; ++i)
+#pragma unroll
+                    for(int j = 0; j < 3; ++j)
+                        v[3 * j + i] = Hd[3 * i + j];  // H^T
+            }
+        }
+        mas_warp_agg_atomic_add_3x3(dst, v);
+
+        // ---- coarse levels ----
+        bool walk = live && !fine_hit;
+        for(int level = 1; level <= level_num - 1; ++level)
+        {
+            if(walk)
+            {
+                if(level == 1)
+                {
+                    vert_col = going_next(col_real);
+                    vert_row = going_next(row_real);
+                }
+                else
+                {
+                    vert_col = going_next(vert_col);
+                    vert_row = going_next(vert_row);
+                }
+                if(vert_col < 0 || vert_row < 0)
+                    walk = false;
+            }
+
+            if(walk)
+            {
+                UIPC_KERNEL_ASSERT(vert_col >= level_size(level).y
+                                       && vert_col < level_size(level + 1).y,
+                                   "scatter P1: vert_col=%d not in level %d [%d, %d)",
+                                   vert_col,
+                                   level,
+                                   level_size(level).y,
+                                   level_size(level + 1).y);
+                UIPC_KERNEL_ASSERT(vert_row >= level_size(level).y
+                                       && vert_row < level_size(level + 1).y,
+                                   "scatter P1: vert_row=%d not in level %d [%d, %d)",
+                                   vert_row,
+                                   level,
+                                   level_size(level).y,
+                                   level_size(level + 1).y);
+            }
+
+            double* ldst = nullptr;
+            double  lv[9];
+#pragma unroll
+            for(int k = 0; k < 9; ++k)
+                lv[k] = 0.0;
+
+            if(walk && vert_col / BANKSIZE == vert_row / BANKSIZE)
+            {
+                int cluster_id = vert_col / BANKSIZE;
+                if(vert_col >= vert_row)
+                {
+                    int si = sym_index(vert_row % BANKSIZE, vert_col % BANKSIZE);
+                    ldst = cluster_hess(cluster_id).M[si].data();
+                    if(vert_col == vert_row)
+                    {
+#pragma unroll
+                        for(int i = 0; i < 3; ++i)
+#pragma unroll
+                            for(int j = 0; j < 3; ++j)
+                                lv[3 * j + i] = Hd[3 * j + i] + Hd[3 * i + j];
+                    }
+                    else
+                    {
+#pragma unroll
+                        for(int k = 0; k < 9; ++k)
+                            lv[k] = Hd[k];
+                    }
+                }
+                else
+                {
+                    int si = sym_index(vert_col % BANKSIZE, vert_row % BANKSIZE);
+                    ldst = cluster_hess(cluster_id).M[si].data();
+#pragma unroll
+                    for(int i = 0; i < 3; ++i)
+#pragma unroll
+                        for(int j = 0; j < 3; ++j)
+                            lv[3 * j + i] = Hd[3 * i + j];  // H^T
+                }
+            }
+            mas_warp_agg_atomic_add_3x3(ldst, lv);
+        }
     }
 
     __global__ void MASPreconditionerEngine_scatter_hessian_to_clusters_k1_kernel(
@@ -980,6 +1197,31 @@ namespace
         }
     }
 
+
+    // s08 verification probe: max |a - b| and max |b| over the assembled
+    // cluster Hessians, accumulated on device (values are non-negative, so a
+    // 64-bit atomicMax on the bit pattern is a valid max for doubles).
+    __global__ void MASPreconditionerEngine_compare_cluster_hess_kernel(
+        cuda_tool::CBufferView<ClusterMatrixSym> a,
+        cuda_tool::CBufferView<ClusterMatrixSym> b,
+        unsigned long long* out,  // [0] = max diff, [1] = max ref
+        int                 n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        int           blk = i / (SYM_BLOCK_COUNT * 9);
+        int           rem = i % (SYM_BLOCK_COUNT * 9);
+        const double* pa  = a(blk).M[rem / 9].data();
+        const double* pb  = b(blk).M[rem / 9].data();
+        double        va  = pa[rem % 9];
+        double        vb  = pb[rem % 9];
+        double        d   = fabs(va - vb);
+        double        r   = fabs(vb);
+        atomicMax(&out[0], (unsigned long long)__double_as_longlong(d));
+        atomicMax(&out[1], (unsigned long long)__double_as_longlong(r));
+    }
+
     __global__ void MASPreconditionerEngine_collect_final_Z_kernel(
         cuda_tool::DenseVectorView<Float>  Z_view,
         cuda_tool::CBufferView<float3>     multi_lz,
@@ -1403,6 +1645,65 @@ void MASPreconditionerEngine::set_preconditioner(cuda_tool::CBufferView<Eigen::M
     // Scatter BCOO Hessian blocks into cluster matrices
     scatter_hessian_to_clusters(triplet_values, row_ids, col_ids, dof_offset);
 
+    // s08 verification probe: UIPC_MAS_SCATTER_VERIFY=1 re-runs the *other*
+    // scatter path into a scratch buffer, =2 re-runs the *same* one (that is
+    // the old/new path's own atomic-order noise), and reports max |diff| and
+    // max |ref| over all assembled cluster Hessian entries.
+    static const int verify_mode = []
+    {
+        const char* e = std::getenv("UIPC_MAS_SCATTER_VERIFY");
+        return e ? std::atoi(e) : 0;
+    }();
+    if(verify_mode)
+    {
+        using namespace cuda_tool;
+        if(num_cluster_blocks > static_cast<int>(cluster_hessians_verify.size()))
+            cluster_hessians_verify.resize(num_cluster_blocks);
+        if(m_verify_stat.size() < 2)
+            m_verify_stat.resize(2);
+        CUDA_TOOL_CHECK(cudaMemsetAsync(cluster_hessians_verify.data(),
+                                        0,
+                                        sizeof(ClusterMatrixSym) * num_cluster_blocks,
+                                        nullptr));
+        bool other = (verify_mode == 2) ? scatter_agg_enabled() : !scatter_agg_enabled();
+        scatter_hessian_to_clusters_into(cluster_hessians_verify.view(0, num_cluster_blocks),
+                                         other,
+                                         triplet_values,
+                                         row_ids,
+                                         col_ids,
+                                         dof_offset);
+        CUDA_TOOL_CHECK(cudaMemsetAsync(
+            m_verify_stat.data(), 0, sizeof(unsigned long long) * 2, nullptr));
+        int  n = num_cluster_blocks * SYM_BLOCK_COUNT * 9;
+        auto k = MASPreconditionerEngine_compare_cluster_hess_kernel;
+        k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            cluster_hessians_verify.cview(0, num_cluster_blocks),
+            cluster_hessians.cview(0, num_cluster_blocks),
+            m_verify_stat.data(),
+            n);
+        unsigned long long h[2] = {0, 0};
+        m_verify_stat.view(0, 2).copy_to(h);
+        double dmax = 0.0, rmax = 0.0;
+        std::memcpy(&dmax, &h[0], sizeof(double));
+        std::memcpy(&rmax, &h[1], sizeof(double));
+        ++m_verify_count;
+        if(dmax > m_verify_worst_abs)
+            m_verify_worst_abs = dmax;
+        double rel = (rmax > 0.0) ? dmax / rmax : 0.0;
+        if(rel > m_verify_worst_rel)
+            m_verify_worst_rel = rel;
+        spdlog::info(
+            "[MAS scatter verify] mode={} n={} max|diff|={:.6e} max|ref|={:.6e} rel={:.6e} "
+            "worst_abs={:.6e} worst_rel={:.6e}",
+            verify_mode,
+            m_verify_count,
+            dmax,
+            rmax,
+            rel,
+            m_verify_worst_abs,
+            m_verify_worst_rel);
+    }
+
     // Invert each cluster matrix (Gauss-Jordan)
     invert_cluster_matrices();
 }
@@ -1410,7 +1711,30 @@ void MASPreconditionerEngine::set_preconditioner(cuda_tool::CBufferView<Eigen::M
 // ---------------------------------------------------------------------------
 // Scatter BCOO Hessian entries into cluster-level dense matrices
 // ---------------------------------------------------------------------------
+// s08: warp-aggregated FP64 atomics in the pass-1 scatter. UIPC_MAS_SCATTER_AGG=0 = old.
+bool MASPreconditionerEngine::scatter_agg_enabled()
+{
+    static const bool on = []
+    {
+        const char* e = std::getenv("UIPC_MAS_SCATTER_AGG");
+        return !(e && e[0] == '0');
+    }();
+    return on;
+}
+
 void MASPreconditionerEngine::scatter_hessian_to_clusters(
+    cuda_tool::CBufferView<Eigen::Matrix3d> triplet_values,
+    cuda_tool::CBufferView<int>             row_ids,
+    cuda_tool::CBufferView<int>             col_ids,
+    int                                     dof_offset)
+{
+    scatter_hessian_to_clusters_into(
+        cluster_hessians.view(), scatter_agg_enabled(), triplet_values, row_ids, col_ids, dof_offset);
+}
+
+void MASPreconditionerEngine::scatter_hessian_to_clusters_into(
+    cuda_tool::BufferView<ClusterMatrixSym> cluster_hess,
+    bool                                    use_agg,
     cuda_tool::CBufferView<Eigen::Matrix3d> triplet_values,
     cuda_tool::CBufferView<int>             row_ids,
     cuda_tool::CBufferView<int>             col_ids,
@@ -1423,7 +1747,23 @@ void MASPreconditionerEngine::scatter_hessian_to_clusters(
     // --- Pass 1: Place each 3x3 block at the finest level where both
     //             row and col belong to the same cluster. ---
 
-    if(triplet_num > 0)
+    if(triplet_num > 0 && use_agg)
+    {
+        auto k = MASPreconditionerEngine_scatter_hessian_to_clusters_k1_agg_kernel;
+        k<<<cuda_tool::best_grid_dim(triplet_num, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            dof_offset,
+            m_level_num,
+            going_next.cview(0, m_total_num_clusters),
+            level_sizes.cview(),
+            cluster_hess,
+            real_to_part.cview(),
+            triplet_values,
+            row_ids,
+            col_ids,
+            m_total_nodes,
+            triplet_num);
+    }
+    else if(triplet_num > 0)
     {
         auto k = MASPreconditionerEngine_scatter_hessian_to_clusters_k1_kernel;
         k<<<cuda_tool::best_grid_dim(triplet_num, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
@@ -1431,7 +1771,7 @@ void MASPreconditionerEngine::scatter_hessian_to_clusters(
             m_level_num,
             going_next.cview(0, m_total_num_clusters),
             level_sizes.cview(),
-            cluster_hessians.view(),
+            cluster_hess,
             real_to_part.cview(),
             triplet_values,
             row_ids,
@@ -1453,7 +1793,7 @@ void MASPreconditionerEngine::scatter_hessian_to_clusters(
         m_level_num,
         going_next.cview(0, m_total_num_clusters),
         level_sizes.cview(),
-        cluster_hessians.view(),
+        cluster_hess,
         part_to_real.cview(),
         fine_connect_masks.cview(),
         prefix_original.cview(),

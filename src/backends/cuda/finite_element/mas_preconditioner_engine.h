@@ -147,7 +147,14 @@ class MASPreconditionerEngine
                                      cuda_tool::CBufferView<int> row_ids,
                                      cuda_tool::CBufferView<int> col_ids,
                                      int                         dof_offset);
-    void invert_cluster_matrices();
+    void scatter_hessian_to_clusters_into(cuda_tool::BufferView<ClusterMatrixSym> cluster_hess,
+                                          bool use_agg,
+                                          cuda_tool::CBufferView<Eigen::Matrix3d> triplet_values,
+                                          cuda_tool::CBufferView<int> row_ids,
+                                          cuda_tool::CBufferView<int> col_ids,
+                                          int dof_offset);
+    static bool scatter_agg_enabled();
+    void        invert_cluster_matrices();
 
     // Preconditioning steps
     void build_multi_level_R(cuda_tool::CDenseVectorView<Float> R,
@@ -197,6 +204,13 @@ class MASPreconditionerEngine
     // ---- GPU buffers: cluster matrices ----
     cuda_tool::DeviceBuffer<ClusterMatrixSym> cluster_hessians;  // assembled Hessian blocks (double)
     cuda_tool::DeviceBuffer<ClusterMatrixSymF> cluster_inverses;  // inverted preconditioner (float, matches GIPC)
+
+    // ---- s08 verification probe (UIPC_MAS_SCATTER_VERIFY) ----
+    cuda_tool::DeviceBuffer<ClusterMatrixSym>   cluster_hessians_verify;
+    cuda_tool::DeviceBuffer<unsigned long long> m_verify_stat;
+    int                                         m_verify_count     = 0;
+    double                                      m_verify_worst_abs = 0.0;
+    double                                      m_verify_worst_rel = 0.0;
 
     // ---- GPU buffers: multi-level residual / solution (float, matches GIPC) ----
     cuda_tool::DeviceBuffer<Eigen::Vector3f> multi_level_R;
