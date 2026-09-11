@@ -1628,3 +1628,14 @@ buffers by 1.25x instead of 1.5x (`UIPC_BUFFER_GROWTH`; tshirt logged peak 1325 
 means 7.42 / 15.86 / 19.10 ms per Newton iteration (−6 / −12 / −8 % vs 28136dc3,
 −20 / −21 / −19 % vs e1eed4b9). Test follow-up `3cb741fb` (internal-cull proof expects
 n−1 root visits). Recommendation: build the next wheel from `837ce898`.
+
+## Stale test expectations and benchmark runner fixes (2026-09-11)
+
+- `apps/tests/core/scene_config.cpp` and `python/tests/test_scene_config_schema.py`
+  pinned the scene config schema to 48 entries; the five keys added since
+  (`collision_detection/dcd_candidate_reuse`, `extras/debug/dcd_candidate_reuse_verify`,
+  `extras/debug/candidate_reuse_oracle`, `extras/debug/warm_start_oracle`,
+  `extras/debug/dump_candidates`) made `uipc.core` and its Python twin fail
+  deterministically. Both tests now assert the exact registered key set (53
+  keys), so a key added or removed without updating the test (and
+  `docs/specification/scene_config.md`) fails by name instead of by count.
