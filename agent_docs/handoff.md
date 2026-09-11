@@ -1357,10 +1357,17 @@ cloth-dataset `docs/perf-bench-3080.md` §9.
   assembled). `UIPC_ABD_DIAG_SIDE_STREAM=0`.
 - Rejected without commit: `__launch_bounds__(256, 2)` on the PE+PP contact
   part — ptxas: a non-inlined Eigen callee needs 142 registers.
+- K16 `837ce898` — hinge (K7) projection assembled from 3×3 blocks with the
+  constant Helmert weights instead of dense 12×9 basis products (rounding-level,
+  7.9e-15 relative; spill stores 7.1 → 5.0 KB; hinge G+H scope −13 %).
+  `UIPC_DAHL_BLOCKED_PROJ=0`.
+- Rejected without commit: K15 (Cholesky PD shortcut for the hinge eigen-solve:
+  fires for 0 of 50 000 hinge Hessians), K17 (block assembly for the EE contact
+  branch: no measurable gain), launch bounds on the hinge kernel (ptxas error).
 
 Result (2070S, 600 frames, ms per Newton iteration towel / tshirt /
-jacket+shorts, three runs per side): final 7.61 / 16.34 / 19.51 vs 28136dc3
-7.93 / 18.11 / 20.85 (−4 / −10 / −6 %) and vs baseline e1eed4b9 9.28 / 20.09 /
-23.60 (−18 / −19 / −17 %); MPS ×3 aggregate +24 / +27 / +14 % (two pairs).
-Test follow-up `3cb741fb` (internal-cull proof expects n−1 root visits).
-Recommendation: build the next wheel from this head.
+jacket+shorts, three runs per side): final `837ce898` 7.20 / 15.74 / 19.26 vs
+28136dc3 7.93 / 18.11 / 20.85 (−9 / −13 / −8 %) and vs baseline e1eed4b9 9.28 /
+20.09 / 23.60 (−22 / −22 / −18 %); MPS ×3 aggregate +24 / +27 / +14 % for the
+K9–K13 build (two pairs). Test follow-up `3cb741fb` (internal-cull proof expects
+n−1 root visits). Recommendation: build the next wheel from `837ce898`.

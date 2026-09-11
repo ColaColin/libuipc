@@ -1,8 +1,8 @@
 # 2026-09-11 — perf/kernels round 3: contact G+H split, EE reduced SPD, BVH self-cull, MAS memset, ABD side stream
 
-- Status: Accepted (K9, K10, K11, K12, K13); K14 rejected at build time
+- Status: Accepted (K9, K10, K11, K12, K13, K16); K14 rejected at build time, K15 and K17 rejected by verifier / A/B
 - Before commit: `28136dc3` (perf/kernels = f4a0b415 + K6 substep fix)
-- After commit: `6b1cfac8`
+- After commit: `837ce898` (kernel code; docs/test commits in between)
 - Benchmark: cloth-dataset drum benchmark (`dataset/bench/drum_bench.py`, specs
   `dataset/bench/specs.json`: towel c002217 468 v / tshirt c002007 3.8 k /
   jacket+shorts c002014 5.9 k), 600 frames single process, metric = ms per
@@ -79,14 +79,28 @@ c002007 / jacket+shorts c002014); probes accepted at every step.
 | K11 aa3c9e09 | BVH self-query subtree cull | 8.28 / 17.57 / 19.99 | BVH Query 3.09 → 2.70 (−12.5 %); self kernel 2.65 → 2.35 ms/launch |
 | K12 adda87be | MAS clear via memset | 7.84 / 16.92 / 20.08 | Assemble Preconditioner 1.06 → 0.76 |
 | K13 6b1cfac8 | ABD diag inverse on a side stream | 7.41 / 16.45 / 19.42 | Assemble Preconditioner 0.75 → 0.49 |
-| **final 6b1cfac8** (`t_fin1/2/3`) | all five | **7.70 / 16.29 / 19.55; 7.39 / 16.30 / 19.75; 7.74 / 16.43 / 19.24 (mean 7.61 / 16.34 / 19.51)** | nsys ms/it 19.4 → 17.5 (−9.7 %) |
+| final 6b1cfac8 (`t_fin1/2/3`, K9–K13) | five steps | 7.70 / 16.29 / 19.55; 7.39 / 16.30 / 19.75; 7.74 / 16.43 / 19.24 (mean 7.61 / 16.34 / 19.51) | nsys ms/it 19.4 → 17.5 (−9.7 %) |
+| **final 837ce898** (`t_k16`, `t_fin4/5`, K9–K13 + K16) | six steps | **7.15 / 15.97 / 19.53; 7.27 / 15.74 / 19.21; 7.19 / 15.52 / 19.03 (mean 7.20 / 15.74 / 19.26)** | nsys ms/it 19.4 → 16.9 (−13 %); hinge G+H 3.22 → 2.77 ms/launch |
 | baseline e1eed4b9 (`t_base_n`, `t_base_n2` same night; `t_base` night before) | — | 9.64 / 20.36 / 23.94; 9.52 / 19.94 / 23.25; 8.69 / 19.98 / 23.61 (mean 9.28 / 20.09 / 23.60) | — |
 | MPS ×3 aggregate frames/s, 120 frames, two pairs | final vs baseline | 45.8 / 6.40 / 4.94 and 43.7 / 6.77 / 5.39 vs 37.0 / 5.14 / 4.44 and 35.1 / 5.20 / 4.62 (**+24 / +27 / +14 %** on the pair means) | — |
 
-Final build (three-run means) vs 28136dc3: **−4 / −10 / −6 %**; vs the baseline
-(three-run mean): **−18 / −19 / −17 %**. The towel's 600-frame numbers scatter
+Final build 837ce898 (three-run means) vs 28136dc3: **−9 / −13 / −8 %**; vs the
+baseline (three-run mean): **−22 / −22 / −18 %** (the K9–K13 build alone: −4 / −10 /
+−6 % and −18 / −19 / −17 %). The towel's 600-frame numbers scatter
 ±5–8 % run to run (7.39–8.98 across the perf builds, 8.69–9.64 for the
 baseline); only the two large loads resolve single steps.
+
+### 06:00–08:00 stretch (coordinator targets)
+
+| Step | Change | Result |
+|---|---|---|
+| K15 (not committed) | skip the hinge 9×9 eigen-solve when a Cholesky attempt certifies the reduced Hessian PD | verifier over 50 000 random hinges through `DFDSB::dEdx_ddEddx`: the certificate fires for 0 of 50 000 — nothing to skip; reverted |
+| launch bounds on the hinge kernel | `__launch_bounds__(256, 2)` trial compile | ptxas error (non-inlined Eigen callee > 128 registers); spills would triple. Kernel as is: 255 registers, 8.9 KB stack, 7.1 KB spill stores / 6.1 KB loads (the 12×12 Hessian alone exceeds the register file) |
+| **K16 837ce898** | K7 projection assembled from 3×3 blocks with the constant Helmert weights (no 12×9 basis / temporaries, zero weights skipped exactly); `UIPC_DAHL_BLOCKED_PROJ=0` = dense | rounding-level (7.9e-15 relative vs the dense products on 50 000 hinge Hessians); ptxas spill stores 7.1 → 5.0 KB; "FEM Reporters G/H" 34.2 → 29.8 ms/frame at equal Newton counts (−13 %, 3.29 → 2.86 ms/it); probe inside band; 600 frames 7.15 / 15.97 / 19.53 |
+| K17 (not committed) | the same block assembly for the EE contact branch | 2.1e-12 relative vs the dense K10 path; "Contact Normal G/H" 2.27 → 2.25 ms/it (−1 %, inside noise): rounding-level change without measurable gain — reverted |
+| target 2 (BCOO pattern cache) | data only | consecutive detections have identical (PT, EE, PE, PP) counts in 19 of 406 iteration pairs (4.7 %) on the tshirt; the two convert scopes cost 1.4 ms/it ⇒ ≤ 0.07 ms/it possible; skipped |
+| target 3 (memory) | data only | total GPU peak (incl. ≈ 300 MiB idle context/MPS server): tshirt 1.65–1.78 GB, jacket+shorts 1.67–1.79 GB on both builds — unchanged by K9–K16; no exact over-allocation removal identified |
+| target 4 (whole-iteration graph) | not attempted | the capture condition would hold in < 5 % of iterations (same data as target 2) |
 
 ## Interpretation
 
@@ -110,12 +124,13 @@ are 91 % GPU-busy compute windows (no idle gaps to fuse away).
 ## Decision
 
 Accepted and committed on `perf/kernels`: K9 d54728df, K10 9d2012d8, K11
-aa3c9e09, K12 adda87be, K13 6b1cfac8 (+ test follow-up 3cb741fb). K14 (`__launch_bounds__(256, 2)` on the
+aa3c9e09, K12 adda87be, K13 6b1cfac8 (+ test follow-up 3cb741fb), K16
+837ce898. K14 (`__launch_bounds__(256, 2)` on the
 PE+PP contact part) rejected: ptxas refuses the 128-register cap because a
 non-inlined Eigen callee (`selfadjoint_matrix_vector_product`) needs 142
 registers; never committed. Every step has an env switch back to the previous
 path (`UIPC_CONTACT_SPLIT`, `UIPC_EE_REDUCED_SPD`, `UIPC_BVH_SELF_RANGE_CULL`,
-`UIPC_MAS_FILL_KERNEL`, `UIPC_ABD_DIAG_SIDE_STREAM`).
+`UIPC_MAS_FILL_KERNEL`, `UIPC_ABD_DIAG_SIDE_STREAM`, `UIPC_DAHL_BLOCKED_PROJ`).
 
 ## Reproduction and artifacts
 
