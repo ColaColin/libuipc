@@ -1359,7 +1359,8 @@ cloth-dataset `docs/perf-bench-3080.md` §9.
   part — ptxas: a non-inlined Eigen callee needs 142 registers.
 
 Result (2070S, 600 frames, ms per Newton iteration towel / tshirt /
-jacket+shorts): final 7.55 / 16.30 / 19.65 vs 28136dc3 7.93 / 18.11 / 20.85
-(−5 / −10 / −6 %) and vs the same-night baseline e1eed4b9 9.64 / 20.36 / 23.94
-(−22 / −20 / −18 %); MPS ×3 aggregate +24 / +25 / +11 %. Recommendation: build
-the next wheel from `6b1cfac8`.
+jacket+shorts, three runs per side): final 7.61 / 16.34 / 19.51 vs 28136dc3
+7.93 / 18.11 / 20.85 (−4 / −10 / −6 %) and vs baseline e1eed4b9 9.28 / 20.09 /
+23.60 (−18 / −19 / −17 %); MPS ×3 aggregate +24 / +27 / +14 % (two pairs).
+Test follow-up `3cb741fb` (internal-cull proof expects n−1 root visits).
+Recommendation: build the next wheel from this head.

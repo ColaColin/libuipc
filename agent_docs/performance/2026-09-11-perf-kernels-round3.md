@@ -50,13 +50,21 @@ towel over 600 frames.
   functions, 50 000 random edge pairs inside d_hat (kappa 1e2..1e8, edge scales
   1 mm..0.1 m): max |H t|/|H|_F = 2.3e-15 over rigid translations, max relative
   Frobenius difference to `make_spd<12>` = 6.1e-12 (same projection to
-  rounding, as K7).
+  rounding, as K7); a second run with exactly parallel edges (typed PE-type
+  EE flags in 11 k of 50 k samples): 2.3e-15 / 4.0e-12.
 - K11 (self cull): candidate set identical by construction (leaf test
   unchanged); `UIPC_BVH_SELF_CULL_VERIFY=1` re-runs every EE self query
   without the cull and compares sets on the host: 0 mismatches in 4 400
   queries (3 specs × 120 frames).
 - Probes: every step inside the noise band at every checkpoint ≤ 30 on all
   three specs; `30_fem_animiator_substep` passes after every change.
+- Final build: `uipc_test_sim_case` 93/93 (12 611 assertions; the two ABD-joint
+  cases 74/80 abort on e1eed4b9 too and were excluded), `uipc_test_regression`
+  1/1, `uipc_test_backend_cuda` 21/22 — `collision_filter_registration` is the
+  pre-existing failure; `lbvh` is flaky (failed once on each build, passed on
+  re-run); `info_stackless_bvh/internal_cull_proof` counted n−1 instead of n
+  `node_cull` calls after K11 (the query at the last sorted position has no
+  partner and skips the root) — expectation updated in `3cb741fb`.
 
 ## Results
 
@@ -71,14 +79,14 @@ c002007 / jacket+shorts c002014); probes accepted at every step.
 | K11 aa3c9e09 | BVH self-query subtree cull | 8.28 / 17.57 / 19.99 | BVH Query 3.09 → 2.70 (−12.5 %); self kernel 2.65 → 2.35 ms/launch |
 | K12 adda87be | MAS clear via memset | 7.84 / 16.92 / 20.08 | Assemble Preconditioner 1.06 → 0.76 |
 | K13 6b1cfac8 | ABD diag inverse on a side stream | 7.41 / 16.45 / 19.42 | Assemble Preconditioner 0.75 → 0.49 |
-| **final 6b1cfac8** (`t_fin1`, `t_fin2`) | all five | **7.70 / 16.29 / 19.55; 7.39 / 16.30 / 19.75** | nsys ms/it 19.4 → 17.5 (−9.7 %) |
-| baseline e1eed4b9 (`t_base_n`, same night; `t_base`, night before) | — | 9.64 / 20.36 / 23.94; 8.69 / 19.98 / 23.61 | — |
-| MPS ×3 aggregate frames/s, 120 frames | final vs baseline | 45.8 / 6.40 / 4.94 vs 37.0 / 5.14 / 4.44 (+24 / +25 / +11 %) | — |
+| **final 6b1cfac8** (`t_fin1/2/3`) | all five | **7.70 / 16.29 / 19.55; 7.39 / 16.30 / 19.75; 7.74 / 16.43 / 19.24 (mean 7.61 / 16.34 / 19.51)** | nsys ms/it 19.4 → 17.5 (−9.7 %) |
+| baseline e1eed4b9 (`t_base_n`, `t_base_n2` same night; `t_base` night before) | — | 9.64 / 20.36 / 23.94; 9.52 / 19.94 / 23.25; 8.69 / 19.98 / 23.61 (mean 9.28 / 20.09 / 23.60) | — |
+| MPS ×3 aggregate frames/s, 120 frames, two pairs | final vs baseline | 45.8 / 6.40 / 4.94 and 43.7 / 6.77 / 5.39 vs 37.0 / 5.14 / 4.44 and 35.1 / 5.20 / 4.62 (**+24 / +27 / +14 %** on the pair means) | — |
 
-Final build vs 28136dc3: **−5 / −10 / −6 %**; vs the same-night baseline: **−22 /
-−20 / −18 %** (−13 / −18 / −17 % vs the previous night's baseline run). The towel's
-600-frame numbers scatter ±8 % run to run (7.39–8.98 across the perf builds,
-8.69–9.64 for the baseline); only the two large loads resolve single steps.
+Final build (three-run means) vs 28136dc3: **−4 / −10 / −6 %**; vs the baseline
+(three-run mean): **−18 / −19 / −17 %**. The towel's 600-frame numbers scatter
+±5–8 % run to run (7.39–8.98 across the perf builds, 8.69–9.64 for the
+baseline); only the two large loads resolve single steps.
 
 ## Interpretation
 
@@ -102,7 +110,7 @@ are 91 % GPU-busy compute windows (no idle gaps to fuse away).
 ## Decision
 
 Accepted and committed on `perf/kernels`: K9 d54728df, K10 9d2012d8, K11
-aa3c9e09, K12 adda87be, K13 6b1cfac8. K14 (`__launch_bounds__(256, 2)` on the
+aa3c9e09, K12 adda87be, K13 6b1cfac8 (+ test follow-up 3cb741fb). K14 (`__launch_bounds__(256, 2)` on the
 PE+PP contact part) rejected: ptxas refuses the 128-register cap because a
 non-inlined Eigen callee (`selfadjoint_matrix_vector_product`) needs 142
 registers; never committed. Every step has an env switch back to the previous
