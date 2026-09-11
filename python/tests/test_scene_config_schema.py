@@ -8,6 +8,64 @@ from uipc import Exception as UIPCException
 from uipc import Scene
 from uipc.cli.config_schema import main as config_schema_main
 
+# Every registered key. Adding or removing a key must update this set
+# (and docs/specification/scene_config.md).
+SCHEMA_KEYS = {
+    "dt",
+    "gravity",
+    "cfl/enable",
+    "integrator/type",
+    "newton/max_iter",
+    "newton/min_iter",
+    "newton/use_adaptive_tol",
+    "newton/velocity_tol",
+    "newton/velocity_tol_relative",
+    "newton/ccd_tol",
+    "newton/transrate_tol",
+    "newton/semi_implicit/enable",
+    "newton/semi_implicit/beta_tol",
+    "newton/semi_implicit/K_min",
+    "linear_system/tol_rate",
+    "linear_system/solver",
+    "linear_system/fem_preconditioner",
+    "linear_system/use_cuda_graph",
+    "linear_system/check_interval",
+    "line_search/max_iter",
+    "line_search/report_energy",
+    "contact/enable",
+    "contact/d_hat",
+    "contact/d_hat_relative",
+    "contact/friction/enable",
+    "contact/eps_velocity",
+    "contact/eps_velocity_relative",
+    "contact/constitution",
+    "contact/al-ipc/mu_scale_mode",
+    "contact/al-ipc/mu_scale_diag_norm",
+    "contact/al-ipc/mu_scale_fem",
+    "contact/al-ipc/mu_scale_abd",
+    "contact/al-ipc/toi_threshold",
+    "contact/al-ipc/alpha_lower_bound",
+    "contact/al-ipc/decay_factor",
+    "contact/adaptive/min_kappa",
+    "contact/adaptive/init_kappa",
+    "contact/adaptive/max_kappa",
+    "contact/adaptive/kappa_eval_scale",
+    "collision_detection/method",
+    "collision_detection/dcd_candidate_reuse",
+    "sanity_check/enable",
+    "sanity_check/mode",
+    "diff_sim/enable",
+    "extras/debug/dump_surface",
+    "extras/debug/dump_linear_system",
+    "extras/debug/dump_linear_pcg",
+    "extras/debug/dump_mas_matrices",
+    "extras/debug/dump_candidates",
+    "extras/debug/dcd_candidate_reuse_verify",
+    "extras/debug/candidate_reuse_oracle",
+    "extras/debug/warm_start_oracle",
+    "extras/strict_mode/enable",
+}
+
 
 def test_scene_config_schema_matches_public_defaults() -> None:
     schema = Scene.config_schema()
@@ -15,7 +73,7 @@ def test_scene_config_schema_matches_public_defaults() -> None:
 
     assert schema["schemaVersion"] == 1
     assert schema["strictUnknownKeys"] is True
-    assert len(entries) == 48
+    assert set(entries) == SCHEMA_KEYS
     assert entries["dt"]["default"] == pytest.approx(0.01)
     assert entries["dt"]["exclusiveMinimum"] == 0.0
     assert entries["gravity"]["componentCount"] == 3

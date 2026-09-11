@@ -11,7 +11,8 @@ std::string_view expected_filter_type(std::string_view method)
         return "InfoStacklessBVHV0SimplexTrajectoryFilter";
     if(method == "stackless_bvh")
         return "StacklessBVHSimplexTrajectoryFilter";
-    if(method == "linear_bvh")
+    // "lbvh" is an alias of "linear_bvh" (same LBVHSimplexTrajectoryFilter).
+    if(method == "linear_bvh" || method == "lbvh")
         return "LBVHSimplexTrajectoryFilter";
     return {};
 }
