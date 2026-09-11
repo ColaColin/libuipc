@@ -80,12 +80,12 @@ c002007 / jacket+shorts c002014); probes accepted at every step.
 | K12 adda87be | MAS clear via memset | 7.84 / 16.92 / 20.08 | Assemble Preconditioner 1.06 → 0.76 |
 | K13 6b1cfac8 | ABD diag inverse on a side stream | 7.41 / 16.45 / 19.42 | Assemble Preconditioner 0.75 → 0.49 |
 | final 6b1cfac8 (`t_fin1/2/3`, K9–K13) | five steps | 7.70 / 16.29 / 19.55; 7.39 / 16.30 / 19.75; 7.74 / 16.43 / 19.24 (mean 7.61 / 16.34 / 19.51) | nsys ms/it 19.4 → 17.5 (−9.7 %) |
-| **final 837ce898** (`t_k16`, `t_fin4/5`, K9–K13 + K16) | six steps | **7.15 / 15.97 / 19.53; 7.27 / 15.74 / 19.21; 7.19 / 15.52 / 19.03 (mean 7.20 / 15.74 / 19.26)** | nsys ms/it 19.4 → 16.9 (−13 %); hinge G+H 3.22 → 2.77 ms/launch |
+| **final 837ce898** (`t_k16`, `t_fin4/5/6`, K9–K13 + K16) | six steps | **7.15 / 15.97 / 19.53; 7.27 / 15.74 / 19.21; 7.19 / 15.52 / 19.03; 8.05 / 15.83 / 18.79 (mean 7.42 / 15.77 / 19.14)** | nsys ms/it 19.4 → 16.9 (−13 %); hinge G+H 3.22 → 2.77 ms/launch; MPS ×3 aggregate 46.1 / 6.75 / 5.77 vs baseline 36.0 / 5.17 / 4.53 (+28 / +31 / +27 %) |
 | baseline e1eed4b9 (`t_base_n`, `t_base_n2` same night; `t_base` night before) | — | 9.64 / 20.36 / 23.94; 9.52 / 19.94 / 23.25; 8.69 / 19.98 / 23.61 (mean 9.28 / 20.09 / 23.60) | — |
 | MPS ×3 aggregate frames/s, 120 frames, two pairs | final vs baseline | 45.8 / 6.40 / 4.94 and 43.7 / 6.77 / 5.39 vs 37.0 / 5.14 / 4.44 and 35.1 / 5.20 / 4.62 (**+24 / +27 / +14 %** on the pair means) | — |
 
-Final build 837ce898 (three-run means) vs 28136dc3: **−9 / −13 / −8 %**; vs the
-baseline (three-run mean): **−22 / −22 / −18 %** (the K9–K13 build alone: −4 / −10 /
+Final build 837ce898 (four-run means) vs 28136dc3: **−6 / −13 / −8 %**; vs the
+baseline (three-run mean): **−20 / −22 / −19 %** (the K9–K13 build alone: −4 / −10 /
 −6 % and −18 / −19 / −17 %). The towel's 600-frame numbers scatter
 ±5–8 % run to run (7.39–8.98 across the perf builds, 8.69–9.64 for the
 baseline); only the two large loads resolve single steps.
@@ -101,6 +101,9 @@ baseline); only the two large loads resolve single steps.
 | target 2 (BCOO pattern cache) | data only | consecutive detections have identical (PT, EE, PE, PP) counts in 19 of 406 iteration pairs (4.7 %) on the tshirt; the two convert scopes cost 1.4 ms/it ⇒ ≤ 0.07 ms/it possible; skipped |
 | target 3 (memory) | data only | total GPU peak (incl. ≈ 300 MiB idle context/MPS server): tshirt 1.65–1.78 GB, jacket+shorts 1.67–1.79 GB on both builds — unchanged by K9–K16; no exact over-allocation removal identified |
 | target 4 (whole-iteration graph) | not attempted | the capture condition would hold in < 5 % of iterations (same data as target 2) |
+| spill pass (stretch 2) | `-Xptxas -v` over membrane, friction, half-plane contact, trajectory filter, contact energies | no spills beyond 8–48 B; the hinge (5.0 KB after K16) and contact PT+EE (3.5 KB) spills are structural |
+| launch census, towel (stretch 2) | nsys, 60 frames | 191 kernels + 56 memcpy/memset per Newton iteration, GPU 87 % busy: contact G+H 18 %, CUB two-launch idioms, 20 host sync copies; no exact merge of our own kernels |
+| memory attribution (stretch 2) | `UIPC_ALLOC_LOG_MB` (diag commit 7af10021, off by default), tshirt 30 frames | 431 MB after engine init (context), 1331 MB peak: 3×3-block Hessian triplet buffers (64 MB max, 56 reallocations), CUB temp 16 MB, Vector3 10 MB, converter pairs/keys 7 MB each, int index arrays |
 
 ## Interpretation
 
@@ -125,7 +128,7 @@ are 91 % GPU-busy compute windows (no idle gaps to fuse away).
 
 Accepted and committed on `perf/kernels`: K9 d54728df, K10 9d2012d8, K11
 aa3c9e09, K12 adda87be, K13 6b1cfac8 (+ test follow-up 3cb741fb), K16
-837ce898. K14 (`__launch_bounds__(256, 2)` on the
+837ce898; diagnostic logger 7af10021. K14 (`__launch_bounds__(256, 2)` on the
 PE+PP contact part) rejected: ptxas refuses the 128-register cap because a
 non-inlined Eigen callee (`selfadjoint_matrix_vector_product`) needs 142
 registers; never committed. Every step has an env switch back to the previous

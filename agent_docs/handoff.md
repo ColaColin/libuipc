@@ -1366,8 +1366,9 @@ cloth-dataset `docs/perf-bench-3080.md` §9.
   branch: no measurable gain), launch bounds on the hinge kernel (ptxas error).
 
 Result (2070S, 600 frames, ms per Newton iteration towel / tshirt /
-jacket+shorts, three runs per side): final `837ce898` 7.20 / 15.74 / 19.26 vs
-28136dc3 7.93 / 18.11 / 20.85 (−9 / −13 / −8 %) and vs baseline e1eed4b9 9.28 /
-20.09 / 23.60 (−22 / −22 / −18 %); MPS ×3 aggregate +24 / +27 / +14 % for the
-K9–K13 build (two pairs). Test follow-up `3cb741fb` (internal-cull proof expects
+jacket+shorts, four runs on the final kernel code): `837ce898` 7.42 / 15.77 /
+19.14 vs 28136dc3 7.93 / 18.11 / 20.85 (−6 / −13 / −8 %) and vs baseline e1eed4b9
+9.28 / 20.09 / 23.60 (−20 / −22 / −19 %); MPS ×3 aggregate +28 / +31 / +27 % vs
+baseline. `7af10021` adds the default-off allocation logger `UIPC_ALLOC_LOG_MB`
+(tshirt peak 1.33 GB: 0.43 GB context + 3×3-block triplet buffers up to 64 MB each). Test follow-up `3cb741fb` (internal-cull proof expects
 n−1 root visits). Recommendation: build the next wheel from `837ce898`.
