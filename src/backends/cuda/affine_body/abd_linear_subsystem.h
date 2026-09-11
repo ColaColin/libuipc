@@ -131,9 +131,13 @@ class ABDLinearSubsystem final : public DiagLinearSubsystem
         cuda_tool::DeviceBuffer<Matrix12x12> diag_hessian;
 
         // s03: per-body-pair pre-reduction of the dytopo effect hessians
-        // (UIPC_ABD_PAIR_REDUCE=0 restores the 16-triplets-per-contact path)
-        bool                                 dytopo_pair_reduce = true;
-        SizeT                                dytopo_pair_count  = 0;
+        // (UIPC_ABD_PAIR_REDUCE=0 restores the 16-triplets-per-contact path);
+        // s05: warp-cooperative accumulation in pair-sorted order
+        // (UIPC_ABD_PAIR_WARP=0 restores the one-thread-per-contact kernel)
+        bool                                 dytopo_pair_reduce      = true;
+        bool                                 dytopo_pair_warp        = true;
+        int                                  dytopo_pair_warp_rounds = 1;
+        SizeT                                dytopo_pair_count       = 0;
         cuda_tool::DeviceBuffer<uint64_t>    dytopo_pair_key_in;
         cuda_tool::DeviceBuffer<uint64_t>    dytopo_pair_key_sorted;
         cuda_tool::DeviceBuffer<int>         dytopo_pair_idx_in;

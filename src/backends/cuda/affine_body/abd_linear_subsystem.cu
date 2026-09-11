@@ -407,6 +407,200 @@ namespace
         eigen::atomic_add(pair_hessian(contact_to_pair(I)), H12x12);
     }
 
+    // ---- s05: warp-cooperative per-pair accumulation of J^T H J ----
+    // pair_k2 above forms one 12x12 per thread (255 registers, spills) and
+    // adds it with 144 FP64 atomics into its pair block: ~29 M contended
+    // atomics per launch on the wrecking balls. Here one warp walks a run of
+    // contacts in pair-sorted order (perm/seg from _prepare_dytopo_pairs),
+    // each lane owning 4-5 of the 144 entries of the running 12x12 sum. The
+    // closed form of J^T H J,
+    //   [ H          | H(:,c) y^T    ]
+    //   [ x H(r,:)   | H(r,c) x y^T  ]   (x = x_bar_i, y = x_bar_j),
+    // makes entry (row, col) = F * H(a, b) with F in {1, x_r, y_c, x_r*y_c}:
+    // lanes 0..15 hold the 16 factors of the current contact, lanes 0..8 its
+    // 3x3 block, and every entry costs two shuffles and one fma. The sum is
+    // flushed with 144 lane-distributed atomics only when the pair changes
+    // or the run ends. The per-contact products are the ones of JT_H_J
+    // (x_r*y_c first, then *H); only the summation order/fusing differs.
+
+    // entry e (column-major index into the 12x12) -> lane of the H element
+    // and of the factor, for the (x, y, H) and the transposed (y, x, H^T)
+    // contribution
+    UIPC_DEVICE inline void abd_pair_entry_lanes(int e, int& h, int& f, int& hT, int& fT)
+    {
+        const int row = e % 12, col = e / 12;
+        const int br = row / 3, rr = row % 3, bc = col / 3, cc = col % 3;
+        const int a = br == 0 ? rr : br - 1;
+        const int b = bc == 0 ? cc : bc - 1;
+        h           = b * 3 + a;  // H(a, b), column-major
+        hT          = a * 3 + b;  // H(b, a)
+        // factor lanes: 0..8 = x_r*y_c at c*3+r, 9..11 = x_r, 12..14 = y_c, 15 = 1
+        if(br == 0 && bc == 0)
+        {
+            f  = 15;
+            fT = 15;
+        }
+        else if(br == 0)  // H(:,c) y^T -> y_c ; transposed: x_c
+        {
+            f  = 12 + cc;
+            fT = 9 + cc;
+        }
+        else if(bc == 0)  // x H(r,:) -> x_r ; transposed: y_r
+        {
+            f  = 9 + rr;
+            fT = 12 + rr;
+        }
+        else  // x_r*y_c ; transposed: y_r*x_c = (x*y^T)(c, r)
+        {
+            f  = cc * 3 + rr;
+            fT = rr * 3 + cc;
+        }
+    }
+
+    UIPC_DEVICE inline void abd_pair_flush(const cuda_tool::BufferView<Matrix12x12>& pair_hessian,
+                                           int pair,
+                                           int lane,
+                                           Float (&acc)[5])
+    {
+        if(pair < 0)
+            return;
+        Float* dst = pair_hessian(pair).data();
+#pragma unroll
+        for(int e = 0; e < 5; ++e)
+        {
+            const int idx = lane + 32 * e;
+            if(idx < 144)
+                atomicAdd(dst + idx, acc[e]);
+            acc[e] = 0;
+        }
+    }
+
+    __global__ void abd_linear_subsystem_assemble_dytopo_effect_pair_warp_kernel(
+        cuda_tool::CTripletMatrixView<Float, 3, 3> dytopo_effect_hessian,
+        cuda_tool::BufferView<Matrix12x12>         pair_hessian,
+        cuda_tool::CBufferView<int>       perm,  // sorted pos -> contact
+        cuda_tool::CBufferView<int>       seg,   // sorted pos -> pair + 1
+        cuda_tool::CBufferView<IndexT>    v2b,
+        cuda_tool::CBufferView<ABDJacobi> Js,
+        cuda_tool::CBufferView<IndexT>    is_fixed,
+        IndexT                            vertex_offset,
+        int                               rounds,  // 32-contact rounds per warp
+        int                               n)
+    {
+        constexpr unsigned FULL  = 0xffffffffu;
+        const int          lane  = threadIdx.x & 31;
+        const int          warp  = (blockIdx.x * blockDim.x + threadIdx.x) >> 5;
+        const int          begin = warp * rounds * 32;
+        if(begin >= n)  // warp-uniform
+            return;
+        const int end = min(begin + rounds * 32, n);
+
+        auto rows = dytopo_effect_hessian.row_indices();
+        auto cols = dytopo_effect_hessian.col_indices();
+        auto vals = dytopo_effect_hessian.values();
+
+        int   hidx[5], fidx[5], hidxT[5], fidxT[5];
+        Float acc[5];
+#pragma unroll
+        for(int e = 0; e < 5; ++e)
+        {
+            const int idx = lane + 32 * e;  // >= 144 for lanes >= 16 at e == 4: never flushed
+            abd_pair_entry_lanes(idx < 144 ? idx : 0, hidx[e], fidx[e], hidxT[e], fidxT[e]);
+            acc[e] = 0;
+        }
+        int cur_pair = -1;
+
+        // what this lane loads of every contact: H element hl (lanes >= 9
+        // duplicate), factor slot m: x_(m%3)*y_(m/3) | x_(m-9) | y_(m-12) | 1
+        const int hl = lane % 9;
+        const int m  = lane & 15;
+        const int xi = m < 9 ? m % 3 : (m < 12 ? m - 9 : -1);
+        const int yi = m < 9 ? m / 3 : (m >= 12 && m < 15 ? m - 12 : -1);
+
+        for(int t0 = begin; t0 < end; t0 += 32)
+        {
+            // lane l describes the contact at sorted position t0 + l
+            const int  t     = t0 + lane;
+            const bool valid = t < end;
+            const int  ci    = valid ? perm(t) : 0;
+            const int  p     = valid ? seg(t) - 1 : -1;
+            const int  i     = rows(ci) - vertex_offset;
+            const int  j     = cols(ci) - vertex_offset;
+            const auto bi    = v2b(i);
+            const auto bj    = v2b(j);
+            // 0 skip (fixed body / past the end), 1 (x_i, x_j, H),
+            // 2 (x_j, x_i, H^T) [rows of the pair = min body], 3 = both
+            // (same body, i != j) — the same cases as pair_k2
+            int mode = 0;
+            if(valid && !(is_fixed(bi) || is_fixed(bj)))
+            {
+                if(bi < bj)
+                    mode = 1;
+                else if(bi > bj)
+                    mode = 2;
+                else
+                    mode = (i != j) ? 3 : 1;
+            }
+            const int vi = mode == 2 ? j : i;
+            const int vj = mode == 2 ? i : j;
+
+            for(int b = 0; b < 32; b += 8)
+            {
+                Float Hreg[8], Freg[8];
+                int   pk[8];
+                bool  dbl[8];
+#pragma unroll
+                for(int q = 0; q < 8; ++q)
+                {
+                    const int k     = b + q;
+                    const int mk    = __shfl_sync(FULL, mode, k);
+                    const int pp    = __shfl_sync(FULL, p, k);
+                    const int ck    = __shfl_sync(FULL, ci, k);
+                    const int vik   = __shfl_sync(FULL, vi, k);
+                    const int vjk   = __shfl_sync(FULL, vj, k);
+                    pk[q]           = mk == 0 ? -1 : pp;
+                    dbl[q]          = (mk == 3);
+                    const Float* Hd = vals(ck).data();
+                    const Float* xd = Js(vik).x_bar().data();
+                    const Float* yd = Js(vjk).x_bar().data();
+                    Hreg[q]         = Hd[mk == 2 ? (hl % 3) * 3 + hl / 3 : hl];
+                    const Float xv  = xi >= 0 ? xd[xi] : Float{1};
+                    const Float yv  = yi >= 0 ? yd[yi] : Float{1};
+                    Freg[q]         = xv * yv;  // *1 is exact
+                }
+#pragma unroll
+                for(int q = 0; q < 8; ++q)
+                {
+                    if(pk[q] < 0)  // warp-uniform
+                        continue;
+                    if(pk[q] != cur_pair)  // warp-uniform
+                    {
+                        abd_pair_flush(pair_hessian, cur_pair, lane, acc);
+                        cur_pair = pk[q];
+                    }
+#pragma unroll
+                    for(int e = 0; e < 5; ++e)
+                    {
+                        const Float h = __shfl_sync(FULL, Hreg[q], hidx[e]);
+                        const Float f = __shfl_sync(FULL, Freg[q], fidx[e]);
+                        acc[e]        = fma(f, h, acc[e]);
+                    }
+                    if(dbl[q])  // warp-uniform
+                    {
+#pragma unroll
+                        for(int e = 0; e < 5; ++e)
+                        {
+                            const Float h = __shfl_sync(FULL, Hreg[q], hidxT[e]);
+                            const Float f = __shfl_sync(FULL, Freg[q], fidxT[e]);
+                            acc[e] = fma(f, h, acc[e]);
+                        }
+                    }
+                }
+            }
+        }
+        abd_pair_flush(pair_hessian, cur_pair, lane, acc);
+    }
+
     // #5: one pair -> 16 triplets (+ the diagonal-pair block into diag_hessian)
     __global__ void abd_linear_subsystem_assemble_dytopo_effect_pair_k3_kernel(
         cuda_tool::TripletMatrixView<Float, 3>  dst,
@@ -497,6 +691,31 @@ namespace
         return enabled;
     }
 
+
+    // s05 env switch, read once: UIPC_ABD_PAIR_WARP=0 restores the
+    // one-thread-per-contact pair_k2 kernel (144 atomics per contact);
+    // UIPC_ABD_PAIR_WARP_ROUNDS = 32-contact rounds per warp (default 1)
+    bool abd_dytopo_pair_warp_enabled()
+    {
+        static const bool enabled = []
+        {
+            const char* e = std::getenv("UIPC_ABD_PAIR_WARP");
+            return !(e && e[0] == '0');
+        }();
+        return enabled;
+    }
+
+    int abd_dytopo_pair_warp_rounds()
+    {
+        static const int rounds = []
+        {
+            const char* e = std::getenv("UIPC_ABD_PAIR_WARP_ROUNDS");
+            int         r = e ? std::atoi(e) : 1;
+            return r > 0 ? r : 1;
+        }();
+        return rounds;
+    }
+
     // number of radix bits needed for keys in [0, max_key]
     int abd_dytopo_pair_key_bits(uint64_t max_key)
     {
@@ -522,8 +741,10 @@ void ABDLinearSubsystem::do_build(DiagLinearSubsystem::BuildInfo& info)
     m_impl.dt_attr = world().scene().config().find<Float>("dt");
     UIPC_ASSERT(m_impl.dt_attr, "Scene config must have a 'dt' attribute.");
 
-    m_impl.dytopo_effect_receiver = find<ABDDyTopoEffectReceiver>();
-    m_impl.dytopo_pair_reduce     = abd_dytopo_pair_reduce_enabled();
+    m_impl.dytopo_effect_receiver  = find<ABDDyTopoEffectReceiver>();
+    m_impl.dytopo_pair_reduce      = abd_dytopo_pair_reduce_enabled();
+    m_impl.dytopo_pair_warp        = abd_dytopo_pair_warp_enabled();
+    m_impl.dytopo_pair_warp_rounds = abd_dytopo_pair_warp_rounds();
 }
 
 void ABDLinearSubsystem::Impl::init()
@@ -912,6 +1133,27 @@ void ABDLinearSubsystem::Impl::_assemble_dytopo_effect(IndexT& offset,
             dytopo_pair_hessian.resize_discard(P);
             dytopo_pair_hessian.fill(Matrix12x12::Zero());
 
+            if(dytopo_pair_warp)
+            {
+                // s05: one warp per run of `rounds` x 32 pair-sorted contacts
+                auto k = abd_linear_subsystem_assemble_dytopo_effect_pair_warp_kernel;
+                int n       = (int)dytopo_effect_hessian_count;
+                int rounds  = dytopo_pair_warp_rounds;
+                int warps   = (n + rounds * 32 - 1) / (rounds * 32);
+                int threads = warps * 32;
+                k<<<cuda_tool::best_grid_dim(threads, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+                    dytopo_effect_receiver->hessians(),
+                    dytopo_pair_hessian.view(),
+                    dytopo_pair_perm.cview(),
+                    dytopo_pair_seg.cview(),
+                    abd().vertex_id_to_body_id.cview(),
+                    abd().vertex_id_to_J.cview(),
+                    abd().body_id_to_is_fixed.cview(),
+                    vertex_offset,
+                    rounds,
+                    n);
+            }
+            else
             {
                 auto k = abd_linear_subsystem_assemble_dytopo_effect_pair_k2_kernel;
                 int  n = (int)dytopo_effect_hessian_count;
