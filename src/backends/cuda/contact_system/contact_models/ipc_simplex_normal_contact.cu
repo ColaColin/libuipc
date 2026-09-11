@@ -276,6 +276,7 @@ namespace
                                        IndexT ee_offset,
                                        IndexT pe_offset,
                                        IndexT pp_offset,
+                                       bool   ee_reduced_spd,
                                        int    n)
     {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -370,7 +371,15 @@ namespace
                     Matrix12x12 H;
                     mollified_EE_barrier_gradient_hessian(
                         G, H, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
-                    make_spd(H);
+                    // perf/kernels (K10): the mollified EE barrier depends on
+                    // relative positions only, so H annihilates rigid
+                    // translations and the PSD projection reduces to the
+                    // 9x9 translation-free subspace (same projection up to
+                    // rounding, as K7 for the hinge)
+                    if(ee_reduced_spd)
+                        make_spd_translation_free_4x3(H);
+                    else
+                        make_spd(H);
                     DoubletVectorAssembler DVA{EE_Gs};
                     DVA.segment<4>(i * 4).write(EE, G);
                     TripletMatrixAssembler TMA{EE_Hs};
@@ -468,6 +477,9 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // serialising behind it. UIPC_CONTACT_SPLIT=0 restores the fused
     // launch, =1 runs the two launches back to back on the default stream.
     int          m_split       = 2;
+    // perf/kernels (K10): EE Hessian PSD projection on the translation-free
+    // 9x9 subspace (UIPC_EE_REDUCED_SPD=0 restores the 12x12 eigen-solve)
+    bool         m_ee_reduced_spd = true;
     cudaStream_t m_side_stream = nullptr;
     cudaEvent_t  m_fork        = nullptr;
     cudaEvent_t  m_join        = nullptr;
@@ -478,6 +490,8 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
 
         if(const char* e = std::getenv("UIPC_CONTACT_SPLIT"))
             m_split = std::atoi(e);
+        if(const char* e = std::getenv("UIPC_EE_REDUCED_SPD"))
+            m_ee_reduced_spd = !(e[0] == '0');
         if(m_split == 2)
         {
             CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream,
@@ -615,6 +629,7 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 ee_offset,
                 pe_offset,
                 pp_offset,
+                m_ee_reduced_spd,
                 n);
         };
 
