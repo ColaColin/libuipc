@@ -101,6 +101,18 @@ touching that area; several of these have bitten us more than once.
 - The line-search max-iteration warning/exception now prints
   `alpha_last/E0/E_last/rel_E_increase/ccd_alpha/cfl_alpha` — judge real
   regression vs ULP jitter from those numbers before hunting.
+- **Never return a lazy Eigen expression from a deduced-return-type lambda.**
+  `[](const auto& b) { return Eigen::Vector3f{b.center()}.cast<Float>(); }`
+  returns a `CwiseUnaryOp` that nests the temporary `Vector3f` *by reference*
+  (`NestByRefBit`), so the caller evaluates a dangling expression
+  (ASan: `stack-use-after-scope`). This made the `lbvh` point-query
+  brute-force reference in `apps/tests/backends/cuda/lbvh.cu` read dead stack
+  memory: the reference was usually empty (test silently passed for years)
+  and occasionally garbage (the "flaky" `CHECK(diff.empty())` failures on
+  sm_75 and sm_120), while the `LinearBVH` query itself was bit-identical
+  across runs. Fix: `-> Vector3` explicit return type (forces evaluation) —
+  and always sanity-check a brute-force reference (`size() >= n`) so an empty
+  ground truth cannot pass as a green comparison.
 
 ## Performance measurement
 

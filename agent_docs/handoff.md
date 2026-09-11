@@ -1,5 +1,16 @@
 # Handoff — Current State of the Repo
 
+> **`lbvh` test flake resolved (2026-09-11)**: the nondeterministic
+> `CHECK(diff.empty())` at `apps/tests/backends/cuda/lbvh.cu:255` was a
+> test-side bug, not a `LinearBVH` defect. The brute-force point-query
+> reference returned a dangling Eigen `cast<>()` expression from a
+> deduced-return-type lambda (ASan `stack-use-after-scope`), so the ground
+> truth was usually empty (silent pass) and sometimes garbage (fail); the BVH
+> query output was bit-identical across every run. Fixed with an explicit
+> `-> Vector3` return type plus reference sanity checks; 20/20 runs green,
+> compute-sanitizer memcheck/initcheck/racecheck clean. Pitfall recorded in
+> `08-pitfalls-and-debugging.md`.
+
 > **Project/API/frontend audit, documentation only (2026-09-11)**: review baseline
 > `4757859ce69c039a4146fcd574e9c59484a31a87`; findings and source/evidence links are
 > in [14-project-audit.md](14-project-audit.md). The source, kernels, addon, build
