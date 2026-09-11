@@ -290,6 +290,30 @@ touching that area; several of these have bitten us more than once.
   once per frame.
 - `make_spd`'s 9×9 EVD is a throughput suspect in FEM assembly, but
   removing it worsens Newton convergence — measured; don't simply delete.
+- **Eigen `Inverse<>` expressions silently become `trap` in device code.**
+  Symptom: every `AffineBodyRevoluteJointExternalForce` scene aborted in
+  frame 1 (sim cases 74/80 and the 95-case aggregate after 72 cases) with
+  CUDA error 719 from `cudaMemcpyAsync` (`cuda_tool/buffer.h`), rethrown
+  across the `noexcept(AbortOnException)` frame lambda in `advance_ipc.cu`
+  → `terminate called without an active exception`. `compute-sanitizer`
+  showed a `Trace/breakpoint trap` in `torque_to_F` and `cuobjdump -sass`
+  showed the healthy branch compiled to a bare `BPT.TRAP`. Root cause:
+  `Matrix3x3 A_inv_T = A.inverse().transpose();` — in Eigen 3.4.0 only the
+  direct assignment `Matrix = X.inverse()` is `EIGEN_DEVICE_FUNC`; any
+  composed use of the `Inverse<>` expression (`.inverse().transpose()`,
+  `s * X.inverse()`, `X.inverse() * v`) constructs
+  `internal::unary_evaluator<Inverse<>>` whose constructor is host-only
+  (`Eigen/src/Core/Inverse.h`). nvcc 12.8 emits **no diagnostic** for the
+  cross-execution-space call inside the template instantiation (not even
+  with `-Werror cross-execution-space-call`) and lowers it to `trap;`
+  already in PTX. Fix: evaluate into a plain matrix first
+  (`Matrix3x3 A_inv = A.inverse(); ... A_inv.transpose()`). Rule: in
+  `__device__`/`UIPC_GENERIC` code never compose on an `inverse()` result;
+  the same applies to any Eigen expression whose evaluator is not
+  device-annotated. Quick check for a suspect device function:
+  compile its TU with `-ptx` (take the command from
+  `ninja -C <build> -t commands | grep <file>.cu`) and grep the function
+  body for `trap;` outside the `UIPC_KERNEL_ASSERT/ERROR` printf paths.
 - nvcc needs the MSVC environment (vcvars64); a bare shell reports
   "Cannot find compiler 'cl.exe'". MSVC + CUDA≥13 needs `/Zc:preprocessor`;
   cuda_tool TUs need `--extended-lambda --expt-relaxed-constexpr`.
