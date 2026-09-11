@@ -56,6 +56,9 @@ class InfoStacklessBVHSimplexTrajectoryFilter final : public SimplexTrajectoryFi
         // perf/kernels: refit instead of rebuild for the trajectory detects
         bool  bvh_refit_enabled  = true;   // env UIPC_BVH_REFIT=0 disables
         bool  bvh_refit_verify   = false;  // env UIPC_BVH_REFIT_VERIFY=1: rebuild + compare sets
+        bool  bvh_self_cull_verify = false;  // env UIPC_BVH_SELF_CULL_VERIFY=1 (K11): EE self query with/without the range cull
+        SizeT bvh_self_cull_verify_calls      = 0;
+        SizeT bvh_self_cull_verify_mismatches = 0;
         int   refit_rebuild_every = 64;
         int   refits_since_build  = 0;
         SizeT bvh_refit_verify_calls      = 0;

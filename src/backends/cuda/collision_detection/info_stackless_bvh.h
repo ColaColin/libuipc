@@ -168,6 +168,11 @@ class InfoStacklessBVH
     Config&       config() noexcept { return m_impl.config; }
     const Config& config() const noexcept { return m_impl.config; }
 
+    // perf/kernels (K11): self-query subtree cull on the sorted leaf range
+    // (UIPC_BVH_SELF_RANGE_CULL=0 restores the leaf-only ordering test)
+    void set_self_range_cull(bool on) noexcept { m_impl.self_range_cull = on; }
+    bool self_range_cull() const noexcept { return m_impl.self_range_cull; }
+
   public:
     class Impl
     {
@@ -244,6 +249,10 @@ class InfoStacklessBVH
         cuda_tool::DeviceVector<IndexT>   int_bid;
         cuda_tool::DeviceVector<IndexT>   int_cid;
         cuda_tool::DeviceVector<Node>     nodes;
+        // perf/kernels (K11): last leaf (sorted position) under each node,
+        // indexed like `nodes`; leaves map to their own position
+        cuda_tool::DeviceVector<int>      node_range_y;
+        bool                              self_range_cull = true;
         Config                            config;
     };
 

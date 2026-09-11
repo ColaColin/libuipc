@@ -1212,6 +1212,8 @@ void InfoStacklessBVHSimplexTrajectoryFilter::do_build(BuildInfo&)
     m_impl.bvh_refit_enabled = !(refit_env && refit_env[0] == '0');
     const char* verify_env   = std::getenv("UIPC_BVH_REFIT_VERIFY");
     m_impl.bvh_refit_verify  = verify_env && verify_env[0] == '1';
+    const char* cull_verify_env    = std::getenv("UIPC_BVH_SELF_CULL_VERIFY");
+    m_impl.bvh_self_cull_verify = cull_verify_env && cull_verify_env[0] == '1';
 }
 
 void InfoStacklessBVHSimplexTrajectoryFilter::do_detect(DetectInfo& info)
@@ -1519,6 +1521,55 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
         launch_alle_alle();
     if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, host_counts[3]))
         launch_allp_allt(false);
+
+    // DIAGNOSTIC (env UIPC_BVH_SELF_CULL_VERIFY=1, K11): redo the edge-edge
+    // self query without the sorted-range subtree cull and compare the
+    // candidate sets on the host (order-agnostic). Logs a warning on any
+    // difference; the culled result is restored afterwards.
+    if(bvh_self_cull_verify)
+    {
+        auto snapshot_ee = [&](std::vector<Vector2i>& out)
+        {
+            auto v = candidate_AllE_AllE_pairs.view();
+            out.resize(v.size());
+            if(v.size() > 0)
+                v.copy_to(out.data());
+            std::sort(out.begin(), out.end(), [](const Vector2i& a, const Vector2i& b)
+                      { return a.x() != b.x() ? a.x() < b.x() : a.y() < b.y(); });
+            out.erase(std::unique(out.begin(), out.end()), out.end());
+        };
+        auto rerun_ee = [&](bool cull)
+        {
+            lbvh_E.set_self_range_cull(cull);
+            launch_alle_alle();
+            InfoStacklessBVHSimplexTrajectoryFilter_collect_query_counts_kernel<<<1, 1>>>(
+                candidate_AllP_CodimP_pairs.m_cpNum.cview(),
+                candidate_CodimP_AllE_pairs.m_cpNum.cview(),
+                candidate_AllE_AllE_pairs.m_cpNum.cview(),
+                candidate_AllP_AllT_pairs.m_cpNum.cview(),
+                query_counts.view());
+            std::array<IndexT, 4> c{};
+            query_counts.copy_to(c.data());
+            if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, c[2]))
+                launch_alle_alle();
+        };
+        std::vector<Vector2i> cull_set, full_set;
+        snapshot_ee(cull_set);
+        const bool cull_was = lbvh_E.self_range_cull();
+        rerun_ee(!cull_was);
+        snapshot_ee(full_set);
+        rerun_ee(cull_was);
+        if(cull_set != full_set)
+        {
+            logger::warn("BVH self cull verify [AllE-AllE] alpha={} : cull {} pairs, no-cull {} pairs",
+                         alpha, cull_set.size(), full_set.size());
+            ++bvh_self_cull_verify_mismatches;
+        }
+        ++bvh_self_cull_verify_calls;
+        if(bvh_self_cull_verify_calls % 200 == 0)
+            logger::warn("BVH self cull verify: {} calls, {} set mismatches so far",
+                         bvh_self_cull_verify_calls, bvh_self_cull_verify_mismatches);
+    }
 
     // DIAGNOSTIC (env UIPC_BVH_REFIT_VERIFY=1): after a refit, rebuild the
     // trees from scratch, redo the queries and compare the candidate pair

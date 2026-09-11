@@ -1,6 +1,7 @@
 #include <cuda_device/builtin.h>
 #include <cuda_tool/cub.h>
 #include <cuda_tool/cuda_tool.h>
+#include <cstdlib>
 
 // Implementation of InfoStacklessBVH.
 // All build/sort/reorder functions are identical to InfoStacklessBVH.
@@ -490,6 +491,7 @@ namespace
         cuda_tool::BufferView<IndexT>                 _int_bid,
         cuda_tool::BufferView<IndexT>                 _int_cid,
         cuda_tool::BufferView<InfoStacklessBVH::Node> _nodes,
+        cuda_tool::BufferView<int>                    _node_range_y,
         int                                           count)
     {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -510,6 +512,7 @@ namespace
         leaf.bid               = _lvs_bid(idx);
         leaf.cid               = _lvs_cid(idx);
         _nodes(idx + int_size) = leaf;
+        _node_range_y(idx + int_size) = idx;  // K11: a leaf is its own range
 
         if(idx >= int_size)
             return;
@@ -531,6 +534,7 @@ namespace
         n.bid          = _int_bid(idx);
         n.cid          = _int_cid(idx);
         _nodes(new_id) = n;
+        _node_range_y(new_id) = _int_range_y(idx);  // K11
     }
 
     template <typename NodeCull, typename PairPred>
@@ -541,6 +545,8 @@ namespace
         int                                           numObjs,
         cuda_tool::BufferView<int>                    _lvs_idx,
         cuda_tool::BufferView<InfoStacklessBVH::Node> _nodes,
+        cuda_tool::BufferView<int>                    _node_range_y,
+        bool                                          range_cull,
         cuda_tool::CBufferView<IndexT>                _bids,
         cuda_tool::CBufferView<IndexT>                _cids,
         bool                                          has_info,
@@ -597,6 +603,16 @@ namespace
                     if(st == -1)
                         break;
                     auto node = _nodes(st);
+                    // perf/kernels (K11): only pairs with the partner leaf
+                    // at a later sorted position are recorded (tid < leaf,
+                    // below), so a subtree whose last leaf is <= tid cannot
+                    // contribute — skip it without the box tests. The leaf
+                    // test below is unchanged, so the pair set is identical.
+                    if(range_cull && _node_range_y(st) <= tid)
+                    {
+                        st = node.escape;
+                        continue;
+                    }
                     if(!node.bound.intersects(bv))
                     {
                         st = node.escape;
@@ -880,6 +896,7 @@ inline void InfoStacklessBVH::Impl::reorderNode(int int_size)
 {
     auto k = InfoStacklessBVH_reorderNode_kernel;
     int  n = int_size + 1;
+    node_range_y.resize(nodes.size());
     if(n > 0)
         k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
             int_size,
@@ -895,6 +912,7 @@ inline void InfoStacklessBVH::Impl::reorderNode(int int_size)
             int_bid.view(),
             int_cid.view(),
             nodes.view(),
+            node_range_y.view(),
             n);
 }
 
@@ -1038,6 +1056,8 @@ void InfoStacklessBVH::Impl::stacklessSelf(NodeCull                node_cull,
                                               num_objs,
                                               ext_idx.view(),
                                               nodes.view(),
+                                              node_range_y.view(),
+                                              self_range_cull,
                                               bids,
                                               cids,
                                               has_info,
@@ -1095,6 +1115,9 @@ void InfoStacklessBVH::Impl::stacklessOther(NodeCull node_cull,
 inline InfoStacklessBVH::InfoStacklessBVH(cuda_tool::Stream& stream) noexcept
 {
     (void)stream;
+    // perf/kernels (K11)
+    const char* e           = std::getenv("UIPC_BVH_SELF_RANGE_CULL");
+    m_impl.self_range_cull  = !(e && e[0] == '0');
 }
 
 inline void InfoStacklessBVH::QueryBuffer::build(cuda_tool::CBufferView<AABB> aabbs)
