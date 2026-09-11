@@ -7,6 +7,7 @@
 #include <utils/make_spd.h>
 #include <utils/primitive_d_hat.h>
 #include <pipeline/ipc_pipeline_flag.h>
+#include <cstdlib>
 
 namespace uipc::backend::cuda
 {
@@ -252,7 +253,7 @@ namespace
         Es(i) = PP_barrier_energy(flag, kt2, d_hat, thickness, Pa, Pb);
     }
 
-    template <bool GradientOnly>
+    template <bool GradientOnly, int Part>
     __global__ void do_assemble_kernel(cuda_tool::CDense2D<ContactCoeff> table,
                                        cuda_tool::CBufferView<IndexT> contact_ids,
                                        cuda_tool::CBufferView<Vector3> Ps,
@@ -283,158 +284,169 @@ namespace
 
         using namespace sym::codim_ipc_simplex_contact;
 
-        if(idx < ee_offset)  // PT
+        // perf/kernels (K9): Part 1 = PT+EE (12x12 branches), Part 2 = PE+PP
+        // (the bulk, small reduced projections), Part 0 = the fused kernel.
+        if constexpr(Part != 2)
         {
-            int      i    = idx;
-            Vector4i PT   = PTs(i);
-            Vector4i cids = {contact_ids(PT[0]),
-                             contact_ids(PT[1]),
-                             contact_ids(PT[2]),
-                             contact_ids(PT[3])};
-            Float    kt2  = PT_kappa(table, cids) * dt * dt;
-
-            const auto& P  = Ps(PT[0]);
-            const auto& T0 = Ps(PT[1]);
-            const auto& T1 = Ps(PT[2]);
-            const auto& T2 = Ps(PT[3]);
-
-            Float thickness = PT_thickness(thicknesses(PT(0)),
-                                           thicknesses(PT(1)),
-                                           thicknesses(PT(2)),
-                                           thicknesses(PT(3)));
-            Float d_hat =
-                PT_d_hat(d_hats(PT(0)), d_hats(PT(1)), d_hats(PT(2)), d_hats(PT(3)));
-            Vector4i flag = distance::point_triangle_distance_flag(P, T0, T1, T2);
-
-            Vector12 G;
-            if constexpr(GradientOnly)
+            if(idx < ee_offset)  // PT
             {
-                PT_barrier_gradient(G, flag, kt2, d_hat, thickness, P, T0, T1, T2);
-                DoubletVectorAssembler DVA{PT_Gs};
-                DVA.segment<4>(i * 4).write(PT, G);
+                int      i    = idx;
+                Vector4i PT   = PTs(i);
+                Vector4i cids = {contact_ids(PT[0]),
+                                 contact_ids(PT[1]),
+                                 contact_ids(PT[2]),
+                                 contact_ids(PT[3])};
+                Float    kt2  = PT_kappa(table, cids) * dt * dt;
+
+                const auto& P  = Ps(PT[0]);
+                const auto& T0 = Ps(PT[1]);
+                const auto& T1 = Ps(PT[2]);
+                const auto& T2 = Ps(PT[3]);
+
+                Float thickness = PT_thickness(thicknesses(PT(0)),
+                                               thicknesses(PT(1)),
+                                               thicknesses(PT(2)),
+                                               thicknesses(PT(3)));
+                Float d_hat =
+                    PT_d_hat(d_hats(PT(0)), d_hats(PT(1)), d_hats(PT(2)), d_hats(PT(3)));
+                Vector4i flag = distance::point_triangle_distance_flag(P, T0, T1, T2);
+
+                Vector12 G;
+                if constexpr(GradientOnly)
+                {
+                    PT_barrier_gradient(G, flag, kt2, d_hat, thickness, P, T0, T1, T2);
+                    DoubletVectorAssembler DVA{PT_Gs};
+                    DVA.segment<4>(i * 4).write(PT, G);
+                }
+                else
+                {
+                    Matrix12x12 H;
+                    PT_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
+                    PT_barrier_make_spd(H, flag, P, T0, T1, T2);
+                    DoubletVectorAssembler DVA{PT_Gs};
+                    DVA.segment<4>(i * 4).write(PT, G);
+                    TripletMatrixAssembler TMA{PT_Hs};
+                    TMA.half_block<4>(i * SimplexNormalContact::PTHalfHessianSize).write(PT, H);
+                }
+                return;
             }
-            else
+            if(idx < pe_offset)  // EE
             {
-                Matrix12x12 H;
-                PT_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
-                PT_barrier_make_spd(H, flag, P, T0, T1, T2);
-                DoubletVectorAssembler DVA{PT_Gs};
-                DVA.segment<4>(i * 4).write(PT, G);
-                TripletMatrixAssembler TMA{PT_Hs};
-                TMA.half_block<4>(i * SimplexNormalContact::PTHalfHessianSize).write(PT, H);
+                int      i    = idx - ee_offset;
+                Vector4i EE   = EEs(i);
+                Vector4i cids = {contact_ids(EE[0]),
+                                 contact_ids(EE[1]),
+                                 contact_ids(EE[2]),
+                                 contact_ids(EE[3])};
+                Float    kt2  = EE_kappa(table, cids) * dt * dt;
+
+                const auto& E0     = Ps(EE[0]);
+                const auto& E1     = Ps(EE[1]);
+                const auto& E2     = Ps(EE[2]);
+                const auto& E3     = Ps(EE[3]);
+                const auto& t0_Ea0 = rest_Ps(EE[0]);
+                const auto& t0_Ea1 = rest_Ps(EE[1]);
+                const auto& t0_Eb0 = rest_Ps(EE[2]);
+                const auto& t0_Eb1 = rest_Ps(EE[3]);
+
+                Float thickness = EE_thickness(thicknesses(EE(0)),
+                                               thicknesses(EE(1)),
+                                               thicknesses(EE(2)),
+                                               thicknesses(EE(3)));
+                Float d_hat =
+                    EE_d_hat(d_hats(EE(0)), d_hats(EE(1)), d_hats(EE(2)), d_hats(EE(3)));
+                Vector4i flag = distance::edge_edge_distance_flag(E0, E1, E2, E3);
+
+                Vector12 G;
+                if constexpr(GradientOnly)
+                {
+                    mollified_EE_barrier_gradient(
+                        G, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
+                    DoubletVectorAssembler DVA{EE_Gs};
+                    DVA.segment<4>(i * 4).write(EE, G);
+                }
+                else
+                {
+                    Matrix12x12 H;
+                    mollified_EE_barrier_gradient_hessian(
+                        G, H, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
+                    make_spd(H);
+                    DoubletVectorAssembler DVA{EE_Gs};
+                    DVA.segment<4>(i * 4).write(EE, G);
+                    TripletMatrixAssembler TMA{EE_Hs};
+                    TMA.half_block<4>(i * SimplexNormalContact::EEHalfHessianSize).write(EE, H);
+                }
+                return;
             }
         }
-        else if(idx < pe_offset)  // EE
+        if constexpr(Part != 1)
         {
-            int      i    = idx - ee_offset;
-            Vector4i EE   = EEs(i);
-            Vector4i cids = {contact_ids(EE[0]),
-                             contact_ids(EE[1]),
-                             contact_ids(EE[2]),
-                             contact_ids(EE[3])};
-            Float    kt2  = EE_kappa(table, cids) * dt * dt;
-
-            const auto& E0     = Ps(EE[0]);
-            const auto& E1     = Ps(EE[1]);
-            const auto& E2     = Ps(EE[2]);
-            const auto& E3     = Ps(EE[3]);
-            const auto& t0_Ea0 = rest_Ps(EE[0]);
-            const auto& t0_Ea1 = rest_Ps(EE[1]);
-            const auto& t0_Eb0 = rest_Ps(EE[2]);
-            const auto& t0_Eb1 = rest_Ps(EE[3]);
-
-            Float thickness = EE_thickness(thicknesses(EE(0)),
-                                           thicknesses(EE(1)),
-                                           thicknesses(EE(2)),
-                                           thicknesses(EE(3)));
-            Float d_hat =
-                EE_d_hat(d_hats(EE(0)), d_hats(EE(1)), d_hats(EE(2)), d_hats(EE(3)));
-            Vector4i flag = distance::edge_edge_distance_flag(E0, E1, E2, E3);
-
-            Vector12 G;
-            if constexpr(GradientOnly)
+            if(idx < pp_offset)  // PE
             {
-                mollified_EE_barrier_gradient(
-                    G, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
-                DoubletVectorAssembler DVA{EE_Gs};
-                DVA.segment<4>(i * 4).write(EE, G);
+                int      i  = idx - pe_offset;
+                Vector3i PE = PEs(i);
+                Vector3i cids = {contact_ids(PE[0]), contact_ids(PE[1]), contact_ids(PE[2])};
+                Float kt2 = PE_kappa(table, cids) * dt * dt;
+
+                const auto& P  = Ps(PE[0]);
+                const auto& E0 = Ps(PE[1]);
+                const auto& E1 = Ps(PE[2]);
+
+                Float thickness =
+                    PE_thickness(thicknesses(PE(0)), thicknesses(PE(1)), thicknesses(PE(2)));
+                Float d_hat = PE_d_hat(d_hats(PE(0)), d_hats(PE(1)), d_hats(PE(2)));
+                Vector3i flag = distance::point_edge_distance_flag(P, E0, E1);
+
+                Vector9 G;
+                if constexpr(GradientOnly)
+                {
+                    PE_barrier_gradient(G, flag, kt2, d_hat, thickness, P, E0, E1);
+                    DoubletVectorAssembler DVA{PE_Gs};
+                    DVA.segment<3>(i * 3).write(PE, G);
+                }
+                else
+                {
+                    Matrix9x9 H;
+                    PE_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, E0, E1);
+                    PE_barrier_make_spd(H, flag, P, E0, E1);
+                    DoubletVectorAssembler DVA{PE_Gs};
+                    DVA.segment<3>(i * 3).write(PE, G);
+                    TripletMatrixAssembler TMA{PE_Hs};
+                    TMA.half_block<3>(i * SimplexNormalContact::PEHalfHessianSize).write(PE, H);
+                }
+                return;
             }
-            else
+            // PP
             {
-                Matrix12x12 H;
-                mollified_EE_barrier_gradient_hessian(
-                    G, H, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
-                make_spd(H);
-                DoubletVectorAssembler DVA{EE_Gs};
-                DVA.segment<4>(i * 4).write(EE, G);
-                TripletMatrixAssembler TMA{EE_Hs};
-                TMA.half_block<4>(i * SimplexNormalContact::EEHalfHessianSize).write(EE, H);
-            }
-        }
-        else if(idx < pp_offset)  // PE
-        {
-            int      i  = idx - pe_offset;
-            Vector3i PE = PEs(i);
-            Vector3i cids = {contact_ids(PE[0]), contact_ids(PE[1]), contact_ids(PE[2])};
-            Float kt2 = PE_kappa(table, cids) * dt * dt;
+                int         i    = idx - pp_offset;
+                const auto& PP   = PPs(i);
+                Vector2i    cids = {contact_ids(PP[0]), contact_ids(PP[1])};
+                Float       kt2  = PP_kappa(table, cids) * dt * dt;
 
-            const auto& P  = Ps(PE[0]);
-            const auto& E0 = Ps(PE[1]);
-            const auto& E1 = Ps(PE[2]);
+                const auto& P0 = Ps(PP[0]);
+                const auto& P1 = Ps(PP[1]);
 
-            Float thickness =
-                PE_thickness(thicknesses(PE(0)), thicknesses(PE(1)), thicknesses(PE(2)));
-            Float d_hat = PE_d_hat(d_hats(PE(0)), d_hats(PE(1)), d_hats(PE(2)));
-            Vector3i flag = distance::point_edge_distance_flag(P, E0, E1);
+                Float thickness = PP_thickness(thicknesses(PP(0)), thicknesses(PP(1)));
+                Float    d_hat = PP_d_hat(d_hats(PP(0)), d_hats(PP(1)));
+                Vector2i flag  = distance::point_point_distance_flag(P0, P1);
 
-            Vector9 G;
-            if constexpr(GradientOnly)
-            {
-                PE_barrier_gradient(G, flag, kt2, d_hat, thickness, P, E0, E1);
-                DoubletVectorAssembler DVA{PE_Gs};
-                DVA.segment<3>(i * 3).write(PE, G);
-            }
-            else
-            {
-                Matrix9x9 H;
-                PE_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, E0, E1);
-                PE_barrier_make_spd(H, flag, P, E0, E1);
-                DoubletVectorAssembler DVA{PE_Gs};
-                DVA.segment<3>(i * 3).write(PE, G);
-                TripletMatrixAssembler TMA{PE_Hs};
-                TMA.half_block<3>(i * SimplexNormalContact::PEHalfHessianSize).write(PE, H);
-            }
-        }
-        else
-        {
-            int         i    = idx - pp_offset;
-            const auto& PP   = PPs(i);
-            Vector2i    cids = {contact_ids(PP[0]), contact_ids(PP[1])};
-            Float       kt2  = PP_kappa(table, cids) * dt * dt;
-
-            const auto& P0 = Ps(PP[0]);
-            const auto& P1 = Ps(PP[1]);
-
-            Float thickness = PP_thickness(thicknesses(PP(0)), thicknesses(PP(1)));
-            Float    d_hat = PP_d_hat(d_hats(PP(0)), d_hats(PP(1)));
-            Vector2i flag  = distance::point_point_distance_flag(P0, P1);
-
-            Vector6 G;
-            if constexpr(GradientOnly)
-            {
-                PP_barrier_gradient(G, flag, kt2, d_hat, thickness, P0, P1);
-                DoubletVectorAssembler DVA{PP_Gs};
-                DVA.segment<2>(i * 2).write(PP, G);
-            }
-            else
-            {
-                Matrix6x6 H;
-                PP_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P0, P1);
-                PP_barrier_make_spd(H, flag, P0, P1);
-                DoubletVectorAssembler DVA{PP_Gs};
-                DVA.segment<2>(i * 2).write(PP, G);
-                TripletMatrixAssembler TMA{PP_Hs};
-                TMA.half_block<2>(i * SimplexNormalContact::PPHalfHessianSize).write(PP, H);
+                Vector6 G;
+                if constexpr(GradientOnly)
+                {
+                    PP_barrier_gradient(G, flag, kt2, d_hat, thickness, P0, P1);
+                    DoubletVectorAssembler DVA{PP_Gs};
+                    DVA.segment<2>(i * 2).write(PP, G);
+                }
+                else
+                {
+                    Matrix6x6 H;
+                    PP_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P0, P1);
+                    PP_barrier_make_spd(H, flag, P0, P1);
+                    DoubletVectorAssembler DVA{PP_Gs};
+                    DVA.segment<2>(i * 2).write(PP, G);
+                    TripletMatrixAssembler TMA{PP_Hs};
+                    TMA.half_block<2>(i * SimplexNormalContact::PPHalfHessianSize).write(PP, H);
+                }
             }
         }
     }
@@ -446,9 +458,44 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
   public:
     using SimplexNormalContact::SimplexNormalContact;
 
+    // perf/kernels (K9): the fused G+H kernel is compiled for its worst
+    // branch (EE: mollified 12x12 Hessian + full make_spd; 255 registers,
+    // 13.5 KB stack per thread), which the PE/PP bulk then pays for too.
+    // Split into two launches with unchanged per-pair arithmetic and
+    // output slots (bit-identical): PT+EE on a side stream forked from and
+    // joined back into the default stream, PE+PP (lean) on the default
+    // stream, so the rare expensive pairs overlap the bulk instead of
+    // serialising behind it. UIPC_CONTACT_SPLIT=0 restores the fused
+    // launch, =1 runs the two launches back to back on the default stream.
+    int          m_split       = 2;
+    cudaStream_t m_side_stream = nullptr;
+    cudaEvent_t  m_fork        = nullptr;
+    cudaEvent_t  m_join        = nullptr;
+
     virtual void do_build(BuildInfo& info) override
     {
         require<IPCPipelineFlag>();
+
+        if(const char* e = std::getenv("UIPC_CONTACT_SPLIT"))
+            m_split = std::atoi(e);
+        if(m_split == 2)
+        {
+            CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream,
+                                                      cudaStreamNonBlocking));
+            CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_fork, cudaEventDisableTiming));
+            CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_join, cudaEventDisableTiming));
+        }
+    }
+
+    ~IPCSimplexNormalContact() override
+    {
+        // best effort: the CUDA context may already be gone at exit
+        if(m_join)
+            cudaEventDestroy(m_join);
+        if(m_fork)
+            cudaEventDestroy(m_fork);
+        if(m_side_stream)
+            cudaStreamDestroy(m_side_stream);
     }
 
     virtual void do_compute_energy(EnergyInfo& info) override
@@ -532,14 +579,20 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         IndexT pe_offset = ee_offset + ee_count;
         IndexT pp_offset = pe_offset + pe_count;
 
-        // Keep all contact types in one launch: rare PT/EE Hessians are
-        // individually expensive, and splitting them serializes work that the
-        // fused launch overlaps with the dominant PE population. Specialize
-        // only the uniform gradient/Hessian branch.
-        auto launch = [&]<bool GradientOnly>()
+        // One launch per Part (see m_split): the fused kernel (Part 0) or
+        // PT+EE (Part 1, [0, pt+ee)) and PE+PP (Part 2, [0, pe+pp)); the
+        // offsets are re-based so every pair keeps its per-type index and
+        // output slot. Two launches on the same stream would serialise the
+        // rare, individually expensive PT/EE Hessians behind the bulk, so
+        // Part 1 runs on a side stream (fork/join with events).
+        auto launch = [&]<bool GradientOnly, int Part>(IndexT       ee_offset,
+                                                       IndexT       pe_offset,
+                                                       IndexT       pp_offset,
+                                                       IndexT       n,
+                                                       cudaStream_t s)
         {
-            auto k = do_assemble_kernel<GradientOnly>;
-            k<<<cuda_tool::best_grid_dim(total, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            auto k = do_assemble_kernel<GradientOnly, Part>;
+            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, s>>>(
                 info.contact_tabular().viewer(),
                 info.contact_element_ids().viewer(),
                 info.positions().viewer(),
@@ -562,13 +615,42 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 ee_offset,
                 pe_offset,
                 pp_offset,
-                total);
+                n);
+        };
+
+        auto run = [&]<bool GradientOnly>()
+        {
+            IndexT n_ptee = pt_count + ee_count;
+            IndexT n_pepp = pe_count + pp_count;
+            if(GradientOnly || m_split == 0 || n_ptee == 0 || n_pepp == 0)
+            {
+                // gradient-only is lean already (144 registers); a single
+                // non-empty part needs no split either
+                launch.operator()<GradientOnly, 0>(
+                    ee_offset, pe_offset, pp_offset, total, nullptr);
+                return;
+            }
+            cudaStream_t side = nullptr;
+            if(m_split == 2)
+            {
+                side = m_side_stream;
+                CUDA_TOOL_CHECK(cudaEventRecord(m_fork, nullptr));
+                CUDA_TOOL_CHECK(cudaStreamWaitEvent(side, m_fork, 0));
+            }
+            launch.operator()<GradientOnly, 1>(
+                pt_count, n_ptee, n_ptee, n_ptee, side);
+            launch.operator()<GradientOnly, 2>(0, 0, pe_count, n_pepp, nullptr);
+            if(m_split == 2)
+            {
+                CUDA_TOOL_CHECK(cudaEventRecord(m_join, side));
+                CUDA_TOOL_CHECK(cudaStreamWaitEvent(nullptr, m_join, 0));
+            }
         };
 
         if(info.gradient_only())
-            launch.operator()<true>();
+            run.operator()<true>();
         else
-            launch.operator()<false>();
+            run.operator()<false>();
     }
 };
 
