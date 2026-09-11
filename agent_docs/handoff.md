@@ -1327,3 +1327,39 @@ regression).
   repository contracts 48/48, portable Python tests 80 passed / 1 skipped, the
   real Python 3.14 CUDA doctor probe, and the complete documentation build all
   passed.
+
+## perf/kernels round 3 — overnight 2026-09-11 (after `28136dc3`)
+
+Five exact / same-projection-to-rounding kernel changes on `perf/kernels`,
+one per commit, each with an env switch back to the previous path and
+validated on the local RTX 2070 SUPER with the cloth-dataset drum protocol
+(probe Δx inside the baseline-pair noise band at every checkpoint ≤ 30 frames,
+`30_fem_animiator_substep` after every change). Evidence:
+`agent_docs/performance/2026-09-11-perf-kernels-round3.md`; full report in
+cloth-dataset `docs/perf-bench-3080.md` §9.
+
+- K9 `d54728df` — IPC contact G+H as two overlapped launches (PT+EE on a
+  non-blocking side stream via fork/join events, PE+PP on the default stream;
+  `Part` template parameter, per-pair arithmetic unchanged).
+  `UIPC_CONTACT_SPLIT=0/1/2`.
+- K10 `9d2012d8` — EE barrier Hessian PSD projection on the translation-free
+  9×9 subspace (`make_spd_translation_free_4x3`, K7's basis); verified 6e-12
+  relative vs `make_spd<12>` on 50 000 random pairs. `UIPC_EE_REDUCED_SPD=0`.
+- K11 `aa3c9e09` — BVH self traversal skips subtrees whose last leaf (sorted
+  order) is ≤ the query's position (`node_range_y` per node; leaf test
+  unchanged ⇒ identical pair set, verifier `UIPC_BVH_SELF_CULL_VERIFY=1`: 0
+  mismatches in 4 400 queries). `UIPC_BVH_SELF_RANGE_CULL=0`.
+- K12 `adda87be` — MAS cluster-matrix clear via `cudaMemsetAsync` instead of
+  the per-thread struct fill kernel. `UIPC_MAS_FILL_KERNEL=1`.
+- K13 `6b1cfac8` — ABD diag preconditioner (single-body 12×12 inverse) on a
+  side stream, joined through the new `LocalPreconditioner::do_finish_assemble()`
+  hook (called by `GlobalLinearSystem` after all local preconditioners are
+  assembled). `UIPC_ABD_DIAG_SIDE_STREAM=0`.
+- Rejected without commit: `__launch_bounds__(256, 2)` on the PE+PP contact
+  part — ptxas: a non-inlined Eigen callee needs 142 registers.
+
+Result (2070S, 600 frames, ms per Newton iteration towel / tshirt /
+jacket+shorts): final 7.55 / 16.30 / 19.65 vs 28136dc3 7.93 / 18.11 / 20.85
+(−5 / −10 / −6 %) and vs the same-night baseline e1eed4b9 9.64 / 20.36 / 23.94
+(−22 / −20 / −18 %); MPS ×3 aggregate +24 / +25 / +11 %. Recommendation: build
+the next wheel from `6b1cfac8`.
