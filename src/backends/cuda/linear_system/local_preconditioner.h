@@ -30,6 +30,10 @@ class LocalPreconditioner : public SimSystem
     virtual void do_build(BuildInfo& info) = 0;
     virtual void do_init(InitInfo& info)   = 0;
     virtual void do_assemble(GlobalLinearSystem::LocalPreconditionerAssemblyInfo& info) = 0;
+    // perf/kernels (K13): called once all local preconditioners have been
+    // assembled; a preconditioner that assembles on a side stream joins it
+    // back into the default stream here.
+    virtual void do_finish_assemble() {}
     virtual void do_apply(GlobalLinearSystem::ApplyPreconditionerInfo& info) = 0;
 
   private:
@@ -39,6 +43,7 @@ class LocalPreconditioner : public SimSystem
     virtual void init();
 
     void assemble(GlobalLinearSystem::LocalPreconditionerAssemblyInfo& info);
+    void finish_assemble();
     void apply(GlobalLinearSystem::ApplyPreconditionerInfo& info);
     DiagLinearSubsystem* m_subsystem = nullptr;
 };

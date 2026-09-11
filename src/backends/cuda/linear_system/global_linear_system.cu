@@ -432,6 +432,9 @@ void GlobalLinearSystem::Impl::_assemble_preconditioner()
         LocalPreconditionerAssemblyInfo info{this, preconditioner->m_subsystem->m_index};
         preconditioner->assemble(info);
     }
+    // perf/kernels (K13): join side-stream assembly before the solve
+    for(auto&& preconditioner : local_preconditioners.view())
+        preconditioner->finish_assemble();
 }
 
 void GlobalLinearSystem::Impl::solve_linear_system()
