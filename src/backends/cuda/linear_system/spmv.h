@@ -46,6 +46,12 @@ class Spmv
                           SizeT                                triplet_capacity,
                           cudaStream_t stream = nullptr);
 
+    // perf/round4 (s07) UIPC_SPMV_VERIFY=1: read back and log the max
+    // differences between the chunked and the per-triplet kernel accumulated
+    // since the previous call; allocates the scratch on the first call. Call
+    // outside any graph capture, before the solve (once per assembly).
+    void verify_report(SizeT dof_count);
+
     // debug fallback cpu spmv
     // very slow, only for debug
     void cpu_sym_spmv(Float                                a,
@@ -53,5 +59,14 @@ class Spmv
                       cuda_tool::CDenseVectorView<Float>   x,
                       Float                                b,
                       cuda_tool::DenseVectorView<Float>    y);
+
+  private:
+    // UIPC_SPMV_VERIFY scratch: reference y / dot and the max-diff accumulators
+    cuda_tool::DeviceVector<Float>              m_verify_y;
+    cuda_tool::DeviceVar<Float>                 m_verify_dot;
+    cuda_tool::DeviceVector<unsigned long long> m_verify_acc;
+    unsigned long long                          m_verify_launches    = 0;
+    double                                      m_verify_max_rel_y   = 0;
+    double                                      m_verify_max_rel_dot = 0;
 };
 }  // namespace uipc::backend::cuda

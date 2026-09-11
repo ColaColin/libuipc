@@ -8,9 +8,19 @@
 #include <cuda_device/builtin.h>
 #include <Eigen/Sparse>
 #include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <uipc/common/log.h>
 
 namespace uipc::backend::cuda
 {
+static double __longlong_as_double_host(unsigned long long b)
+{
+    double d;
+    std::memcpy(&d, &b, sizeof(d));
+    return d;
+}
+
 __host__ __device__ constexpr int b2i(bool b)
 {
     return b ? 1 : 0;
@@ -474,6 +484,291 @@ namespace
                 atomicAdd(d_dot.data(), partial);
         }
     }
+
+    // perf/round4 (s07): chunked row-run SpMV + dot.
+    // The per-triplet kernel above is FP64-issue-bound on 1/32-rate parts
+    // (SASS: ~75 FP64 instructions per triplet — two 3x3 matvecs, the
+    // dot, three 5-level segmented warp reductions, the dot reduction and
+    // the `a` scaling; 288k triplets x 75 / 141.6 G FP64/s = 152 us on the
+    // 2070S, measured 153 us). Here one thread walks C consecutive triplets
+    // of the (row, col)-sorted symmetric BCOO: equal-row runs accumulate the
+    // row sum with 9 FMAs per block (no cross-lane reduction), a run is
+    // flushed with 3 atomics when the row changes, the lower-triangle
+    // contribution w = A^T x_i goes out with 3 atomics per off-diagonal
+    // block, and the dot uses x^T A x = sum_i x_i.rowsum_i
+    // + sum_{i<j} x_j.(A_ij^T x_i), so w is reused (3 FMAs) and the
+    // diagonal needs no special case. `a` is applied only when a != 1
+    // (exact for a == 1, which the PCG passes). Same matrix, vectors and
+    // products; the summation order differs (rounding-level; the old path
+    // was already nondeterministic through its atomics). The grid covers
+    // the reserved capacity / (256 C) with the s02 idle-block exit and the
+    // device-side count, so a captured graph stays valid while the count
+    // varies within the capacity. UIPC_SPMV_CHUNK=0 = the kernel above,
+    // 1|2|4|8|16 = force C; UIPC_SPMV_VERIFY=1 = also run the old kernel
+    // into scratch and accumulate max|dy|, max|y_ref|, max|ddot| on
+    // device (reported once per assembly by Spmv::verify_report).
+    // Measured (2070S, ms per launch, old -> C = 1 / 2 / 4 / 8 / 16): bunny
+    // 0.070 -> 0.053 / 0.065 / 0.077 / 0.076 / 0.110, case2 0.149 -> 0.112 /
+    // 0.120 / 0.162 / 0.206 / 0.277 — C = 1 (every block its own run, six
+    // atomics per off-diagonal block, perfectly coalesced loads) is the
+    // default; longer runs lose more to the strided loads than they save in
+    // atomics. Probes at C = 1 (bunny): loads only 31 us, no atomics 43,
+    // no transposed part 43, real 53 — the kernel is within 1.7x of the
+    // DRAM floor for this storage.
+    // MODE (UIPC_SPMV_PROBE timing probes into scratch, never the result):
+    // 0 real; 1 no transposed contribution; 2 plain stores instead of
+    // atomics; 3 loads only (integer checksum, no FP64)
+    template <int C, int MODE = 0>
+    __global__ void __launch_bounds__(256)
+        Spmv_rbk_sym_spmv_dot_chunked_kernel(Float a,
+                                             const int* __restrict__ rows,
+                                             const int* __restrict__ cols,
+                                             const Matrix3x3* __restrict__ vals,
+                                             const Float* __restrict__ x,
+                                             Float*        y,
+                                             Float*        d_dot,
+                                             const IndexT* d_triplet_count)
+    {
+        constexpr int block_dim = 256;
+        constexpr int warp_size = 32;
+        using WarpReduceFloat   = cub::WarpReduce<Float, warp_size>;
+        __shared__ typename WarpReduceFloat::TempStorage temp_storage_float[block_dim / warp_size];
+        __shared__ Float s_dot_partials[block_dim / warp_size];
+
+        const int triplet_count = (int)(*d_triplet_count);
+        const int block_first   = (int)blockIdx.x * (block_dim * C);
+        if(block_first >= triplet_count)  // uniform per block: no barrier skipped
+            return;
+
+        const int  begin = block_first + (int)threadIdx.x * C;
+        const bool unit  = (a == Float(1));
+        auto       acc   = [](Float* p, Float v)
+        {
+            if constexpr(MODE == 2)
+                *p = v;
+            else
+                atomicAdd(p, v);
+        };
+        [[maybe_unused]] unsigned long long chk = 0;
+
+        Float dot_local = 0;
+        int   cur_i     = -1;
+        Float xi0 = 0, xi1 = 0, xi2 = 0;
+        Float r0 = 0, r1 = 0, r2 = 0;
+
+        [[maybe_unused]] bool twice = false;  // C == 1 only, see below
+
+        auto flush = [&]()
+        {
+            // dot += x_i . rowsum_i ; y_i += a * rowsum_i
+            Float d = xi0 * r0;
+            d       = __fma_rn(xi1, r1, d);
+            d       = __fma_rn(xi2, r2, d);
+            if constexpr(C == 1)
+                dot_local += twice ? d + d : d;
+            else
+                dot_local += d;
+            Float* yi = y + 3 * cur_i;
+            if(unit)
+            {
+                acc(yi + 0, r0);
+                acc(yi + 1, r1);
+                acc(yi + 2, r2);
+            }
+            else
+            {
+                acc(yi + 0, a * r0);
+                acc(yi + 1, a * r1);
+                acc(yi + 2, a * r2);
+            }
+        };
+
+#pragma unroll
+        for(int k = 0; k < C; ++k)
+        {
+            const int t = begin + k;
+            if(t >= triplet_count)  // sorted: every later t is past the end too
+                break;
+            const int i = rows[t];
+            const int j = cols[t];
+
+            const Matrix3x3 A = vals[t];  // 9 doubles into registers
+
+            const Float* xj  = x + 3 * j;
+            const Float  xj0 = __ldg(xj + 0);
+            const Float  xj1 = __ldg(xj + 1);
+            const Float  xj2 = __ldg(xj + 2);
+
+            if constexpr(MODE == 3)
+            {
+                const Float* xi = x + 3 * i;
+                for(int e = 0; e < 9; ++e)
+                    chk ^= (unsigned long long)__double_as_longlong(A.data()[e]);
+                chk ^= (unsigned long long)__double_as_longlong(
+                    xj0 + xj1 + xj2 + __ldg(xi) + __ldg(xi + 1) + __ldg(xi + 2));
+                continue;
+            }
+
+            if(i != cur_i)
+            {
+                if(cur_i >= 0)
+                    flush();
+                cur_i = i;
+                r0 = r1 = r2    = 0;
+                const Float* xi = x + 3 * i;
+                xi0             = __ldg(xi + 0);
+                xi1             = __ldg(xi + 1);
+                xi2             = __ldg(xi + 2);
+            }
+
+            // rowsum += A * x_j  (9 FMA)
+            r0 = __fma_rn(A(0, 0), xj0, r0);
+            r0 = __fma_rn(A(0, 1), xj1, r0);
+            r0 = __fma_rn(A(0, 2), xj2, r0);
+            r1 = __fma_rn(A(1, 0), xj0, r1);
+            r1 = __fma_rn(A(1, 1), xj1, r1);
+            r1 = __fma_rn(A(1, 2), xj2, r1);
+            r2 = __fma_rn(A(2, 0), xj0, r2);
+            r2 = __fma_rn(A(2, 1), xj1, r2);
+            r2 = __fma_rn(A(2, 2), xj2, r2);
+
+            if(MODE != 1 && i != j)
+            {
+                // w = A^T x_i  (3 MUL + 6 FMA); dot += x_j . w ; y_j += a * w
+                Float w0 = A(0, 0) * xi0;
+                w0       = __fma_rn(A(1, 0), xi1, w0);
+                w0       = __fma_rn(A(2, 0), xi2, w0);
+                Float w1 = A(0, 1) * xi0;
+                w1       = __fma_rn(A(1, 1), xi1, w1);
+                w1       = __fma_rn(A(2, 1), xi2, w1);
+                Float w2 = A(0, 2) * xi0;
+                w2       = __fma_rn(A(1, 2), xi1, w2);
+                w2       = __fma_rn(A(2, 2), xi2, w2);
+
+                if constexpr(C == 1)
+                {
+                    // one block per thread: x_j.w == x_i.(A x_j) = x_i.rowsum,
+                    // which the flush adds once; add it a second time there
+                    // (2 x_i.(A x_j), exact doubling) instead of 3 more FMAs
+                    twice = true;
+                }
+                else
+                {
+                    dot_local = __fma_rn(xj0, w0, dot_local);
+                    dot_local = __fma_rn(xj1, w1, dot_local);
+                    dot_local = __fma_rn(xj2, w2, dot_local);
+                }
+
+                Float* yj = y + 3 * j;
+                if(unit)
+                {
+                    acc(yj + 0, w0);
+                    acc(yj + 1, w1);
+                    acc(yj + 2, w2);
+                }
+                else
+                {
+                    acc(yj + 0, a * w0);
+                    acc(yj + 1, a * w1);
+                    acc(yj + 2, a * w2);
+                }
+            }
+        }
+        if constexpr(MODE == 3)
+        {
+            y[begin % 3 + 3 * (int)(chk % 7)] = __longlong_as_double((long long)chk);
+            return;
+        }
+        if(cur_i >= 0)
+            flush();
+        if(!unit)
+            dot_local *= a;
+
+        // two-level reduction, one atomicAdd per block (as above)
+        const int warp_id = threadIdx.x / warp_size;
+        const int lane_id = threadIdx.x & (warp_size - 1);
+        dot_local = WarpReduceFloat(temp_storage_float[warp_id]).Sum(dot_local);
+        if(lane_id == 0)
+            s_dot_partials[warp_id] = dot_local;
+        __syncthreads();
+        if(threadIdx.x < warp_size)
+        {
+            Float partial = (threadIdx.x < block_dim / warp_size) ?
+                                s_dot_partials[threadIdx.x] :
+                                Float{0};
+            __syncwarp();
+            partial = WarpReduceFloat(temp_storage_float[0]).Sum(partial);
+            if(threadIdx.x == 0)
+                atomicAdd(d_dot, partial);
+        }
+    }
+
+
+    // UIPC_SPMV_VERIFY: acc = {max|y - y_ref|, max|y_ref|, max|dot - dot_ref|,
+    // max|dot_ref|, launches} as the bit patterns of non-negative doubles
+    // (order-preserving as unsigned 64-bit), warp-max first, then atomicMax
+    __global__ void Spmv_verify_kernel(const Float*        y,
+                                       const Float*        y_ref,
+                                       const Float*        dot,
+                                       const Float*        dot_ref,
+                                       unsigned long long* acc,
+                                       int                 n)
+    {
+        using WarpReduceU = cub::WarpReduce<unsigned long long, 32>;
+        __shared__ typename WarpReduceU::TempStorage temp[8];
+        const int i  = blockIdx.x * blockDim.x + threadIdx.x;
+        auto      ab = [](Float v)
+        { return (unsigned long long)__double_as_longlong(fabs(v)); };
+        unsigned long long d = 0, m = 0;
+        if(i < n)
+        {
+            d = ab(y[i] - y_ref[i]);
+            m = ab(y_ref[i]);
+        }
+        const int warp_id = threadIdx.x / 32;
+        d                 = WarpReduceU(temp[warp_id]).Reduce(d, cub::Max());
+        m                 = WarpReduceU(temp[warp_id]).Reduce(m, cub::Max());
+        if((threadIdx.x & 31) == 0)
+        {
+            atomicMax(acc + 0, d);
+            atomicMax(acc + 1, m);
+        }
+        if(i == 0)
+        {
+            atomicMax(acc + 2, ab(*dot - *dot_ref));
+            atomicMax(acc + 3, ab(*dot_ref));
+            atomicAdd(acc + 4, 1ull);
+        }
+    }
+
+    struct SpmvEnv
+    {
+        int chunk = 1;  // 0 = per-triplet kernel; 1 measured best (see the round-4 record, s07)
+        bool verify           = false;
+        bool probe            = false;
+        bool skip_idle_blocks = true;
+    };
+    const SpmvEnv& spmv_env()
+    {
+        static const SpmvEnv env = []
+        {
+            SpmvEnv e;
+            if(const char* s = std::getenv("UIPC_SPMV_CHUNK"))
+            {
+                int c = std::atoi(s);
+                e.chunk =
+                    (c == 0 || c == 1 || c == 2 || c == 4 || c == 8 || c == 16) ? c : 1;
+            }
+            if(const char* s = std::getenv("UIPC_SPMV_VERIFY"))
+                e.verify = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_SPMV_PROBE"))
+                e.probe = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_SPMV_SKIP_IDLE_BLOCKS"))
+                e.skip_idle_blocks = !(s[0] == '0');
+            return e;
+        }();
+        return env;
+    }
 }  // namespace
 
 void Spmv::sym_spmv(Float                                a,
@@ -590,22 +885,144 @@ void Spmv::rbk_sym_spmv_dot(Float                                a,
 
     cudaMemsetAsync(d_dot.data(), 0, sizeof(Float), stream);
 
-    // grid covers the reserved capacity: blocks beyond the current
-    // (device-side) count exit through the is_valid guard with zero work,
-    // so the launch shape need not change when the count does
-    constexpr int block_dim = 256;
-    int block_count = (int)((triplet_capacity + block_dim - 1) / block_dim);
+    const SpmvEnv& env = spmv_env();
 
-    static const bool skip_idle_blocks = []
+    // grid covers the reserved capacity: blocks beyond the current
+    // (device-side) count exit with zero work, so the launch shape need not
+    // change when the count does
+    constexpr int block_dim = 256;
+
+    auto launch_triplet =
+        [&](cuda_tool::DenseVectorView<Float> yy, cuda_tool::Dense<Float> dd)
     {
-        const char* e = std::getenv("UIPC_SPMV_SKIP_IDLE_BLOCKS");
-        return !(e && e[0] == '0');
-    }();
-    if(block_count > 0)
+        int block_count = (int)((triplet_capacity + block_dim - 1) / block_dim);
+        if(block_count > 0)
+            Spmv_rbk_sym_spmv_dot_kernel<<<block_count, block_dim, 0, stream>>>(
+                a, A, x, yy, dd, d_triplet_count, env.skip_idle_blocks);
+    };
+
+    auto launch_chunked = [&](int C, cuda_tool::DenseVectorView<Float> yy, Float* dd)
     {
-        Spmv_rbk_sym_spmv_dot_kernel<<<block_count, block_dim, 0, stream>>>(
-            a, A, x, y, d_dot.viewer(), d_triplet_count, skip_idle_blocks);
+        const SizeT per_block = (SizeT)block_dim * (SizeT)C;
+        int block_count = (int)((triplet_capacity + per_block - 1) / per_block);
+        if(block_count <= 0)
+            return;
+        const int*       rows = A.row_indices().data();
+        const int*       cols = A.col_indices().data();
+        const Matrix3x3* vals = A.values().data();
+        const Float*     xp   = x.data();
+        Float*           yp   = yy.data();
+        const IndexT*    cnt  = d_triplet_count.data();
+#define UIPC_SPMV_LAUNCH_CHUNKED(CC)                                                       \
+    case CC:                                                                               \
+        Spmv_rbk_sym_spmv_dot_chunked_kernel<CC>                                           \
+            <<<block_count, block_dim, 0, stream>>>(a, rows, cols, vals, xp, yp, dd, cnt); \
+        break;
+        switch(C)
+        {
+            default:
+                UIPC_SPMV_LAUNCH_CHUNKED(1)
+                UIPC_SPMV_LAUNCH_CHUNKED(2)
+                UIPC_SPMV_LAUNCH_CHUNKED(4)
+                UIPC_SPMV_LAUNCH_CHUNKED(8)
+                UIPC_SPMV_LAUNCH_CHUNKED(16)
+        }
+#undef UIPC_SPMV_LAUNCH_CHUNKED
+    };
+
+    if(env.chunk > 0)
+        launch_chunked(env.chunk, y, d_dot.data());
+    else
+        launch_triplet(y, d_dot.viewer());
+
+    // verify: the per-triplet kernel as the reference into scratch on the
+    // same stream (captured with the primary), then the max-diff kernel
+    if(env.verify && m_verify_acc.size() == 5 && m_verify_y.size() >= (size_t)y.size())
+    {
+        const int                         n = y.size();
+        cuda_tool::DenseVectorView<Float> y_ref{m_verify_y.data(), 0, n, n};
+        cuda_tool::BufferLaunch(stream).fill<Float>(y_ref.buffer_view(), 0);
+        cudaMemsetAsync(m_verify_dot.data(), 0, sizeof(Float), stream);
+        launch_triplet(y_ref, m_verify_dot.viewer());
+        if(n > 0)
+            Spmv_verify_kernel<<<(n + 255) / 256, 256, 0, stream>>>(y.data(),
+                                                                    y_ref.data(),
+                                                                    d_dot.data(),
+                                                                    m_verify_dot.data(),
+                                                                    m_verify_acc.data(),
+                                                                    n);
     }
+
+    // timing probes (results discarded): C = 1 variants into the scratch
+    if(env.probe && m_verify_y.size() >= (size_t)y.size())
+    {
+        int block_count = (int)((triplet_capacity + block_dim - 1) / block_dim);
+        if(block_count > 0)
+        {
+            const int*       rows = A.row_indices().data();
+            const int*       cols = A.col_indices().data();
+            const Matrix3x3* vals = A.values().data();
+            const Float*     xp   = x.data();
+            Float*           yp   = m_verify_y.data();
+            Float*           dd   = m_verify_dot.data();
+            const IndexT*    cnt  = d_triplet_count.data();
+            Spmv_rbk_sym_spmv_dot_chunked_kernel<1, 1>
+                <<<block_count, block_dim, 0, stream>>>(a, rows, cols, vals, xp, yp, dd, cnt);
+            Spmv_rbk_sym_spmv_dot_chunked_kernel<1, 2>
+                <<<block_count, block_dim, 0, stream>>>(a, rows, cols, vals, xp, yp, dd, cnt);
+            Spmv_rbk_sym_spmv_dot_chunked_kernel<1, 3>
+                <<<block_count, block_dim, 0, stream>>>(a, rows, cols, vals, xp, yp, dd, cnt);
+        }
+    }
+}
+
+void Spmv::verify_report(SizeT dof_count)
+{
+    const SpmvEnv& env = spmv_env();
+    if(!env.verify && !env.probe)
+        return;
+    if(env.verify && m_verify_acc.size() == 5)
+    {
+        unsigned long long h[5];
+        CUDA_TOOL_CHECK(cudaMemcpy(h, m_verify_acc.data(), sizeof(h), cudaMemcpyDeviceToHost));
+        if(h[4] > 0)
+        {
+            auto f = [](unsigned long long b)
+            { return __longlong_as_double_host(b); };
+            double dy = f(h[0]), my = f(h[1]), dd = f(h[2]), md = f(h[3]);
+            m_verify_launches += h[4];
+            m_verify_max_rel_y = std::max(m_verify_max_rel_y, my > 0 ? dy / my : dy);
+            m_verify_max_rel_dot = std::max(m_verify_max_rel_dot, md > 0 ? dd / md : dd);
+            logger::warn("[SpmvVerify] chunk={} {} launches since the last assembly: max|dy| {:.3e} / max|y_ref| {:.3e} = {:.3e}; max|ddot| {:.3e} / |dot_ref| {:.3e} = {:.3e}; cumulative {} launches, max rel y {:.3e}, max rel dot {:.3e}",
+                         env.chunk,
+                         h[4],
+                         dy,
+                         my,
+                         my > 0 ? dy / my : dy,
+                         dd,
+                         md,
+                         md > 0 ? dd / md : dd,
+                         m_verify_launches,
+                         m_verify_max_rel_y,
+                         m_verify_max_rel_dot);
+            CUDA_TOOL_CHECK(cudaMemset(m_verify_acc.data(), 0, sizeof(h)));
+        }
+    }
+    else if(env.verify)
+    {
+        m_verify_acc.resize(5);
+        CUDA_TOOL_CHECK(cudaMemset(m_verify_acc.data(), 0, 5 * sizeof(unsigned long long)));
+    }
+    // the scratch pointers are baked into a captured PCG graph: allocate once,
+    // generously, outside any capture (this runs before the solve)
+    if(m_verify_y.size() == 0)
+    {
+        m_verify_y.resize(std::max<SizeT>(2 * dof_count, SizeT{1024}));
+    }
+    UIPC_ASSERT(m_verify_y.size() >= dof_count,
+                "UIPC_SPMV_VERIFY: the DoF count grew past the verify scratch ({} > {}); not supported",
+                dof_count,
+                m_verify_y.size());
 }
 
 void Spmv::cpu_sym_spmv(Float                                a,

@@ -223,6 +223,10 @@ void GlobalLinearSystem::Impl::build_linear_system()
         return;
     }
 
+    // perf/round4 (s07): UIPC_SPMV_VERIFY readback of the previous solve
+    // (no-op unless the env is set)
+    spmver.verify_report(b.size());
+
     {
         Timer t{"Assemble Subsystems"};
         _assemble_linear_system();
