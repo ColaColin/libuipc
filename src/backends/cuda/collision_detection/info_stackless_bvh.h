@@ -72,6 +72,8 @@ class InfoStacklessBVH
         {
             m_pairs.reserve_discard(50 * 1024);
             m_pairs.resize_discard(50 * 1024);
+            m_broad.reserve_discard(256 * 1024);
+            m_broad.resize_discard(256 * 1024);
         }
 
         auto view() const noexcept { return m_pairs.view(0, m_size); }
@@ -87,6 +89,15 @@ class InfoStacklessBVH
         friend class InfoStacklessBVH;
         SizeT                                 m_size = 0;
         cuda_tool::DeviceBuffer<Vector2i>     m_pairs;
+        // perf/round4 (s04): two-phase query. The traversal stages every
+        // (query raw index, leaf sorted position) that passes the box and
+        // node tests here; a second, coalesced kernel evaluates the leaf
+        // predicate one thread per pair and writes the survivors to m_pairs.
+        // Pairs beyond the capacity are evaluated inline by the traversal, so
+        // the result is complete either way; the capacity grows on the next
+        // prepare_query_result. Same tests on the same pairs: identical sets.
+        cuda_tool::DeviceBuffer<Vector2i>     m_broad;
+        cuda_tool::DeviceVar<int>             m_broadNum{0};  // read by prepare_query_result even if no query ran
         cuda_tool::DeviceBuffer<unsigned int> m_queryMtCode;
         cuda_tool::DeviceBuffer<unsigned int> m_querySortedMtCode;
         cuda_tool::DeviceVar<AABB>            m_querySceneBox;
@@ -172,6 +183,10 @@ class InfoStacklessBVH
     // (UIPC_BVH_SELF_RANGE_CULL=0 restores the leaf-only ordering test)
     void set_self_range_cull(bool on) noexcept { m_impl.self_range_cull = on; }
     bool self_range_cull() const noexcept { return m_impl.self_range_cull; }
+    // perf/round4 (s04): two-phase query (UIPC_BVH_TWO_PHASE=0 = leaf
+    // predicate evaluated inside the traversal)
+    void set_two_phase(bool on) noexcept { m_impl.two_phase = on; }
+    bool two_phase() const noexcept { return m_impl.two_phase; }
 
   public:
     class Impl
@@ -202,10 +217,7 @@ class InfoStacklessBVH
         // Pre-loads query bid/cid into shared memory before the traversal loop.
         // node_cull receives NodePredInfo with query_bid/query_cid from SMem.
         template <typename NodeCull, typename PairPred>
-        void stacklessSelf(NodeCull                        node_cull,
-                           PairPred                        pair_pred,
-                           cuda_tool::VarView<int>         cpNum,
-                           cuda_tool::BufferView<Vector2i> buffer);
+        void stacklessSelf(NodeCull node_cull, PairPred pair_pred, QueryBuffer& qbuffer);
 
         // Pre-loads query_bids/query_cids into shared memory before the traversal loop.
         // node_cull receives NodePredInfo with query_bid/query_cid from SMem.
@@ -216,8 +228,7 @@ class InfoStacklessBVH
                             cuda_tool::CBufferView<IndexT>  query_bids,
                             cuda_tool::CBufferView<IndexT>  query_cids,
                             cuda_tool::CBufferView<int>     query_sorted_id,
-                            cuda_tool::VarView<int>         cpNum,
-                            cuda_tool::BufferView<Vector2i> buffer);
+                            QueryBuffer&                    qbuffer);
 
         cuda_tool::CBufferView<AABB>      objs;
         cuda_tool::CBufferView<IndexT>    bids;
@@ -253,7 +264,11 @@ class InfoStacklessBVH
         // indexed like `nodes`; leaves map to their own position
         cuda_tool::DeviceVector<int> node_range_y;
         bool                         self_range_cull = true;
-        Config                       config;
+        // perf/round4 (s04)
+        bool                                        two_phase  = true;
+        bool                                        self_stats = false;  // UIPC_BVH_SELF_STATS=1 probe
+        cuda_tool::DeviceVector<unsigned long long> self_stat_counters;
+        Config                                      config;
     };
 
   private:

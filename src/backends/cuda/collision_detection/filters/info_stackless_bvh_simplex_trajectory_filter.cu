@@ -1214,6 +1214,8 @@ void InfoStacklessBVHSimplexTrajectoryFilter::do_build(BuildInfo&)
     m_impl.bvh_refit_verify     = verify_env && verify_env[0] == '1';
     const char* cull_verify_env = std::getenv("UIPC_BVH_SELF_CULL_VERIFY");
     m_impl.bvh_self_cull_verify = cull_verify_env && cull_verify_env[0] == '1';
+    const char* two_phase_verify_env = std::getenv("UIPC_BVH_TWO_PHASE_VERIFY");
+    m_impl.bvh_two_phase_verify = two_phase_verify_env && two_phase_verify_env[0] == '1';
 }
 
 void InfoStacklessBVHSimplexTrajectoryFilter::do_detect(DetectInfo& info)
@@ -1527,6 +1529,69 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
     // self query without the sorted-range subtree cull and compare the
     // candidate sets on the host (order-agnostic). Logs a warning on any
     // difference; the culled result is restored afterwards.
+    // (env UIPC_BVH_TWO_PHASE_VERIFY=1, s04): the same with the two-phase
+    // query switch flipped, for the EE self query and the
+    // point-triangle query (both traversal kernels).
+    if(bvh_two_phase_verify)
+    {
+        auto snapshot = [&](InfoStacklessBVH::QueryBuffer& qb, std::vector<Vector2i>& out)
+        {
+            auto v = qb.view();
+            out.resize(v.size());
+            if(v.size() > 0)
+                v.copy_to(out.data());
+            std::sort(out.begin(),
+                      out.end(),
+                      [](const Vector2i& a, const Vector2i& b)
+                      { return a.x() != b.x() ? a.x() < b.x() : a.y() < b.y(); });
+        };
+        auto rerun = [&]
+        {
+            launch_alle_alle();
+            launch_allp_allt(false);
+            InfoStacklessBVHSimplexTrajectoryFilter_collect_query_counts_kernel<<<1, 1>>>(
+                candidate_AllP_CodimP_pairs.m_cpNum.cview(),
+                candidate_CodimP_AllE_pairs.m_cpNum.cview(),
+                candidate_AllE_AllE_pairs.m_cpNum.cview(),
+                candidate_AllP_AllT_pairs.m_cpNum.cview(),
+                query_counts.view());
+            std::array<IndexT, 4> c{};
+            query_counts.copy_to(c.data());
+            if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, c[2]))
+                launch_alle_alle();
+            if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, c[3]))
+                launch_allp_allt(false);
+        };
+        std::vector<Vector2i> ee_a, ee_b, pt_a, pt_b;
+        snapshot(candidate_AllE_AllE_pairs, ee_a);
+        snapshot(candidate_AllP_AllT_pairs, pt_a);
+        const bool two_phase_was = lbvh_E.two_phase();
+        lbvh_E.set_two_phase(!two_phase_was);
+        lbvh_T.set_two_phase(!two_phase_was);
+        rerun();
+        snapshot(candidate_AllE_AllE_pairs, ee_b);
+        snapshot(candidate_AllP_AllT_pairs, pt_b);
+        lbvh_E.set_two_phase(two_phase_was);
+        lbvh_T.set_two_phase(two_phase_was);
+        rerun();
+        if(ee_a != ee_b || pt_a != pt_b)
+        {
+            logger::warn("BVH two-phase verify alpha={} : EE {} vs {} pairs, PT {} vs {} pairs (two_phase={} vs {})",
+                         alpha,
+                         ee_a.size(),
+                         ee_b.size(),
+                         pt_a.size(),
+                         pt_b.size(),
+                         two_phase_was,
+                         !two_phase_was);
+            ++bvh_two_phase_verify_mismatches;
+        }
+        ++bvh_two_phase_verify_calls;
+        if(bvh_two_phase_verify_calls % 200 == 0)
+            logger::warn("BVH two-phase verify: {} calls, {} set mismatches so far",
+                         bvh_two_phase_verify_calls,
+                         bvh_two_phase_verify_mismatches);
+    }
     if(bvh_self_cull_verify)
     {
         auto snapshot_ee = [&](std::vector<Vector2i>& out)

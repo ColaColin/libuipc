@@ -388,24 +388,24 @@ void run_internal_cull_proof_case()
     InfoStacklessBVH::Impl impl;
     impl.build(d_aabbs.view(), d_bids.view(), d_cids.view());
 
-    DeviceVar<int>         cp_num;
-    DeviceBuffer<int>      node_cull_calls(1);
-    DeviceBuffer<int>      leaf_pair_calls(1);
-    DeviceBuffer<Vector2i> pairs(16);
-    BufferLaunch().fill(cp_num.view(), 0);
+    InfoStacklessBVH::QueryBuffer qb;  // s04: the launcher takes the query buffer
+    qb.reserve(16);
+    DeviceBuffer<int> node_cull_calls(1);
+    DeviceBuffer<int> leaf_pair_calls(1);
+    BufferLaunch().fill(qb.m_cpNum.view(), 0);
+    BufferLaunch().fill(qb.m_broadNum.view(), 0);
     BufferLaunch().fill(node_cull_calls.view(), 0);
     BufferLaunch().fill(leaf_pair_calls.view(), 0);
 
     impl.stacklessSelf(CountingNodeCull{node_cull_calls.data()},
                        CountingLeafPair{leaf_pair_calls.data()},
-                       cp_num.view(),
-                       pairs.view());
+                       qb);
 
     int h_node_cull_calls = 0;
     int h_leaf_pair_calls = 0;
     node_cull_calls.view(0, 1).copy_to(&h_node_cull_calls);
     leaf_pair_calls.view(0, 1).copy_to(&h_leaf_pair_calls);
-    int h_pairs = cp_num;
+    int h_pairs = qb.m_cpNum;
 
     fmt::println("internal-cull proof stats: node_cull_calls={}, leaf_pair_calls={}, pairs={}",
                  h_node_cull_calls,
@@ -447,19 +447,19 @@ void run_internal_cull_rate_case()
     InfoStacklessBVH::Impl impl;
     impl.build(d_aabbs.view(), d_bids.view(), d_cids.view());
 
-    DeviceVar<int>         cp_num;
-    DeviceBuffer<int>      node_cull_calls(1);
-    DeviceBuffer<int>      node_cull_rejects(1);
-    DeviceBuffer<Vector2i> pairs(2048);
-    BufferLaunch().fill(cp_num.view(), 0);
+    InfoStacklessBVH::QueryBuffer qb;  // s04: the launcher takes the query buffer
+    qb.reserve(2048);
+    DeviceBuffer<int> node_cull_calls(1);
+    DeviceBuffer<int> node_cull_rejects(1);
+    BufferLaunch().fill(qb.m_cpNum.view(), 0);
+    BufferLaunch().fill(qb.m_broadNum.view(), 0);
     BufferLaunch().fill(node_cull_calls.view(), 0);
     BufferLaunch().fill(node_cull_rejects.view(), 0);
 
     impl.stacklessSelf(CullRateNodeCull{node_cull_calls.data(),
                                         node_cull_rejects.data()},
                        LeafPredTrue{},
-                       cp_num.view(),
-                       pairs.view());
+                       qb);
 
     int h_node_cull_calls   = 0;
     int h_node_cull_rejects = 0;

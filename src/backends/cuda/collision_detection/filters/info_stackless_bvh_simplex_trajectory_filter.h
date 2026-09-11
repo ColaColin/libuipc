@@ -57,6 +57,9 @@ class InfoStacklessBVHSimplexTrajectoryFilter final : public SimplexTrajectoryFi
         bool bvh_refit_enabled = true;  // env UIPC_BVH_REFIT=0 disables
         bool bvh_refit_verify = false;  // env UIPC_BVH_REFIT_VERIFY=1: rebuild + compare sets
         bool bvh_self_cull_verify = false;  // env UIPC_BVH_SELF_CULL_VERIFY=1 (K11): EE self query with/without the range cull
+        bool bvh_two_phase_verify = false;  // env UIPC_BVH_TWO_PHASE_VERIFY=1 (s04): EE/PT queries with and without the two-phase split
+        SizeT bvh_two_phase_verify_calls      = 0;
+        SizeT bvh_two_phase_verify_mismatches = 0;
         SizeT bvh_self_cull_verify_calls      = 0;
         SizeT bvh_self_cull_verify_mismatches = 0;
         int   refit_rebuild_every             = 64;

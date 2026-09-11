@@ -2,6 +2,8 @@
 #include <cuda_tool/cub.h>
 #include <cuda_tool/cuda_tool.h>
 #include <cstdlib>
+#include <cstdio>
+#include <array>
 
 // Implementation of InfoStacklessBVH.
 // All build/sort/reorder functions are identical to InfoStacklessBVH.
@@ -537,13 +539,154 @@ namespace
         _node_range_y(new_id) = _int_range_y(idx);  // K11
     }
 
-    template <typename NodeCull, typename PairPred>
+    // perf/round4 (s04): the leaf-predicate evaluation of one staged pair,
+    // shared by the inline path, the overflow fallback and the filter kernel
+    // (same LeafPredInfo as the original traversal for either query type).
+    template <bool Self, typename PairPred>
+    UIPC_DEVICE UIPC_INLINE bool eval_leaf_pair(int             idx,
+                                               int             leaf_raw,
+                                               IndexT          qbid,
+                                               IndexT          qcid,
+                                               IndexT          lbid,
+                                               IndexT          lcid,
+                                               const PairPred& pair_pred,
+                                               int2&           pair)
+    {
+        if constexpr(Self)
+        {
+            bool q_first = (idx < leaf_raw);
+            pair         = ordered_pair(idx, leaf_raw);
+            InfoStacklessBVH::LeafPredInfo info{pair.x,
+                                                pair.y,
+                                                q_first ? qbid : lbid,
+                                                q_first ? qcid : lcid,
+                                                q_first ? lbid : qbid,
+                                                q_first ? lcid : qcid};
+            return pair_pred(info);
+        }
+        else
+        {
+            pair = int2{idx, leaf_raw};
+            InfoStacklessBVH::LeafPredInfo info{idx, leaf_raw, qbid, qcid, lbid, lcid};
+            return pair_pred(info);
+        }
+    }
+
+    // perf/round4 (s04): second phase — one thread per staged broad pair
+    // (query raw index, leaf sorted position); survivors are compacted per
+    // block into `res`. Blocks past the staged count exit before the barrier.
+    template <bool Self, typename PairPred>
+    __global__ void InfoStacklessBVH_pairFilter_kernel(cuda_tool::CBufferView<Vector2i> broad,
+                                                       cuda_tool::Dense<int> broadCounter,
+                                                       cuda_tool::CBufferView<int> _lvs_idx,
+                                                       cuda_tool::CBufferView<IndexT> _lvs_bid,
+                                                       cuda_tool::CBufferView<IndexT> _lvs_cid,
+                                                       cuda_tool::CBufferView<IndexT> _qbids,
+                                                       cuda_tool::CBufferView<IndexT> _qcids,
+                                                       bool qhas_info,
+                                                       cuda_tool::Dense<int> resCounter,
+                                                       cuda_tool::BufferView<Vector2i> res,
+                                                       PairPred pair_pred)
+    {
+        constexpr IndexT invalid = static_cast<IndexT>(-1);
+        __shared__ int2  s_hits[K_THREADS];
+        __shared__ int   s_cnt;
+        __shared__ int   s_base;
+        const int n     = min(*broadCounter.data(), static_cast<int>(broad.size()));
+        const int first = blockIdx.x * blockDim.x;
+        if(first >= n)
+            return;
+        if(threadIdx.x == 0)
+            s_cnt = 0;
+        __syncthreads();
+        const int k = first + threadIdx.x;
+        if(k < n)
+        {
+            Vector2i bp   = broad(k);
+            int      idx  = bp.x();
+            int      pos  = bp.y();
+            IndexT   qbid = qhas_info ? _qbids(idx) : invalid;
+            IndexT   qcid = qhas_info ? _qcids(idx) : invalid;
+            int2     pair;
+            if(eval_leaf_pair<Self>(
+                   idx, _lvs_idx(pos), qbid, qcid, _lvs_bid(pos), _lvs_cid(pos), pair_pred, pair))
+            {
+                int si     = atomicAdd(&s_cnt, 1);
+                s_hits[si] = pair;
+            }
+        }
+        __syncthreads();
+        if(threadIdx.x == 0)
+            s_base = atomicAdd(resCounter.data(), s_cnt);
+        __syncthreads();
+        safe_copy_to(s_hits, s_cnt, res.data(), s_base, static_cast<int>(res.total_size()));
+    }
+
+    // perf/round4 (s04): flush the staged broad pairs of a block to `broad`;
+    // the pairs that do not fit are evaluated inline by the block's threads
+    // and their hits appended to `res` directly (rare: the capacity grows on
+    // the next prepare_query_result).
+    template <bool Self, typename PairPred>
+    UIPC_DEVICE UIPC_INLINE void flush_broad_pairs(int2* shared_res,
+                                                   int   total,
+                                                   int   gidx,
+                                                   cuda_tool::BufferView<Vector2i> broad,
+                                                   cuda_tool::CBufferView<int>     _lvs_idx,
+                                                   cuda_tool::CBufferView<IndexT>  _lvs_bid,
+                                                   cuda_tool::CBufferView<IndexT>  _lvs_cid,
+                                                   cuda_tool::CBufferView<IndexT>  _qbids,
+                                                   cuda_tool::CBufferView<IndexT>  _qcids,
+                                                   bool                            qhas_info,
+                                                   cuda_tool::Dense<int>           resCounter,
+                                                   cuda_tool::BufferView<Vector2i> res,
+                                                   const PairPred&                 pair_pred)
+    {
+        constexpr IndexT invalid = static_cast<IndexT>(-1);
+        const int        cap     = static_cast<int>(broad.total_size());
+        const int        fit     = (gidx >= cap) ? 0 : min(total, cap - gidx);
+        safe_copy_to(shared_res, fit, broad.data(), gidx, cap);
+        const int res_cap = static_cast<int>(res.total_size());
+        for(int k = fit + static_cast<int>(threadIdx.x); k < total; k += static_cast<int>(blockDim.x))
+        {
+            int2   bp   = shared_res[k];
+            int    idx  = bp.x;
+            int    pos  = bp.y;
+            IndexT qbid = qhas_info ? _qbids(idx) : invalid;
+            IndexT qcid = qhas_info ? _qcids(idx) : invalid;
+            int2   pair;
+            if(eval_leaf_pair<Self>(
+                   idx, _lvs_idx(pos), qbid, qcid, _lvs_bid(pos), _lvs_cid(pos), pair_pred, pair))
+            {
+                int g = atomicAdd(resCounter.data(), 1);
+                if(g < res_cap)
+                    res(g) = to_eigen(pair);
+            }
+        }
+    }
+
+    UIPC_DEVICE UIPC_INLINE unsigned long long warp_sum_ull(unsigned int v)
+    {
+        unsigned long long s = v;
+        for(int o = 16; o > 0; o >>= 1)
+            s += __shfl_down_sync(0xffffffffu, s, o);
+        return s;
+    }
+
+    // perf/round4 (s04): TwoPhase = stage the (query, leaf position) pairs
+    // for InfoStacklessBVH_pairFilter_kernel instead of evaluating the leaf
+    // predicate here (the predicate ran warp-divergent at the leaves and was
+    // 92-95 % of this kernel's time); Stats = probe launch
+    // (UIPC_BVH_SELF_STATS=1): same traversal, counts visits, no predicate,
+    // no output.
+    template <bool TwoPhase, bool Stats, typename NodeCull, typename PairPred>
     __global__ void InfoStacklessBVH_stacklessSelf_kernel(
         int                                           Size,
         cuda_tool::CBufferView<AABB>                  _box,
         int                                           intSize,
         int                                           numObjs,
         cuda_tool::BufferView<int>                    _lvs_idx,
+        cuda_tool::CBufferView<IndexT>                _lvs_bid,
+        cuda_tool::CBufferView<IndexT>                _lvs_cid,
         cuda_tool::BufferView<InfoStacklessBVH::Node> _nodes,
         cuda_tool::BufferView<int>                    _node_range_y,
         bool                                          range_cull,
@@ -552,6 +695,9 @@ namespace
         bool                                          has_info,
         cuda_tool::Dense<int>                         resCounter,
         cuda_tool::BufferView<Vector2i>               res,
+        cuda_tool::Dense<int>                         broadCounter,
+        cuda_tool::BufferView<Vector2i>               broad,
+        unsigned long long*                           stats,
         NodeCull                                      node_cull,
         PairPred                                      pair_pred)
     {
@@ -589,6 +735,9 @@ namespace
 
         int       st       = 0;
         const int max_iter = numObjs * 2;
+        // probe counters: visited, range-culled, box-missed, cull-missed,
+        // leaf nodes reached, ordered pair tests
+        unsigned int c_visit = 0, c_range = 0, c_box = 0, c_cull = 0, c_leaf = 0, c_test = 0;
         while(true)
         {
             // First __syncthreads also ensures SMem pre-loads above are
@@ -603,6 +752,8 @@ namespace
                     if(st == -1)
                         break;
                     auto node = _nodes(st);
+                    if constexpr(Stats)
+                        ++c_visit;
                     // perf/kernels (K11): only pairs with the partner leaf
                     // at a later sorted position are recorded (tid < leaf,
                     // below), so a subtree whose last leaf is <= tid cannot
@@ -610,40 +761,61 @@ namespace
                     // test below is unchanged, so the pair set is identical.
                     if(range_cull && _node_range_y(st) <= tid)
                     {
+                        if constexpr(Stats)
+                            ++c_range;
                         st = node.escape;
                         continue;
                     }
                     if(!node.bound.intersects(bv))
                     {
+                        if constexpr(Stats)
+                            ++c_box;
                         st = node.escape;
                         continue;
                     }
                     if(!node_cull(InfoStacklessBVH::NodePredInfo{
                            idx, s_qbid[threadIdx.x], s_qcid[threadIdx.x], node.bid, node.cid}))
                     {
+                        if constexpr(Stats)
+                            ++c_cull;
                         st = node.escape;
                         continue;
                     }
                     if(node.lc == -1)
                     {
-                        if(tid < st - intSize)
+                        if constexpr(Stats)
+                            ++c_leaf;
+                        const int pos = st - intSize;
+                        if(tid < pos)
                         {
-                            int  leaf_raw = _lvs_idx(st - intSize);
-                            bool q_first  = (idx < leaf_raw);
-                            auto pair     = ordered_pair(idx, leaf_raw);
-                            InfoStacklessBVH::LeafPredInfo leaf_info{
-                                pair.x,
-                                pair.y,
-                                q_first ? s_qbid[threadIdx.x] : node.bid,
-                                q_first ? s_qcid[threadIdx.x] : node.cid,
-                                q_first ? node.bid : s_qbid[threadIdx.x],
-                                q_first ? node.cid : s_qcid[threadIdx.x]};
-                            if(pair_pred(leaf_info))
+                            if constexpr(Stats)
+                            {
+                                ++c_test;
+                            }
+                            else if constexpr(TwoPhase)
                             {
                                 int sidx = atomicAdd(&shared_counter, 1);
                                 if(sidx >= MAX_RES_PER_BLOCK)
                                     break;
-                                shared_res[sidx] = pair;
+                                shared_res[sidx] = int2{idx, pos};
+                            }
+                            else
+                            {
+                                int2 pair;
+                                if(eval_leaf_pair<true>(idx,
+                                                        _lvs_idx(pos),
+                                                        s_qbid[threadIdx.x],
+                                                        s_qcid[threadIdx.x],
+                                                        node.bid,
+                                                        node.cid,
+                                                        pair_pred,
+                                                        pair))
+                                {
+                                    int sidx = atomicAdd(&shared_counter, 1);
+                                    if(sidx >= MAX_RES_PER_BLOCK)
+                                        break;
+                                    shared_res[sidx] = pair;
+                                }
                             }
                         }
                         st = node.escape;
@@ -656,19 +828,48 @@ namespace
             __syncthreads();
             int total = min(shared_counter, MAX_RES_PER_BLOCK);
             if(threadIdx.x == 0)
-                shared_global_idx = atomicAdd(resCounter.data(), total);
+                shared_global_idx =
+                    atomicAdd(TwoPhase ? broadCounter.data() : resCounter.data(), total);
             __syncthreads();
             int gidx = shared_global_idx;
             if(threadIdx.x == 0)
                 shared_counter = 0;
             bool done = total < MAX_RES_PER_BLOCK;
-            safe_copy_to(shared_res, total, res.data(), gidx, static_cast<int>(res.total_size()));
+            if constexpr(TwoPhase)
+                flush_broad_pairs<true>(shared_res,
+                                        total,
+                                        gidx,
+                                        broad,
+                                        _lvs_idx,
+                                        _lvs_bid,
+                                        _lvs_cid,
+                                        _bids,
+                                        _cids,
+                                        has_info,
+                                        resCounter,
+                                        res,
+                                        pair_pred);
+            else
+                safe_copy_to(shared_res, total, res.data(), gidx, static_cast<int>(res.total_size()));
             if(done)
                 break;
         }
+        if constexpr(Stats)
+        {
+            // `done` is block-uniform, so the warp is converged here
+            unsigned long long v[6] = {warp_sum_ull(c_visit),
+                                       warp_sum_ull(c_range),
+                                       warp_sum_ull(c_box),
+                                       warp_sum_ull(c_cull),
+                                       warp_sum_ull(c_leaf),
+                                       warp_sum_ull(c_test)};
+            if((threadIdx.x & 31) == 0)
+                for(int k = 0; k < 6; ++k)
+                    atomicAdd(stats + k, v[k]);
+        }
     }
 
-    template <typename NodeCull, typename PairPred>
+    template <bool TwoPhase, typename NodeCull, typename PairPred>
     __global__ void InfoStacklessBVH_stacklessOther_kernel(
         int                                           Size,
         cuda_tool::CBufferView<AABB>                  _box,
@@ -676,12 +877,16 @@ namespace
         int                                           intSize,
         int                                           numObjs,
         cuda_tool::BufferView<int>                    _lvs_idx,
+        cuda_tool::CBufferView<IndexT>                _lvs_bid,
+        cuda_tool::CBufferView<IndexT>                _lvs_cid,
         cuda_tool::BufferView<InfoStacklessBVH::Node> _nodes,
         cuda_tool::CBufferView<IndexT>                _qbids,
         cuda_tool::CBufferView<IndexT>                _qcids,
         bool                                          qhas_info,
         cuda_tool::Dense<int>                         resCounter,
         cuda_tool::BufferView<Vector2i>               res,
+        cuda_tool::Dense<int>                         broadCounter,
+        cuda_tool::BufferView<Vector2i>               broad,
         NodeCull                                      node_cull,
         PairPred                                      pair_pred)
     {
@@ -737,21 +942,32 @@ namespace
                     }
                     if(node.lc == -1)
                     {
-                        auto pair = int2{idx, _lvs_idx(st - intSize)};
-                        // query side: SMem pre-loaded; leaf side: node.bid/cid
-                        InfoStacklessBVH::LeafPredInfo leaf_info{
-                            pair.x,
-                            pair.y,
-                            s_qbid[threadIdx.x],
-                            s_qcid[threadIdx.x],
-                            node.bid,
-                            node.cid};
-                        if(pair_pred(leaf_info))
+                        const int pos = st - intSize;
+                        if constexpr(TwoPhase)
                         {
                             int sidx = atomicAdd(&shared_counter, 1);
                             if(sidx >= MAX_RES_PER_BLOCK)
                                 break;
-                            shared_res[sidx] = pair;
+                            shared_res[sidx] = int2{idx, pos};
+                        }
+                        else
+                        {
+                            // query side: SMem pre-loaded; leaf side: node.bid/cid
+                            int2 pair;
+                            if(eval_leaf_pair<false>(idx,
+                                                     _lvs_idx(pos),
+                                                     s_qbid[threadIdx.x],
+                                                     s_qcid[threadIdx.x],
+                                                     node.bid,
+                                                     node.cid,
+                                                     pair_pred,
+                                                     pair))
+                            {
+                                int sidx = atomicAdd(&shared_counter, 1);
+                                if(sidx >= MAX_RES_PER_BLOCK)
+                                    break;
+                                shared_res[sidx] = pair;
+                            }
                         }
                         st = node.escape;
                     }
@@ -764,14 +980,29 @@ namespace
             __syncthreads();
             int total = min(shared_counter, MAX_RES_PER_BLOCK);
             if(threadIdx.x == 0)
-                shared_global_idx = atomicAdd(resCounter.data(), total);
+                shared_global_idx = atomicAdd(TwoPhase ? broadCounter.data() : resCounter.data(), total);
             __syncthreads();
             int gidx = shared_global_idx;
             if(threadIdx.x == 0)
                 shared_counter = 0;
             __syncthreads();
             bool done = total < MAX_RES_PER_BLOCK;
-            safe_copy_to(shared_res, total, res.data(), gidx, static_cast<int>(res.total_size()));
+            if constexpr(TwoPhase)
+                flush_broad_pairs<false>(shared_res,
+                                         total,
+                                         gidx,
+                                         broad,
+                                         _lvs_idx,
+                                         _lvs_bid,
+                                         _lvs_cid,
+                                         _qbids,
+                                         _qcids,
+                                         qhas_info,
+                                         resCounter,
+                                         res,
+                                         pair_pred);
+            else
+                safe_copy_to(shared_res, total, res.data(), gidx, static_cast<int>(res.total_size()));
             if(done)
                 break;
         }
@@ -1038,10 +1269,7 @@ inline void InfoStacklessBVH::Impl::build(cuda_tool::CBufferView<AABB>   aabbs,
 //   inside the hot loop.
 // ---------------------------------------------------------------------------
 template <typename NodeCull, typename PairPred>
-void InfoStacklessBVH::Impl::stacklessSelf(NodeCull                node_cull,
-                                           PairPred                pair_pred,
-                                           cuda_tool::VarView<int> cpNum,
-                                           cuda_tool::BufferView<Vector2i> buffer)
+void InfoStacklessBVH::Impl::stacklessSelf(NodeCull node_cull, PairPred pair_pred, QueryBuffer& qbuffer)
 {
     auto num_query = static_cast<int>(ext_aabb.size());
     auto num_objs  = num_query;
@@ -1049,23 +1277,80 @@ void InfoStacklessBVH::Impl::stacklessSelf(NodeCull                node_cull,
 
     bool has_info = bids.size() == (size_t)num_objs && cids.size() == (size_t)num_objs;
 
-    if(grid > 0)
-        InfoStacklessBVH_stacklessSelf_kernel<NodeCull, PairPred>
+    if(grid <= 0)
+        return;
+
+    unsigned long long* stats = nullptr;
+    if(self_stats)
+    {
+        self_stat_counters.resize(8);
+        cuda_tool::BufferLaunch().fill(self_stat_counters.view(), 0ull);
+        stats = self_stat_counters.data();
+    }
+
+    auto launch = [&]<bool TwoPhase, bool Stats>()
+    {
+        InfoStacklessBVH_stacklessSelf_kernel<TwoPhase, Stats, NodeCull, PairPred>
             <<<grid, K_THREADS, 0, nullptr>>>(num_query,
                                               objs,
                                               num_objs - 1,
                                               num_objs,
                                               ext_idx.view(),
+                                              ext_bid.view(),
+                                              ext_cid.view(),
                                               nodes.view(),
                                               node_range_y.view(),
                                               self_range_cull,
                                               bids,
                                               cids,
                                               has_info,
-                                              cpNum.viewer(),
-                                              buffer,
+                                              qbuffer.m_cpNum.viewer(),
+                                              qbuffer.m_pairs.view(),
+                                              qbuffer.m_broadNum.viewer(),
+                                              qbuffer.m_broad.view(),
+                                              stats,
                                               node_cull,
                                               pair_pred);
+    };
+    if(two_phase)
+    {
+        launch.template operator()<true, false>();
+        auto bgrid = static_cast<int>((qbuffer.m_broad.size() + K_THREADS - 1) / K_THREADS);
+        InfoStacklessBVH_pairFilter_kernel<true, PairPred>
+            <<<bgrid, K_THREADS, 0, nullptr>>>(qbuffer.m_broad.view(),
+                                               qbuffer.m_broadNum.viewer(),
+                                               ext_idx.view(),
+                                               ext_bid.view(),
+                                               ext_cid.view(),
+                                               bids,
+                                               cids,
+                                               has_info,
+                                               qbuffer.m_cpNum.viewer(),
+                                               qbuffer.m_pairs.view(),
+                                               pair_pred);
+    }
+    else
+    {
+        launch.template operator()<false, false>();
+    }
+    // perf/round4 (s04): probe — a traversal-only launch (no predicate, no
+    // output) after the real one, reporting the visit counters
+    if(self_stats)
+    {
+        launch.template operator()<false, true>();
+        std::array<unsigned long long, 8> h{};
+        cudaDeviceSynchronize();
+        cudaMemcpy(h.data(), stats, sizeof(h), cudaMemcpyDeviceToHost);
+        std::fprintf(stderr,
+                     "UIPC_BVH_SELF_STATS queries=%d visited=%llu range_cull=%llu box_miss=%llu cull_miss=%llu leaf=%llu pair_tests=%llu\n",
+                     num_query,
+                     h[0],
+                     h[1],
+                     h[2],
+                     h[3],
+                     h[4],
+                     h[5]);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1081,8 +1366,7 @@ void InfoStacklessBVH::Impl::stacklessOther(NodeCull node_cull,
                                             cuda_tool::CBufferView<IndexT> query_bids,
                                             cuda_tool::CBufferView<IndexT> query_cids,
                                             cuda_tool::CBufferView<int> query_sorted_id,
-                                            cuda_tool::VarView<int> cpNum,
-                                            cuda_tool::BufferView<Vector2i> buffer)
+                                            QueryBuffer&                qbuffer)
 {
     auto num_query = static_cast<int>(query_aabbs.size());
     auto num_objs  = static_cast<int>(ext_aabb.size());
@@ -1091,22 +1375,51 @@ void InfoStacklessBVH::Impl::stacklessOther(NodeCull node_cull,
     bool qhas_info = query_bids.size() == (size_t)num_query
                      && query_cids.size() == (size_t)num_query;
 
-    if(grid > 0)
-        InfoStacklessBVH_stacklessOther_kernel<NodeCull, PairPred>
+    if(grid <= 0)
+        return;
+    auto launch = [&]<bool TwoPhase>()
+    {
+        InfoStacklessBVH_stacklessOther_kernel<TwoPhase, NodeCull, PairPred>
             <<<grid, K_THREADS, 0, nullptr>>>(num_query,
                                               query_aabbs,
                                               query_sorted_id,
                                               num_objs - 1,
                                               num_objs,
                                               ext_idx.view(),
+                                              ext_bid.view(),
+                                              ext_cid.view(),
                                               nodes.view(),
                                               query_bids,
                                               query_cids,
                                               qhas_info,
-                                              cpNum.viewer(),
-                                              buffer,
+                                              qbuffer.m_cpNum.viewer(),
+                                              qbuffer.m_pairs.view(),
+                                              qbuffer.m_broadNum.viewer(),
+                                              qbuffer.m_broad.view(),
                                               node_cull,
                                               pair_pred);
+    };
+    if(two_phase)  // s04
+    {
+        launch.template operator()<true>();
+        auto bgrid = static_cast<int>((qbuffer.m_broad.size() + K_THREADS - 1) / K_THREADS);
+        InfoStacklessBVH_pairFilter_kernel<false, PairPred>
+            <<<bgrid, K_THREADS, 0, nullptr>>>(qbuffer.m_broad.view(),
+                                               qbuffer.m_broadNum.viewer(),
+                                               ext_idx.view(),
+                                               ext_bid.view(),
+                                               ext_cid.view(),
+                                               query_bids,
+                                               query_cids,
+                                               qhas_info,
+                                               qbuffer.m_cpNum.viewer(),
+                                               qbuffer.m_pairs.view(),
+                                               pair_pred);
+    }
+    else
+    {
+        launch.template operator()<false>();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1119,6 +1432,11 @@ inline InfoStacklessBVH::InfoStacklessBVH(cuda_tool::Stream& stream) noexcept
     // perf/kernels (K11)
     const char* e          = std::getenv("UIPC_BVH_SELF_RANGE_CULL");
     m_impl.self_range_cull = !(e && e[0] == '0');
+    // perf/round4 (s04)
+    const char* tp    = std::getenv("UIPC_BVH_TWO_PHASE");
+    m_impl.two_phase  = !(tp && tp[0] == '0');
+    const char* st    = std::getenv("UIPC_BVH_SELF_STATS");
+    m_impl.self_stats = st && st[0] == '1';
 }
 
 inline void InfoStacklessBVH::QueryBuffer::build(cuda_tool::CBufferView<AABB> aabbs)
@@ -1189,6 +1507,20 @@ inline bool InfoStacklessBVH::prepare_query_result(QueryBuffer& qbuffer, int cou
         qbuffer.m_pairs.resize_discard(new_size);
     }
     qbuffer.m_size = count;
+    // perf/round4 (s04): the broad (two-phase) stage is complete even when it
+    // overflowed (the overflow was evaluated inline); grow it for the next
+    // query so the fallback stays rare. One 4-byte D2H at this (already
+    // synchronising) point.
+    if(m_impl.two_phase)
+    {
+        int broad_count = qbuffer.m_broadNum;
+        if(broad_count > 0 && static_cast<size_t>(broad_count) > qbuffer.m_broad.size())
+        {
+            const auto new_size = static_cast<size_t>(broad_count * m_impl.config.reserve_ratio);
+            qbuffer.m_broad.reserve_discard(new_size);
+            qbuffer.m_broad.resize_discard(new_size);
+        }
+    }
     return retry;
 }
 
@@ -1213,7 +1545,8 @@ inline void InfoStacklessBVH::launch_detect(cuda_tool::CBuffer2DView<IndexT> cmt
                 m_aabbs.size(),
                 m_CIDs.size());
 
-    m_impl.stacklessSelf(np, lp, qbuffer.m_cpNum.view(), qbuffer.m_pairs.view());
+    BufferLaunch().fill(qbuffer.m_broadNum.view(), 0);  // s04
+    m_impl.stacklessSelf(np, lp, qbuffer);
 }
 
 // detect() with NodePred / LeafPred: wrapper passes pre-loaded bid/cid to NodePredInfo
@@ -1260,14 +1593,8 @@ inline void InfoStacklessBVH::launch_query(cuda_tool::CBufferView<AABB> query_aa
         qbuffer.m_built   = true;
         qbuffer.m_built_n = query_aabbs.size();
     }
-    m_impl.stacklessOther(np,
-                          lp,
-                          query_aabbs,
-                          query_BIDs,
-                          query_CIDs,
-                          qbuffer.m_querySortedId.view(),
-                          qbuffer.m_cpNum.view(),
-                          qbuffer.m_pairs.view());
+    BufferLaunch().fill(qbuffer.m_broadNum.view(), 0);  // s04
+    m_impl.stacklessOther(np, lp, query_aabbs, query_BIDs, query_CIDs, qbuffer.m_querySortedId.view(), qbuffer);
 }
 
 // query() with NodePred / LeafPred: passes query BIDs/CIDs to stacklessOther for SMem pre-load
