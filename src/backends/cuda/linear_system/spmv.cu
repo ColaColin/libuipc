@@ -7,6 +7,7 @@
 #include <cuda_device/bit_operation.h>
 #include <cuda_device/builtin.h>
 #include <Eigen/Sparse>
+#include <cstdlib>
 
 namespace uipc::backend::cuda
 {
@@ -347,15 +348,27 @@ namespace
                                                  cuda_tool::CDenseVectorView<Float> x,
                                                  cuda_tool::DenseVectorView<Float> y,
                                                  cuda_tool::Dense<Float> d_dot,
-                                                 cuda_tool::CDense<IndexT> d_triplet_count)
+                                                 cuda_tool::CDense<IndexT> d_triplet_count,
+                                                 bool skip_idle_blocks)
     {
         // count lives on device: a graph capturing this kernel then stays
         // valid when the matrix nnz changes within the reserved capacity
-        const int     triplet_count = (int)(*d_triplet_count);
-        constexpr int warp_size     = 32;
-        constexpr int block_dim     = 256;
-        constexpr int N             = 3;
-        using T                     = Float;
+        const int triplet_count = (int)(*d_triplet_count);
+        // perf/round4 (s02): the grid covers the reserved capacity, which is
+        // sized from the raw (unreduced) triplet count — ABD contact blocks
+        // expand 16x before the reduce, so the capacity can exceed the
+        // reduced count by two orders of magnitude (wrecking balls: <= 32k
+        // unique triplets, > 4M capacity). A block entirely past the count
+        // holds no triplet: leave before the shared-memory reductions
+        // instead of running three empty warp reductions, a block barrier
+        // and an atomicAdd(+0.0). Uniform per block, so no barrier is
+        // skipped by a subset of threads. UIPC_SPMV_SKIP_IDLE_BLOCKS=0 = old.
+        if(skip_idle_blocks && (int)(blockIdx.x * blockDim.x) >= triplet_count)
+            return;
+        constexpr int warp_size = 32;
+        constexpr int block_dim = 256;
+        constexpr int N         = 3;
+        using T                 = Float;
 
         using WarpReduceInt   = cub::WarpReduce<int, warp_size>;
         using WarpReduceFloat = cub::WarpReduce<Float, warp_size>;
@@ -583,10 +596,15 @@ void Spmv::rbk_sym_spmv_dot(Float                                a,
     constexpr int block_dim = 256;
     int block_count = (int)((triplet_capacity + block_dim - 1) / block_dim);
 
+    static const bool skip_idle_blocks = []
+    {
+        const char* e = std::getenv("UIPC_SPMV_SKIP_IDLE_BLOCKS");
+        return !(e && e[0] == '0');
+    }();
     if(block_count > 0)
     {
         Spmv_rbk_sym_spmv_dot_kernel<<<block_count, block_dim, 0, stream>>>(
-            a, A, x, y, d_dot.viewer(), d_triplet_count);
+            a, A, x, y, d_dot.viewer(), d_triplet_count, skip_idle_blocks);
     }
 }
 

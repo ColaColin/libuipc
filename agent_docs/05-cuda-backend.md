@@ -363,7 +363,12 @@ Graph-stability design (no rebuilds from contact-pair fluctuation):
   CAPACITY; the kernel guards with the device count and reads the triplet
   arrays through raw pointers (`A.row_indices().data()` etc.) — the view's
   `A(i)` accessor asserts against the capture-time count and must NOT be
-  used for this.
+  used for this. The capacity is reserved from the *raw* (unreduced) triplet
+  count, which exceeds the reduced count by 16x on ABD contact scenes, so a
+  block whose first triplet index is past the device count returns before
+  the shared-memory reductions (perf round 4 s02, `UIPC_SPMV_SKIP_IDLE_BLOCKS=0`
+  restores the old behaviour): the launch shape stays graph-stable and the
+  idle blocks stop costing three empty warp reductions and an atomic each.
 - rz_tol is device-side; the validity key is buffer pointers + N + max_iter.
   A matrix realloc (new pointers) still forces a rebuild.
 - Stream plumbing: `Spmv::rbk_sym_spmv_dot`, `GlobalLinearSystem::Impl`
