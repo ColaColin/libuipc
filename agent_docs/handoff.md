@@ -1,5 +1,16 @@
 # Handoff — Current State of the Repo
 
+> **Revolute-joint external-torque device trap fixed (2026-09-11,
+> `fix/revolute-joint-sm75`)**: `torque_to_F` (`affine_body/utils.cu`) evaluated
+> `A.inverse().transpose()` in device code; Eigen 3.4.0's
+> `unary_evaluator<Inverse<>>` constructor is host-only and nvcc lowered the
+> whole healthy branch to `trap;` without any diagnostic, so every
+> `AffineBodyRevoluteJointExternalForce` scene aborted in frame 1 (sim cases
+> 74/80, and the `uipc_test_sim_case` aggregate after 72 cases). The inverse is
+> now evaluated into a plain `Matrix3x3` before transposing (numerics
+> unchanged). Pitfall + detection recipe: `08-pitfalls-and-debugging.md`
+> (GPU / cuda_tool, "Eigen `Inverse<>` expressions").
+
 > **Project/API/frontend audit, documentation only (2026-09-11)**: review baseline
 > `4757859ce69c039a4146fcd574e9c59484a31a87`; findings and source/evidence links are
 > in [14-project-audit.md](14-project-audit.md). The source, kernels, addon, build

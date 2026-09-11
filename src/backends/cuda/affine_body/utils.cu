@@ -206,7 +206,14 @@ UIPC_GENERIC Vector12 torque_to_F(Float tau, const Vector3& e, const Vector12& q
         return Vector12::Zero();
     }
 
-    Matrix3x3 A_inv_T = A.inverse().transpose();
+    // Evaluate the inverse into a plain matrix before transposing. In Eigen
+    // 3.4 the direct assignment `Matrix = expr.inverse()` is EIGEN_DEVICE_FUNC,
+    // but any composed use of the Inverse<> expression (`.inverse().transpose()`,
+    // `s * inverse()`, `inverse() * v`) goes through
+    // internal::unary_evaluator<Inverse<>> whose constructor is host-only; nvcc
+    // silently compiles that call to `trap` in device code (no diagnostic).
+    Matrix3x3 A_inv   = A.inverse();
+    Matrix3x3 A_inv_T = A_inv.transpose();
     Matrix3x3 FA      = (0.5 * tau) * skew(e) * A_inv_T;
 
     Vector12 F      = Vector12::Zero();
