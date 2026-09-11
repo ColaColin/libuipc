@@ -1639,3 +1639,7 @@ n−1 root visits). Recommendation: build the next wheel from `837ce898`.
   deterministically. Both tests now assert the exact registered key set (53
   keys), so a key added or removed without updating the test (and
   `docs/specification/scene_config.md`) fails by name instead of by count.
+- `apps/tests/backends/cuda/collision_filter_registration.cpp` did not know the
+  `lbvh` alias of `linear_bvh` (schema enum since `8398dfb8`) and failed on
+  `REQUIRE_FALSE(expected.empty())`; the alias now maps to
+  `LBVHSimplexTrajectoryFilter` like `linear_bvh`.
