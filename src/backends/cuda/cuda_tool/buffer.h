@@ -361,6 +361,22 @@ class DeviceVector
         if(capacity > std::numeric_limits<size_t>::max() / sizeof(T))
             throw std::length_error{"DeviceVector allocation size overflow"};
 
+        // perf/kernels (K18): when the old content is discarded, release it
+        // before allocating the new block so a growth step never holds
+        // old + new at once (the per-iteration triplet buffers grow this
+        // way; up to 2x their size transiently). cudaFree synchronises the
+        // device in either order, so nothing else changes.
+        // UIPC_DISCARD_FREE_FIRST=0 restores allocate-then-free.
+        static const bool free_first = []
+        {
+            const char* e = std::getenv("UIPC_DISCARD_FREE_FIRST");
+            return !(e && e[0] == '0');
+        }();
+        if(free_first && !preserve && m_data)
+        {
+            CUDA_TOOL_CHECK(cudaFree(m_data));
+            m_data = nullptr;
+        }
         T* p = nullptr;
         if(capacity > 0)
             CUDA_TOOL_CHECK(cudaMalloc(&p, capacity * sizeof(T)));
