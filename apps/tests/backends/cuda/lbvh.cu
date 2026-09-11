@@ -483,11 +483,13 @@ std::vector<Vector2i> brute_froce_query_point(span<const LinearBVHAABB> aabbs)
 
     std::vector<Vector3> points(aabbs.size());
 
+    // Return a plain Vector3: `cast<Float>()` is a lazy Eigen expression that
+    // nests its (temporary) operand by reference, so a deduced return type
+    // would hand back a dangling expression (stack-use-after-scope).
     std::ranges::transform(aabbs,
                            points.begin(),
-                           [](const auto& aabb) {
-                               return Eigen::Vector3f{aabb.center()}.cast<Float>();
-                           });
+                           [](const LinearBVHAABB& aabb) -> Vector3
+                           { return aabb.center().cast<Float>(); });
 
     for(auto&& [i, point0] : enumerate(points))
     {
@@ -611,7 +613,12 @@ void lbvh_test(const SimplicialComplex& mesh)
 
     auto lbvh_qp = lbvh_query_point(aabbs);
     auto bf_qp   = brute_froce_query_point(aabbs);
+    // every center lies inside its own box: a smaller ground truth means the
+    // reference is broken, not that the query passed.
+    REQUIRE(bf_qp.size() >= aabbs.size());
     check_cp_conservative(lbvh_qp, bf_qp);
+    // leaf boxes are exact, so the point query must not report extras either.
+    CHECK(lbvh_qp.size() == bf_qp.size());
 
     auto adaptive = adaptive_lbvh_cp(aabbs);
     check_cp_conservative(adaptive, bf_pairs);
