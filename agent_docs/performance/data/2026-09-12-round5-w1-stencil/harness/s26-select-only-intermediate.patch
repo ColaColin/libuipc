@@ -1,0 +1,172 @@
+--- base.cu	2026-09-12 14:22:13.618960595 +0000
++++ s25b.cu	2026-09-12 15:24:50.128406374 +0000
+@@ -6,6 +6,7 @@
+ #include <Eigen/Dense>
+ #include <utils/matrix_assembler.h>
+ #include <cstdlib>
++#include <type_traits>
+ 
+ namespace uipc::backend::cuda
+ {
+@@ -67,7 +68,7 @@
+     // costs 153 more FP64 instructions.
+     constexpr int SnkSvdSweeps = 4;
+ 
+-    template <bool HoistStretch, bool FixedSvd>
++    template <bool HoistStretch, bool FixedSvd, bool StaticStencil>
+     __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(
+         cuda_tool::CBufferView<Float>          mus,
+         cuda_tool::CBufferView<Float>          lambdas,
+@@ -166,7 +167,7 @@
+         constexpr int TwistFlipPairs[3][2] = {{1, 2}, {0, 2}, {0, 1}};
+ 
+         // s15: sw[m][i] = (U diag(block_vectors.col(m)) V^T) * shape_gradients.col(i)
+-        Vector3 sw[3][StencilSize];
++        Float sw[3][StencilSize][3];
+         if constexpr(HoistStretch)
+         {
+ #pragma unroll
+@@ -183,7 +184,7 @@
+ #pragma unroll
+                         for(int k = 0; k < 3; ++k)
+                             sl += shape_gradients(k, i) * q(ip, k);
+-                        sw[m][i](ip) = sl;
++                        sw[m][i][ip] = sl;
+                     }
+             }
+         }
+@@ -203,6 +204,36 @@
+                     right = i;
+                 }
+ 
++                // s26: `left` / `right` are data dependent, so `sa[left]` and
++                // `sw[m][left]` below are *dynamic* indices into thread-local
++                // arrays. ptxas cannot keep such an array in registers; it
++                // places both in local memory, and the resulting LDL/STL is
++                // this kernel's entire local-memory traffic (probe p01
++                // attributed the "spilling" to this loop, and it is this, not
++                // register spilling). Both indices can only ever be `i` or
++                // `j`, so one predicated select between two
++                // compile-time-indexed reads produces exactly the same values
++                // with no local memory at all. Same operands, same order, so
++                // the arithmetic below is bit-identical.
++                // (UIPC_SNK1_STATIC_STENCIL=0 restores the dynamic form.)
++                [[maybe_unused]] const bool swap_ij = tet(i) > tet(j);
++
++                Float sal[3], sar[3];
++#pragma unroll
++                for(int k = 0; k < 3; ++k)
++                {
++                    if constexpr(StaticStencil)
++                    {
++                        sal[k] = swap_ij ? sa[j][k] : sa[i][k];
++                        sar[k] = swap_ij ? sa[i][k] : sa[j][k];
++                    }
++                    else
++                    {
++                        sal[k] = sa[left][k];
++                        sar[k] = sa[right][k];
++                    }
++                }
++
+                 Matrix3x3 H = Matrix3x3::Zero();
+ #pragma unroll
+                 for(int m = 0; m < 3; ++m)
+@@ -218,9 +249,8 @@
+                         if(l < 0.0)
+                             l = 0.0;
+                         const Float s = sgn ? 1.0 : -1.0;
+-                        const Vector3 w_l = Up2 * sa[left][p1] + s * Up1 * sa[left][p2];
+-                        const Vector3 w_r =
+-                            Up2 * sa[right][p1] + s * Up1 * sa[right][p2];
++                        const Vector3 w_l = Up2 * sal[p1] + s * Up1 * sal[p2];
++                        const Vector3 w_r = Up2 * sar[p1] + s * Up1 * sar[p2];
+                         H += (l * w_l) * w_r.transpose();
+                     }
+                 }
+@@ -233,8 +263,23 @@
+                     Vector3 w_l, w_r;
+                     if constexpr(HoistStretch)
+                     {
+-                        w_l = sw[m][left];
+-                        w_r = sw[m][right];
++#pragma unroll
++                        for(int ip = 0; ip < 3; ++ip)
++                        {
++                            if constexpr(StaticStencil)
++                            {
++                                // element-wise select: selecting whole Vector3
++                                // objects lets the compiler select the *address*
++                                // instead, which keeps `sw` in local memory
++                                w_l(ip) = swap_ij ? sw[m][j][ip] : sw[m][i][ip];
++                                w_r(ip) = swap_ij ? sw[m][i][ip] : sw[m][j][ip];
++                            }
++                            else
++                            {
++                                w_l(ip) = sw[m][left][ip];
++                                w_r(ip) = sw[m][right][ip];
++                            }
++                        }
+                     }
+                     else
+                     {
+@@ -290,6 +335,13 @@
+     // path). Rounding-level change, not bit-identical.
+     bool m_fixed_svd = true;
+ 
++    // s26: index the per-node stencil temporaries `sa` / `sw` with
++    // compile-time constants and a predicated select instead of the
++    // data-dependent `left` / `right`, which forces both arrays into local
++    // memory (UIPC_SNK1_STATIC_STENCIL=0 restores the dynamic form).
++    // Bit-identical.
++    bool m_static_stencil = true;
++
+     virtual void do_build(BuildInfo& info) override
+     {
+         const char* e   = std::getenv("UIPC_SNK1_HOIST_STRETCH");
+@@ -297,6 +349,9 @@
+ 
+         const char* f = std::getenv("UIPC_QR_SVD_FIXED");
+         m_fixed_svd   = !(f && f[0] == '0');
++
++        const char* g     = std::getenv("UIPC_SNK1_STATIC_STENCIL");
++        m_static_stencil  = !(g && g[0] == '0');
+     }
+ 
+     virtual void do_report_extent(ReportExtentInfo& info) override
+@@ -388,19 +443,31 @@
+                 n);
+         };
+ 
++        auto dispatch_ss = [&]<bool HS, bool FS>(std::integral_constant<bool, HS>,
++                                                  std::integral_constant<bool, FS>)
++        {
++            if(m_static_stencil)
++                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<HS, FS, true>);
++            else
++                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<HS, FS, false>);
++        };
++
++        constexpr std::true_type  T{};
++        constexpr std::false_type F{};
++
+         if(m_hoist_stretch)
+         {
+             if(m_fixed_svd)
+-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true, true>);
++                dispatch_ss(T, T);
+             else
+-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true, false>);
++                dispatch_ss(T, F);
+         }
+         else
+         {
+             if(m_fixed_svd)
+-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false, true>);
++                dispatch_ss(F, T);
+             else
+-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false, false>);
++                dispatch_ss(F, F);
+         }
+     }
+ };

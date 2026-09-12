@@ -1,0 +1,48 @@
+### mas-bunny.new.1.txt
+ *Pipeline | 4624.13564 ms | 60
+ *Newton Iteration | 4535.89607 ms | 283
+ *G/H uipc::backend::cuda::StableNeoHookean3D | 562.026804 ms | 283
+ *E uipc::backend::cuda::StableNeoHookean3D | 28.324344 ms | 283
+ *E uipc::backend::cuda::StableNeoHookean3D | 6.113032 ms | 60
+### mas-bunny.new.2.txt
+ *Pipeline | 4624.193612 ms | 60
+ *Newton Iteration | 4536.084581 ms | 283
+ *G/H uipc::backend::cuda::StableNeoHookean3D | 562.769742 ms | 283
+ *E uipc::backend::cuda::StableNeoHookean3D | 28.269614 ms | 283
+ *E uipc::backend::cuda::StableNeoHookean3D | 6.11205 ms | 60
+### mas-bunny.old.1.txt
+ *Pipeline | 4806.616525 ms | 60
+ *Newton Iteration | 4716.527684 ms | 283
+ *G/H uipc::backend::cuda::StableNeoHookean3D | 727.259055 ms | 283
+ *E uipc::backend::cuda::StableNeoHookean3D | 28.451122 ms | 283
+ *E uipc::backend::cuda::StableNeoHookean3D | 6.138836 ms | 60
+### mas-bunny.old.2.txt
+ *Pipeline | 4785.721148 ms | 60
+ *Newton Iteration | 4697.568188 ms | 283
+ *G/H uipc::backend::cuda::StableNeoHookean3D | 724.53027 ms | 283
+ *E uipc::backend::cuda::StableNeoHookean3D | 28.195816 ms | 283
+ *E uipc::backend::cuda::StableNeoHookean3D | 6.084899 ms | 60
+### stiff-gipc-case2.new.1.txt
+ *Pipeline | 11353.783568 ms | 60
+ *Newton Iteration | 11049.724361 ms | 327
+ *G/H uipc::backend::cuda::StableNeoHookean3D | 1258.623473 ms | 327
+ *E uipc::backend::cuda::StableNeoHookean3D | 58.215774 ms | 333
+ *E uipc::backend::cuda::StableNeoHookean3D | 10.630842 ms | 60
+### stiff-gipc-case2.new.2.txt
+ *Pipeline | 11399.96812 ms | 60
+ *Newton Iteration | 11093.89336 ms | 329
+ *G/H uipc::backend::cuda::StableNeoHookean3D | 1265.320211 ms | 329
+ *E uipc::backend::cuda::StableNeoHookean3D | 58.854892 ms | 336
+ *E uipc::backend::cuda::StableNeoHookean3D | 10.666462 ms | 60
+### stiff-gipc-case2.old.1.txt
+ *Pipeline | 11731.237473 ms | 60
+ *Newton Iteration | 11427.331877 ms | 329
+ *G/H uipc::backend::cuda::StableNeoHookean3D | 1610.358594 ms | 329
+ *E uipc::backend::cuda::StableNeoHookean3D | 58.70495 ms | 336
+ *E uipc::backend::cuda::StableNeoHookean3D | 10.601753 ms | 60
+### stiff-gipc-case2.old.2.txt
+ *Pipeline | 11743.909395 ms | 60
+ *Newton Iteration | 11440.479171 ms | 327
+ *G/H uipc::backend::cuda::StableNeoHookean3D | 1597.840683 ms | 327
+ *E uipc::backend::cuda::StableNeoHookean3D | 57.984212 ms | 332
+ *E uipc::backend::cuda::StableNeoHookean3D | 10.629938 ms | 60

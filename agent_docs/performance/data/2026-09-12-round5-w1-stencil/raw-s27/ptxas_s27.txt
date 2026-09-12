@@ -1,0 +1,16 @@
+plain  Lb0ELb0ELb0E regs=248 stack=608 spillST=0 spillLD=0
+plain  Lb0ELb0ELb1E regs=254 stack=512 spillST=0 spillLD=0
+occ    Lb0ELb0ELb0E regs=168 stack=720 spillST=296 spillLD=412
+occ    Lb0ELb0ELb1E regs=168 stack=1184 spillST=752 spillLD=872
+plain  Lb0ELb1ELb0E regs=248 stack=640 spillST=0 spillLD=0
+plain  Lb0ELb1ELb1E regs=254 stack=448 spillST=0 spillLD=0
+occ    Lb0ELb1ELb0E regs=168 stack=752 spillST=288 spillLD=392
+occ    Lb0ELb1ELb1E regs=168 stack=1088 spillST=776 spillLD=896
+plain  Lb1ELb0ELb0E regs=254 stack=672 spillST=0 spillLD=0
+plain  Lb1ELb0ELb1E regs=254 stack=512 spillST=0 spillLD=0
+occ    Lb1ELb0ELb0E regs=168 stack=704 spillST=56 spillLD=56
+occ    Lb1ELb0ELb1E regs=168 stack=1184 spillST=752 spillLD=872
+plain  Lb1ELb1ELb0E regs=254 stack=832 spillST=0 spillLD=0
+plain  Lb1ELb1ELb1E regs=254 stack=448 spillST=0 spillLD=0
+occ    Lb1ELb1ELb0E regs=168 stack=864 spillST=64 spillLD=64
+occ    Lb1ELb1ELb1E regs=168 stack=1088 spillST=776 spillLD=896

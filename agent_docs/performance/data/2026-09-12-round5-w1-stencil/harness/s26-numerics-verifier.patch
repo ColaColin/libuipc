@@ -1,0 +1,118 @@
+--- s26.cu	2026-09-12 15:19:52.730277494 +0000
++++ s25v.cu	2026-09-12 15:24:50.129406366 +0000
+@@ -68,6 +68,13 @@
+     // costs 153 more FP64 instructions.
+     constexpr int SnkSvdSweeps = 4;
+ 
++    // ---- s26 numerics verifier (throwaway build, not committed) ----
++    __device__ unsigned int       g_snk_printed = 0;
++    __device__ unsigned long long g_snk_seen    = 0;
++#ifndef SNK_VERIFY_TOL
++#define SNK_VERIFY_TOL 1e-14
++#endif
++
+     template <bool HoistStretch, bool FixedSvd, bool Stencil2>
+     __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(
+         cuda_tool::CBufferView<Float>          mus,
+@@ -300,6 +307,101 @@
+             emit(2, 2, H22);
+             emit(2, 3, H23);
+             emit(3, 3, H33);
++
++            // ---- verifier: re-run the OLD loop and compare, in the same
++            // (min-index, max-index) orientation the assembler stores.
++            {
++                Matrix3x3 NewW[10], OldW[10];
++                auto orient = [&](int a, int b, const Matrix3x3& Hab)
++                {
++                    Matrix3x3 Hw;
++#pragma unroll
++                    for(int p = 0; p < 3; ++p)
++#pragma unroll
++                        for(int q = 0; q < 3; ++q)
++                            Hw(p, q) = (tet(a) > tet(b)) ? Hab(q, p) : Hab(p, q);
++                    return Hw;
++                };
++                NewW[0] = orient(0, 0, H00);
++                NewW[1] = orient(0, 1, H01);
++                NewW[2] = orient(0, 2, H02);
++                NewW[3] = orient(0, 3, H03);
++                NewW[4] = orient(1, 1, H11);
++                NewW[5] = orient(1, 2, H12);
++                NewW[6] = orient(1, 3, H13);
++                NewW[7] = orient(2, 2, H22);
++                NewW[8] = orient(2, 3, H23);
++                NewW[9] = orient(3, 3, H33);
++
++                int oi = 0;
++#pragma unroll
++                for(int i = 0; i < StencilSize; ++i)
++#pragma unroll
++                    for(int j = i; j < StencilSize; ++j)
++                    {
++                        int left  = i;
++                        int right = j;
++                        if(tet(left) > tet(right))
++                        {
++                            left  = j;
++                            right = i;
++                        }
++                        Matrix3x3 H = Matrix3x3::Zero();
++#pragma unroll
++                        for(int m = 0; m < 3; ++m)
++                        {
++                            const int     p1 = TwistFlipPairs[m][0];
++                            const int     p2 = TwistFlipPairs[m][1];
++                            const Vector3 Up1{U(0, p1), U(1, p1), U(2, p1)};
++                            const Vector3 Up2{U(0, p2), U(1, p2), U(2, p2)};
++#pragma unroll
++                            for(int sgn = 0; sgn < 2; ++sgn)
++                            {
++                                Float l = (mu + (sgn ? -S(m) : S(m)) * evScale) * Vdt2;
++                                if(l < 0.0)
++                                    l = 0.0;
++                                const Float   s = sgn ? 1.0 : -1.0;
++                                const Vector3 w_l =
++                                    Up2 * sa[left][p1] + s * Up1 * sa[left][p2];
++                                const Vector3 w_r =
++                                    Up2 * sa[right][p1] + s * Up1 * sa[right][p2];
++                                H += (l * w_l) * w_r.transpose();
++                            }
++                        }
++#pragma unroll
++                        for(int m = 0; m < 3; ++m)
++                        {
++                            Float l = block_values(m) * Vdt2;
++                            if(l < 0.0)
++                                l = 0.0;
++                            H += (l * sw[m][left]) * sw[m][right].transpose();
++                        }
++                        OldW[oi++] = H;
++                    }
++
++                Float scale = 0.0, dmax = 0.0, dmax_n0 = 0.0, dmax_dir = 0.0;
++                for(int b = 0; b < 10; ++b)
++                    for(int p = 0; p < 3; ++p)
++                        for(int q = 0; q < 3; ++q)
++                        {
++                            Float o = OldW[b](p, q);
++                            Float d = ::fabs(NewW[b](p, q) - o);
++                            scale   = ::fmax(scale, ::fabs(o));
++                            dmax    = ::fmax(dmax, d);
++                            if(b <= 3)
++                                dmax_n0 = ::fmax(dmax_n0, d);
++                            else
++                                dmax_dir = ::fmax(dmax_dir, d);
++                        }
++                Float rel = (scale > 0.0) ? dmax / scale : 0.0;
++                atomicAdd(&g_snk_seen, 1ull);
++                if(rel > Float(SNK_VERIFY_TOL) && atomicAdd(&g_snk_printed, 1u) < 300u)
++                    printf("SNKV rel=%.4e dmax=%.4e n0=%.4e dir=%.4e scale=%.4e\n",
++                           rel, dmax, dmax_n0, dmax_dir, scale);
++                if((I & 0xFFFF) == 0)
++                    printf("SNKS rel=%.4e n0=%.4e dir=%.4e scale=%.4e seen=%llu n=%d\n",
++                           rel, dmax_n0, dmax_dir, scale, g_snk_seen, n);
++            }
+         }
+         else
+         {

@@ -6,6 +6,7 @@
 #include <Eigen/Dense>
 #include <utils/matrix_assembler.h>
 #include <cstdlib>
+#include <type_traits>
 
 namespace uipc::backend::cuda
 {
@@ -67,8 +68,13 @@ namespace
     // costs 153 more FP64 instructions.
     constexpr int SnkSvdSweeps = 4;
 
-    template <bool HoistStretch, bool FixedSvd>
-    __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(
+    // s27: the kernel body lives in a __device__ function so that two
+    // __global__ wrappers can compile the *same PTX* under different
+    // `__launch_bounds__`. Nothing else differs between them -- ptxas only
+    // reallocates registers, it does not touch floating-point semantics
+    // (contraction is already fixed in the PTX), so the two are bit-identical.
+    template <bool HoistStretch, bool FixedSvd, bool Stencil2>
+    __device__ __forceinline__ void StableNeoHookean3D_gradient_hessian_body(
         cuda_tool::CBufferView<Float>          mus,
         cuda_tool::CBufferView<Float>          lambdas,
         cuda_tool::CBufferView<Vector4i>       indices,
@@ -166,8 +172,11 @@ namespace
         constexpr int TwistFlipPairs[3][2] = {{1, 2}, {0, 2}, {0, 1}};
 
         // s15: sw[m][i] = (U diag(block_vectors.col(m)) V^T) * shape_gradients.col(i)
+        // s26: Stencil2 always uses the hoisted form (it is the only one that
+        // keeps every `sw` index a compile-time constant), so
+        // UIPC_SNK1_HOIST_STRETCH has no effect when UIPC_SNK1_STENCIL2=1.
         Vector3 sw[3][StencilSize];
-        if constexpr(HoistStretch)
+        if constexpr(HoistStretch || Stencil2)
         {
 #pragma unroll
             for(int m = 0; m < 3; ++m)
@@ -188,79 +197,227 @@ namespace
             }
         }
 
-        IndexT hessian_offset = I * HalfHessianSize;
-#pragma unroll
-        for(int i = 0; i < StencilSize; ++i)
+        // s26: one 3x3 stencil block, always in the *canonical* (a, b)
+        // orientation, i.e. sum_m l_m * w_m_a * w_m_b^T. The old path folded
+        // the (tet(a) > tet(b)) swap into the accumulation, which made every
+        // `sa[..]` / `sw[..]` index data dependent -- and a thread-local array
+        // with a data-dependent index cannot live in registers, so ptxas put
+        // both arrays in local memory. That is where this kernel's whole
+        // LDL/STL traffic came from (it is *not* register spilling: ptxas
+        // reports 0 spill bytes). Assembling canonically and transposing at
+        // write time makes every index a compile-time constant.
+        auto stencil_block = [&](auto A, auto B) -> Matrix3x3
         {
-#pragma unroll
-            for(int j = i; j < StencilSize; ++j)
-            {
-                int left  = i;
-                int right = j;
-                if(tet(left) > tet(right))
-                {
-                    left  = j;
-                    right = i;
-                }
+            constexpr int a = decltype(A)::value;
+            constexpr int b = decltype(B)::value;
 
-                Matrix3x3 H = Matrix3x3::Zero();
+            Matrix3x3 H = Matrix3x3::Zero();
 #pragma unroll
-                for(int m = 0; m < 3; ++m)
+            for(int m = 0; m < 3; ++m)
+            {
+                const int     p1 = TwistFlipPairs[m][0];
+                const int     p2 = TwistFlipPairs[m][1];
+                const Vector3 Up1{U(0, p1), U(1, p1), U(2, p1)};
+                const Vector3 Up2{U(0, p2), U(1, p2), U(2, p2)};
+#pragma unroll
+                for(int sgn = 0; sgn < 2; ++sgn)  // 0: twist, 1: flip
                 {
-                    const int     p1 = TwistFlipPairs[m][0];
-                    const int     p2 = TwistFlipPairs[m][1];
-                    const Vector3 Up1{U(0, p1), U(1, p1), U(2, p1)};
-                    const Vector3 Up2{U(0, p2), U(1, p2), U(2, p2)};
-#pragma unroll
-                    for(int sgn = 0; sgn < 2; ++sgn)  // 0: twist, 1: flip
-                    {
-                        Float l = (mu + (sgn ? -S(m) : S(m)) * evScale) * Vdt2;
-                        if(l < 0.0)
-                            l = 0.0;
-                        const Float s = sgn ? 1.0 : -1.0;
-                        const Vector3 w_l = Up2 * sa[left][p1] + s * Up1 * sa[left][p2];
-                        const Vector3 w_r =
-                            Up2 * sa[right][p1] + s * Up1 * sa[right][p2];
-                        H += (l * w_l) * w_r.transpose();
-                    }
-                }
-#pragma unroll
-                for(int m = 0; m < 3; ++m)  // stretch modes
-                {
-                    Float l = block_values(m) * Vdt2;
+                    Float l = (mu + (sgn ? -S(m) : S(m)) * evScale) * Vdt2;
                     if(l < 0.0)
                         l = 0.0;
-                    Vector3 w_l, w_r;
-                    if constexpr(HoistStretch)
+                    const Float   s   = sgn ? 1.0 : -1.0;
+                    const Vector3 w_a = Up2 * sa[a][p1] + s * Up1 * sa[a][p2];
+                    const Vector3 w_b = Up2 * sa[b][p1] + s * Up1 * sa[b][p2];
+                    H += (l * w_a) * w_b.transpose();
+                }
+            }
+#pragma unroll
+            for(int m = 0; m < 3; ++m)  // stretch modes
+            {
+                Float l = block_values(m) * Vdt2;
+                if(l < 0.0)
+                    l = 0.0;
+                H += (l * sw[m][a]) * sw[m][b].transpose();
+            }
+            return H;
+        };
+
+        // triangular slot of block (a, b), a <= b, in the same order the old
+        // sequential `hessian_offset++` produced
+        auto slot = [](int a, int b) { return a * StencilSize - a * (a - 1) / 2 + (b - a); };
+
+        // branch-free: a data-dependent `if` here would put ten divergent
+        // branches in the block sequence, which the old loop did not have
+        // (it only swapped two index *variables*)
+        auto emit = [&](int a, int b, const Matrix3x3& Hab)
+        {
+            const IndexT off = I * HalfHessianSize + slot(a, b);
+            const IndexT ra = tet(a), rb = tet(b);
+            const bool   tp = ra > rb;
+            Matrix3x3    Hw;
+#pragma unroll
+            for(int p = 0; p < 3; ++p)
+#pragma unroll
+                for(int q = 0; q < 3; ++q)
+                    Hw(p, q) = tp ? Hab(q, p) : Hab(p, q);
+            H3x3s(off).write(tp ? rb : ra, tp ? ra : rb, Hw);
+        };
+
+        if constexpr(Stencil2)
+        {
+            // The four blocks that touch node 0 are not assembled at all.
+            // `tetrahedron_shape_gradients` builds g_0 = -(g_1 + g_2 + g_3)
+            // and every w is linear in g, so sum_k w_m_k = 0 and therefore
+            // H_0b = -(H_1b + H_2b + H_3b) exactly. Accumulating the three
+            // already-computed blocks of a column is 9 adds where the direct
+            // assembly of that block is ~190 FP64 ops. Rounding-level, not
+            // bit-identical: the sum is re-associated.
+            using I1 = std::integral_constant<int, 1>;
+            using I2 = std::integral_constant<int, 2>;
+            using I3 = std::integral_constant<int, 3>;
+
+            const Matrix3x3 H11 = stencil_block(I1{}, I1{});
+            const Matrix3x3 H12 = stencil_block(I1{}, I2{});
+            const Matrix3x3 H13 = stencil_block(I1{}, I3{});
+            const Matrix3x3 H22 = stencil_block(I2{}, I2{});
+            const Matrix3x3 H23 = stencil_block(I2{}, I3{});
+            const Matrix3x3 H33 = stencil_block(I3{}, I3{});
+
+            const Matrix3x3 H01 = -(H11 + H12.transpose() + H13.transpose());
+            const Matrix3x3 H02 = -(H12 + H22 + H23.transpose());
+            const Matrix3x3 H03 = -(H13 + H23 + H33);
+
+            // H_00 = -(H_10 + H_20 + H_30) = -(H_01^T + H_02^T + H_03^T).
+            // Symmetrised explicitly: the direct form is exactly symmetric
+            // (l*w(p)*w(q) == l*w(q)*w(p) term by term) and the derived one is
+            // only symmetric up to rounding; the linear system assumes a
+            // symmetric diagonal block.
+            const Matrix3x3 M   = -(H01.transpose() + H02.transpose() + H03.transpose());
+            const Matrix3x3 H00 = 0.5 * (M + M.transpose());
+
+            emit(0, 0, H00);
+            emit(0, 1, H01);
+            emit(0, 2, H02);
+            emit(0, 3, H03);
+            emit(1, 1, H11);
+            emit(1, 2, H12);
+            emit(1, 3, H13);
+            emit(2, 2, H22);
+            emit(2, 3, H23);
+            emit(3, 3, H33);
+        }
+        else
+        {
+            IndexT hessian_offset = I * HalfHessianSize;
+#pragma unroll
+            for(int i = 0; i < StencilSize; ++i)
+            {
+#pragma unroll
+                for(int j = i; j < StencilSize; ++j)
+                {
+                    int left  = i;
+                    int right = j;
+                    if(tet(left) > tet(right))
                     {
-                        w_l = sw[m][left];
-                        w_r = sw[m][right];
+                        left  = j;
+                        right = i;
                     }
-                    else
+
+                    Matrix3x3 H = Matrix3x3::Zero();
+#pragma unroll
+                    for(int m = 0; m < 3; ++m)
                     {
-                        const Matrix3x3 q =
-                            U * block_vectors.col(m).asDiagonal() * V.transpose();
+                        const int     p1 = TwistFlipPairs[m][0];
+                        const int     p2 = TwistFlipPairs[m][1];
+                        const Vector3 Up1{U(0, p1), U(1, p1), U(2, p1)};
+                        const Vector3 Up2{U(0, p2), U(1, p2), U(2, p2)};
 #pragma unroll
-                        for(int ip = 0; ip < 3; ++ip)
+                        for(int sgn = 0; sgn < 2; ++sgn)  // 0: twist, 1: flip
                         {
-                            Float sl = 0, sr = 0;
-#pragma unroll
-                            for(int k = 0; k < 3; ++k)
-                            {
-                                sl += shape_gradients(k, left) * q(ip, k);
-                                sr += shape_gradients(k, right) * q(ip, k);
-                            }
-                            w_l(ip) = sl;
-                            w_r(ip) = sr;
+                            Float l = (mu + (sgn ? -S(m) : S(m)) * evScale) * Vdt2;
+                            if(l < 0.0)
+                                l = 0.0;
+                            const Float s = sgn ? 1.0 : -1.0;
+                            const Vector3 w_l =
+                                Up2 * sa[left][p1] + s * Up1 * sa[left][p2];
+                            const Vector3 w_r =
+                                Up2 * sa[right][p1] + s * Up1 * sa[right][p2];
+                            H += (l * w_l) * w_r.transpose();
                         }
                     }
-                    H += (l * w_l) * w_r.transpose();
-                }
+#pragma unroll
+                    for(int m = 0; m < 3; ++m)  // stretch modes
+                    {
+                        Float l = block_values(m) * Vdt2;
+                        if(l < 0.0)
+                            l = 0.0;
+                        Vector3 w_l, w_r;
+                        if constexpr(HoistStretch)
+                        {
+                            w_l = sw[m][left];
+                            w_r = sw[m][right];
+                        }
+                        else
+                        {
+                            const Matrix3x3 q =
+                                U * block_vectors.col(m).asDiagonal() * V.transpose();
+#pragma unroll
+                            for(int ip = 0; ip < 3; ++ip)
+                            {
+                                Float sl = 0, sr = 0;
+#pragma unroll
+                                for(int k = 0; k < 3; ++k)
+                                {
+                                    sl += shape_gradients(k, left) * q(ip, k);
+                                    sr += shape_gradients(k, right) * q(ip, k);
+                                }
+                                w_l(ip) = sl;
+                                w_r(ip) = sr;
+                            }
+                        }
+                        H += (l * w_l) * w_r.transpose();
+                    }
 
-                H3x3s(hessian_offset++).write(tet(left), tet(right), H);
+                    H3x3s(hessian_offset++).write(tet(left), tet(right), H);
+                }
             }
         }
     }
+
+#define UIPC_SNK1_GH_ARGS                                                      \
+    cuda_tool::CBufferView<Float> mus, cuda_tool::CBufferView<Float> lambdas,  \
+        cuda_tool::CBufferView<Vector4i> indices,                              \
+        cuda_tool::CBufferView<Vector3> xs,                                    \
+        cuda_tool::CBufferView<Matrix3x3> Dm_invs,                             \
+        cuda_tool::DoubletVectorView<Float, 3> G3s,                            \
+        cuda_tool::TripletMatrixView<Float, 3> H3x3s,                          \
+        cuda_tool::CBufferView<Float> volumes, Float dt, bool gradient_only, int n
+
+#define UIPC_SNK1_GH_CALL                                                      \
+    mus, lambdas, indices, xs, Dm_invs, G3s, H3x3s, volumes, dt, gradient_only, n
+
+    template <bool HoistStretch, bool FixedSvd, bool Stencil2>
+    __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(UIPC_SNK1_GH_ARGS)
+    {
+        StableNeoHookean3D_gradient_hessian_body<HoistStretch, FixedSvd, Stencil2>(
+            UIPC_SNK1_GH_CALL);
+    }
+
+    // s27: the same body under an occupancy bound. Without it ptxas takes 254
+    // registers and the SM holds one 256-thread block = 8 warps; the kernel is
+    // latency bound, not instruction bound, and paying 1.1 KB of frame and
+    // ~1.6 KB of genuine spill traffic to reach 12 warps is a large net win
+    // (measured: -21 % on case2, -22 % on mas-bunny). 128x4 (16 warps) is not
+    // better than 128x3, so this takes the cheaper of the two.
+    // UIPC_SNK1_OCC=0 restores the unbounded kernel.
+    template <bool HoistStretch, bool FixedSvd, bool Stencil2>
+    __global__ __launch_bounds__(128, 3) void StableNeoHookean3D_do_compute_gradient_hessian_kernel_occ(
+        UIPC_SNK1_GH_ARGS)
+    {
+        StableNeoHookean3D_gradient_hessian_body<HoistStretch, FixedSvd, Stencil2>(
+            UIPC_SNK1_GH_CALL);
+    }
+
 }  // namespace
 
 class StableNeoHookean3D final : public FEM3DConstitution
@@ -290,6 +447,16 @@ class StableNeoHookean3D final : public FEM3DConstitution
     // path). Rounding-level change, not bit-identical.
     bool m_fixed_svd = true;
 
+    // s26: canonical-orientation stencil assembly (no data-dependent index
+    // into the thread-local `sa` / `sw`) plus the four node-0 blocks derived
+    // from sum_k w_k = 0 (UIPC_SNK1_STENCIL2=0 restores the old loop).
+    // Rounding-level, not bit-identical.
+    bool m_stencil2 = true;
+
+    // s27: occupancy bound on the G/H kernel (UIPC_SNK1_OCC=0 = unbounded).
+    // Bit-identical: same PTX body, ptxas only reallocates registers.
+    bool m_occ = true;
+
     virtual void do_build(BuildInfo& info) override
     {
         const char* e   = std::getenv("UIPC_SNK1_HOIST_STRETCH");
@@ -297,6 +464,12 @@ class StableNeoHookean3D final : public FEM3DConstitution
 
         const char* f = std::getenv("UIPC_QR_SVD_FIXED");
         m_fixed_svd   = !(f && f[0] == '0');
+
+        const char* g = std::getenv("UIPC_SNK1_STENCIL2");
+        m_stencil2    = !(g && g[0] == '0');
+
+        const char* h = std::getenv("UIPC_SNK1_OCC");
+        m_occ         = !(h && h[0] == '0');
     }
 
     virtual void do_report_extent(ReportExtentInfo& info) override
@@ -388,19 +561,41 @@ class StableNeoHookean3D final : public FEM3DConstitution
                 n);
         };
 
+        auto dispatch = [&]<bool HS, bool FS>(std::integral_constant<bool, HS>,
+                                              std::integral_constant<bool, FS>)
+        {
+            if(m_occ)
+            {
+                if(m_stencil2)
+                    launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel_occ<HS, FS, true>);
+                else
+                    launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel_occ<HS, FS, false>);
+            }
+            else
+            {
+                if(m_stencil2)
+                    launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<HS, FS, true>);
+                else
+                    launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<HS, FS, false>);
+            }
+        };
+
+        constexpr std::true_type  T{};
+        constexpr std::false_type F{};
+
         if(m_hoist_stretch)
         {
             if(m_fixed_svd)
-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true, true>);
+                dispatch(T, T);
             else
-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true, false>);
+                dispatch(T, F);
         }
         else
         {
             if(m_fixed_svd)
-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false, true>);
+                dispatch(F, T);
             else
-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false, false>);
+                dispatch(F, F);
         }
     }
 };
