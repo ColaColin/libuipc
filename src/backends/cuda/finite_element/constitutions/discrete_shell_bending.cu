@@ -67,7 +67,7 @@ namespace
     // projection is a template parameter so that each instantiation carries only
     // one code path's register/stack footprint (the 12x12 eigen-solve alone costs
     // ~7 KB of stack frame).
-    template <int Proj>
+    template <int Proj, int Solver>
     __global__ void DiscreteShellBending_do_compute_gradient_hessian_kernel(
         cuda_tool::BufferView<Vector4i>        stencils,
         cuda_tool::BufferView<Float>           bending_stiffnesses,
@@ -119,12 +119,14 @@ namespace
         // round 3 put on the Dahl friction hinge). UIPC_DSB_REDUCED_SPD=0
         // restores the 12x12 eigen-solve; UIPC_DSB_BLOCKED_PROJ=0 uses the
         // dense 12x9 basis products of K7 instead of the K16 block assembly.
+        // s19: Solver = 0 restores Eigen's SelfAdjointEigenSolver inside the
+        // 9x9 (or 12x12) PSD projection, 1 = the fixed-size tridiagonal QL.
         if constexpr(Proj == 1)
-            make_spd_translation_free_4x3_blocked(H12x12);
+            make_spd_translation_free_4x3_blocked<Solver>(H12x12);
         else if constexpr(Proj == 2)
-            make_spd_translation_free_4x3(H12x12);
+            make_spd_translation_free_4x3<Solver>(H12x12);
         else
-            make_spd(H12x12);
+            make_spd<12, Solver>(H12x12);
 
         TripletMatrixAssembler TMA{H3x3s};
         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
@@ -172,6 +174,9 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
     // (UIPC_DSB_BLOCKED_PROJ=0 = the dense 12x9 basis products)
     bool m_reduced_spd  = true;
     bool m_blocked_proj = true;
+    // s19: UIPC_MAKE_SPD_JACOBI=0 -> Eigen's SelfAdjointEigenSolver in the
+    // PSD projection (the pre-round-5 path); default = tridiagonal QL
+    bool m_tql2 = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -179,6 +184,8 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         m_reduced_spd  = !(e && e[0] == '0');
         const char* b  = std::getenv("UIPC_DSB_BLOCKED_PROJ");
         m_blocked_proj = !(b && b[0] == '0');
+        const char* t  = std::getenv("UIPC_MAKE_SPD_JACOBI");
+        m_tql2         = !(t && t[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -372,12 +379,24 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
                 n);
         };
 
-        if(!m_reduced_spd)
-            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<0>);
-        else if(m_blocked_proj)
-            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1>);
+        if(m_tql2)
+        {
+            if(!m_reduced_spd)
+                launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<0, 1>);
+            else if(m_blocked_proj)
+                launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>);
+            else
+                launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<2, 1>);
+        }
         else
-            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<2>);
+        {
+            if(!m_reduced_spd)
+                launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<0, 0>);
+            else if(m_blocked_proj)
+                launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0>);
+            else
+                launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<2, 0>);
+        }
     }
 };
 
