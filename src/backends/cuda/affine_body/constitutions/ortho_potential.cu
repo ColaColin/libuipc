@@ -140,6 +140,7 @@ class OrthoPotential final : public AffineBodyConstitution
 
     virtual void do_build(AffineBodyConstitution::BuildInfo& info) override
     {
+        // historical name: it selects evd_tridiag_ql, not a Jacobi sweep (R1)
         const char* t = std::getenv("UIPC_MAKE_SPD_JACOBI");
         m_tql2        = !(t && t[0] == '0');
         if(const char* e = std::getenv("UIPC_GRID_SPREAD_VERIFY"))

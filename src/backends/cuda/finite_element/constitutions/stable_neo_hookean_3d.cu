@@ -58,7 +58,8 @@ namespace
     // loop below rebuilds them for every one of the 10 blocks. Evaluating them
     // once, with the same expressions in the same order, is bit-identical.
     // A template parameter so that each instantiation keeps its own register /
-    // stack profile (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form).
+    // stack profile (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form -- but
+    // only with UIPC_SNK1_STENCIL2=0; s29's Stencil2 path always hoists).
     // s23: number of cyclic Jacobi sweeps in the fixed-iteration SVD.
     // 4 is the smallest count that reaches full double precision: over 65 536
     // samples of every deformation regime probed, the worst case needs 4
@@ -440,6 +441,8 @@ class StableNeoHookean3D final : public FEM3DConstitution
 
     // s15: hoist the stretch-mode contractions out of the stencil-block loop
     // (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form). Bit-identical.
+    // Vacuous under the shipped default: s29's Stencil2 assembly always hoists,
+    // so this switch only does something with UIPC_SNK1_STENCIL2=0.
     bool m_hoist_stretch = true;
 
     // s23: fixed-sweep branch-free Jacobi SVD instead of the iterative

@@ -3,6 +3,9 @@
 // Ported verbatim (namespace/qualifiers adjusted) from muda's ext/eigen so the
 // backend keeps bit-identical numerics to the pre-migration implementation:
 //   eigen::evd      — SelfAdjointEigenSolver (computeDirect for N<=3) + Jacobi variant
+//                     (`evd_jacobi` has no callers; round 5 added and ships
+//                      `evd_tridiag_ql`, the fixed-size Householder+QL that
+//                      `make_spd<N, 1>` runs -- see cuda_tool/eigen/evd.h)
 //   eigen::svd / pd — 3x3 SVD and polar decomposition
 //   eigen::inverse  — analytic (2/3/4) + Gauss elimination (N x N)
 //   eigen::atomic_add — element-wise atomicAdd for Eigen matrices

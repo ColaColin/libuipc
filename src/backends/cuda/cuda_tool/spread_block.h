@@ -99,7 +99,13 @@ inline int spread_block_dim_from(int n, int bd, int blocks_per_sm = 0)
 // order is timing-dependent in this solver, so a geometry change anywhere can
 // do that; the answer is to change geometry only where it pays.
 //
-//   UIPC_BUFFER_FILL_SPREAD=0   the pre-s28 geometry (the rollback)
+//   UIPC_BUFFER_FILL_SPREAD=0   the pre-s28 geometry (the rollback). Not the
+//                               only control: `buffer_fill_block_dim` routes
+//                               through `spread_block_dim_from`, so
+//                               UIPC_GRID_SPREAD=0 disables this ramp too (it
+//                               rolls back s20, s24 and s28 together) and
+//                               UIPC_GRID_SPREAD_BLOCK=<n> also pins the fill
+//                               block size.
 //   UIPC_BUFFER_FILL_BPSM=<n>   ramp target in blocks/SM (default 1)
 //   UIPC_BUFFER_FILL_VERIFY=1   device-side coverage proof (see below)
 // ---------------------------------------------------------------------------

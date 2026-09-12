@@ -629,7 +629,11 @@ namespace sym::codim_ipc_simplex_contact
     //          orthogonal to s^), giving the bordered 4x4
     //          [[Hss, m], [m^T, c]] with m = (sum_ab s^_a v_b H_ab) n^ and
     //          c = n^^T (sum_ab v_a v_b H_ab) n^.
-    //   M = 4: not implemented; falls through to the dense-Q path.
+    //   M = 4: not implemented; falls through to the dense-Q path. In the
+    //          shipped dispatch that arm is never instantiated either: M = 4
+    //          is reached only from `PT_/EE_barrier_make_spd`, and both call
+    //          sites pass only `Solver`, i.e. Basis = 0. The `Basis` parameter
+    //          of those two wrappers is therefore inert today.
     template <int N, int M, int Solver = 0, int Basis = 0>
     inline __device__ void make_spd_contact(Matrix<Float, N, N>&     H,
                                             const Vector<IndexT, M>& act,
@@ -740,6 +744,8 @@ namespace sym::codim_ipc_simplex_contact
     //tex: $$ \text{reduced } make\_spd \text{ of the PT barrier Hessian (12x12)}$$
     // round-5 (s25): `Solver` is forwarded to `make_spd_contact`; the PT
     // branch lives in contact part 1, whose projection this step measures.
+    // `Basis` is forwarded too but is inert here: both call sites pass only
+    // `Solver`, and s31's basis-free form needs M <= 3 while PT is M = 4.
     template <int Solver = 0, int Basis = 0>
     inline __device__ void PT_barrier_make_spd(Matrix12x12&    H,
                                                const Vector4i& flag,
@@ -830,6 +836,8 @@ namespace sym::codim_ipc_simplex_contact
     // a vanishing determinant.
     // round-5 (s25): `Solver` is forwarded to `make_spd_contact`; the EE
     // branch lives in contact part 1, whose projection this step measures.
+    // `Basis` is forwarded too but is inert here: both call sites pass only
+    // `Solver`, and s31's basis-free form needs M <= 3 while EE is M = 4.
     template <int Solver = 0, int Basis = 0>
     inline __device__ void EE_barrier_make_spd(Matrix12x12&    H,
                                                const Vector4i& flag,

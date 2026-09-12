@@ -44,8 +44,11 @@ namespace
         // scalar kernel's body. One fewer node per captured PCG iteration.
         // R7 VERDICT: **rejected, default 0** -- the node is not worth what
         // removing it costs. The code and both fold designs stay in tree as
-        // measurement arms (and for the 5090 re-test, see below); the shipped
-        // path is byte-for-byte the pre-R7 one.
+        // measurement arms (and for the 5090 re-test, see below). With fold = 0
+        // the shipped kernel chain and every output it produces are the pre-R7
+        // ones; the source is not, since fused_update_xr gained a guarded
+        // `save_rz_prev` store and d_rz_prev / m_dot_ticket are allocated
+        // unconditionally. Note fold is also forced to 0 by UIPC_PCG_FUSE_SCALAR=0.
         //
         // UIPC_PCG_FOLD selects how:
         //   0 = keep the separate node (SHIPPED)

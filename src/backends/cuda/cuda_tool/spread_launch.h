@@ -36,7 +36,14 @@ namespace uipc::backend::cuda_tool
 //   UIPC_GRID_SPREAD=0             the pre-round-5 geometry everywhere (rollback)
 //   UIPC_GRID_SPREAD_BPSM=<n>      the ramp target in blocks per SM (default 8)
 //   UIPC_GRID_SPREAD_BLOCK=<n>     hard override of the block size
-//   UIPC_GRID_SPREAD_ONLY=<substr> spread only at call sites whose tag matches
+//   UIPC_GRID_SPREAD_ONLY=<substr> spread only at call sites whose tag matches.
+//                                  Only sites that go through `launch_spread` /
+//                                  `SpreadVerifier` carry a tag, so this does
+//                                  NOT gate the two hand-rolled sites in
+//                                  ortho_potential.cu and
+//                                  abd_diag_preconditioner.cu, which call
+//                                  spread_grid_dim/spread_block_dim directly
+//                                  and therefore always spread.
 //   UIPC_GRID_SPREAD_VERIFY=1      run both geometries and compare the outputs
 // device_sm_count / grid_spread_* / spread_block_dim_from now live in
 // cuda_tool/spread_block.h so that view.h and buffer.h can use them too (s28).
@@ -140,9 +147,12 @@ class SpreadVerifier
     static bool on() { return grid_spread_verify_enabled(); }
 
     // UIPC_GRID_SPREAD_ONLY=<substring> restricts the spread geometry to the
-    // call sites whose tag contains <substring>; every other site keeps the
-    // occupancy-max geometry. This is the per-site A/B instrument: it is how
-    // the s24 sites are measured against the s20 ones in one build.
+    // *tagged* call sites whose tag contains <substring>; every other tagged
+    // site keeps the occupancy-max geometry. This is the per-site A/B
+    // instrument: it is how the s24 sites are measured against the s20 ones in
+    // one build. It does NOT reach the untagged sites (ortho_potential,
+    // abd_diag_preconditioner) or the s28 buffer fills -- only
+    // UIPC_GRID_SPREAD=0 turns those back to occupancy-max.
     bool spread() const
     {
         static const char* only = std::getenv("UIPC_GRID_SPREAD_ONLY");

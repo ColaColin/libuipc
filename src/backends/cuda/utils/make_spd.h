@@ -12,10 +12,15 @@ namespace uipc::backend::cuda
 // out-of-line selfadjoint_matrix_vector_product. N <= 3 always takes Eigen's
 // closed-form `computeDirect`, which is cheaper than either. It is a template
 // parameter, not a runtime flag, so each instantiation carries only one code
-// path's stack frame (the s14 lesson). The default is 0 so that this step
-// changes exactly the two call sites it measures (the discrete-shell hinge and
-// the ABD ortho potential); the contact branches and the cold call sites keep
-// the old solver until a follow-up step measures them.
+// path's stack frame (the s14 lesson). The default is 0 so that s19 changed
+// exactly the two call sites it measured (the discrete-shell hinge and the ABD
+// ortho potential). The contact branches were wired on to the same axis later
+// -- s25 for part 1 (PT+EE, `SpdTql`) and s31 for part 2 (PE+PP, `Spd2`) --
+// so only the cold call sites still take Solver = 0. The env switch that
+// drives the two s19 sites is named UIPC_MAKE_SPD_JACOBI for historical
+// reasons: it selects `evd_tridiag_ql`, NOT a Jacobi sweep. Round 5 measured
+// cyclic Jacobi here and rejected it (R1); `evd_jacobi` in cuda_tool/eigen has
+// no callers at all.
 template <int N, int Solver = 0>
 UIPC_GENERIC void make_spd(Matrix<Float, N, N>& H)
 {

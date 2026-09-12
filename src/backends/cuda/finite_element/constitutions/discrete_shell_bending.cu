@@ -185,6 +185,7 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         m_reduced_spd  = !(e && e[0] == '0');
         const char* b  = std::getenv("UIPC_DSB_BLOCKED_PROJ");
         m_blocked_proj = !(b && b[0] == '0');
+        // historical name: it selects evd_tridiag_ql, not a Jacobi sweep (R1)
         const char* t  = std::getenv("UIPC_MAKE_SPD_JACOBI");
         m_tql2         = !(t && t[0] == '0');
     }

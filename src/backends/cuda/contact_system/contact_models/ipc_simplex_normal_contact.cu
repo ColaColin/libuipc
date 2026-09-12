@@ -304,7 +304,8 @@ namespace
     // of the same translation-free 9x9 projection, which drops the 12x9 basis
     // and its two 12x9 temporaries. Same projection up to rounding; a template
     // parameter, not a runtime flag, so one stack frame per instantiation
-    // (s14). Part 2 (PE + PP) is deliberately left on the old path.
+    // (s14). Part 2 (PE + PP) was left on the old path by s25, and moved on to
+    // its own axis by s31 -- see `Spd2` below, which is on by default.
     // round-5 (s31): `Spd2` picks the PSD projection of contact part 2
     // (PE + PP). false = the pre-s31 path (Eigen's SelfAdjointEigenSolver and
     // the explicit range basis Q of `barrier_range_basis`); true = s19's
