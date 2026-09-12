@@ -305,7 +305,16 @@ namespace
     // and its two 12x9 temporaries. Same projection up to rounding; a template
     // parameter, not a runtime flag, so one stack frame per instantiation
     // (s14). Part 2 (PE + PP) is deliberately left on the old path.
-    template <bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql = false>
+    // round-5 (s26): `Spd2` picks the PSD projection of contact part 2
+    // (PE + PP). false = the pre-s26 path (Eigen's SelfAdjointEigenSolver and
+    // the explicit range basis Q of `barrier_range_basis`); true = s19's
+    // fixed-size tridiagonal QL for the 4x4 of the PE dim-3 branch plus s26's
+    // basis-free form of the same reduced projection (no Q, no 9x9 Hs / Hspd
+    // temporary, no tangent frame). Same projection up to rounding; a template
+    // parameter, not a runtime flag, so one stack frame per instantiation
+    // (s14). Part 1 (PT + EE) is on the `SpdTql` axis above and passes
+    // `Spd2 = false`.
+    template <bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql = false, bool Spd2 = false>
     __global__ void do_assemble_kernel(cuda_tool::CDense2D<ContactCoeff> table,
                                        cuda_tool::CBufferView<IndexT> contact_ids,
                                        cuda_tool::CBufferView<Vector3> Ps,
@@ -339,6 +348,8 @@ namespace
         using namespace sym::codim_ipc_simplex_contact;
 
         constexpr int SpdSolver = SpdTql ? 1 : 0;
+        constexpr int Spd2Solver = Spd2 ? 1 : 0;
+        constexpr int Spd2Basis  = Spd2 ? 1 : 0;
 
         // perf/kernels (K9): Part 1 = PT+EE (12x12 branches), Part 2 = PE+PP
         // (the bulk, small reduced projections), Part 0 = the fused kernel.
@@ -507,7 +518,7 @@ namespace
                 {
                     Matrix9x9 H;
                     PE_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, E0, E1);
-                    PE_barrier_make_spd(H, flag, P, E0, E1);
+                    PE_barrier_make_spd<Spd2Solver, Spd2Basis>(H, flag, P, E0, E1);
                     DoubletVectorAssembler DVA{PE_Gs};
                     DVA.segment<3>(i * 3).write(PE, G);
                     TripletMatrixAssembler TMA{PE_Hs};
@@ -541,7 +552,7 @@ namespace
                 {
                     Matrix6x6 H;
                     PP_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P0, P1);
-                    PP_barrier_make_spd(H, flag, P0, P1);
+                    PP_barrier_make_spd<Spd2Solver, Spd2Basis>(H, flag, P0, P1);
                     DoubletVectorAssembler DVA{PP_Gs};
                     DVA.segment<2>(i * 2).write(PP, G);
                     TripletMatrixAssembler TMA{PP_Hs};
@@ -584,6 +595,11 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // K16's blocked translation-free basis (UIPC_CONTACT_SPD_TQL=0 restores the
     // Eigen SelfAdjointEigenSolver and the dense 12x9 basis)
     bool                            m_spd_tql          = true;
+
+    // round-5 (s26): contact part 2's (PE + PP) PSD projection on s19's
+    // tridiagonal-QL solver and s26's basis-free range reduction
+    // (UIPC_CONTACT_SPD2=0 restores Eigen + the explicit basis Q)
+    bool                            m_spd2             = true;
     IndexT                          m_ee_partition_min = 64;
     cuda_tool::DeviceBuffer<IndexT> m_ee_perm;
     cuda_tool::DeviceBuffer<IndexT> m_ee_counters;
@@ -605,6 +621,8 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             m_ee_partition = !(e[0] == '0');
         if(const char* e = std::getenv("UIPC_CONTACT_SPD_TQL"))
             m_spd_tql = !(e[0] == '0');
+        if(const char* e = std::getenv("UIPC_CONTACT_SPD2"))
+            m_spd2 = !(e[0] == '0');
         if(m_split == 2)
         {
             CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream, cudaStreamNonBlocking));
@@ -759,14 +777,14 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         // output slot. Two launches on the same stream would serialise the
         // rare, individually expensive PT/EE Hessians behind the bulk, so
         // Part 1 runs on a side stream (fork/join with events).
-        auto launch_t = [&]<bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql>(
+        auto launch_t = [&]<bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql, bool Spd2>(
                             IndexT       ee_offset,
                             IndexT       pe_offset,
                             IndexT       pp_offset,
                             IndexT       n,
                             cudaStream_t s)
         {
-            auto k = do_assemble_kernel<GradientOnly, Part, EEReducedRange, SpdTql>;
+            auto k = do_assemble_kernel<GradientOnly, Part, EEReducedRange, SpdTql, Spd2>;
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, s>>>(
                 info.contact_tabular().viewer(),
                 info.contact_element_ids().viewer(),
@@ -798,6 +816,28 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         // round-4 (s16): the reduced-range EE projection is a template
         // parameter, not a runtime flag, so the instantiation that takes it
         // does not carry the 9x9 path's stack frame (cf. s14).
+        // round-5 (s26): the part-2 projection is the third template axis. Part 1
+        // has no PE/PP branch, so it is only ever instantiated with Spd2 = false.
+        auto launch_2 = [&]<bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql>(
+                            IndexT       ee_offset,
+                            IndexT       pe_offset,
+                            IndexT       pp_offset,
+                            IndexT       n,
+                            cudaStream_t s)
+        {
+            if constexpr(!GradientOnly && Part != 1)
+            {
+                if(m_spd2)
+                {
+                    launch_t.template operator()<GradientOnly, Part, EEReducedRange, SpdTql, true>(
+                        ee_offset, pe_offset, pp_offset, n, s);
+                    return;
+                }
+            }
+            launch_t.template operator()<GradientOnly, Part, EEReducedRange, SpdTql, false>(
+                ee_offset, pe_offset, pp_offset, n, s);
+        };
+
         auto launch = [&]<bool GradientOnly, int Part>(IndexT       ee_offset,
                                                       IndexT       pe_offset,
                                                       IndexT       pp_offset,
@@ -812,21 +852,21 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 if(m_ee_reduced_range)
                 {
                     if(m_spd_tql)
-                        launch_t.template operator()<GradientOnly, Part, true, true>(
+                        launch_2.template operator()<GradientOnly, Part, true, true>(
                             ee_offset, pe_offset, pp_offset, n, s);
                     else
-                        launch_t.template operator()<GradientOnly, Part, true, false>(
+                        launch_2.template operator()<GradientOnly, Part, true, false>(
                             ee_offset, pe_offset, pp_offset, n, s);
                     return;
                 }
                 if(m_spd_tql)
                 {
-                    launch_t.template operator()<GradientOnly, Part, false, true>(
+                    launch_2.template operator()<GradientOnly, Part, false, true>(
                         ee_offset, pe_offset, pp_offset, n, s);
                     return;
                 }
             }
-            launch_t.template operator()<GradientOnly, Part, false, false>(
+            launch_2.template operator()<GradientOnly, Part, false, false>(
                 ee_offset, pe_offset, pp_offset, n, s);
         };
 
