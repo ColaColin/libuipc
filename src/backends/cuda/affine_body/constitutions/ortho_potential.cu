@@ -2,6 +2,7 @@
 #include <affine_body/constitutions/ortho_potential_function.h>
 #include <utils/make_spd.h>
 #include <cstdlib>
+#include <cuda_tool/spread_launch.h>
 
 
 namespace uipc::backend::cuda
@@ -71,6 +72,45 @@ namespace
         H.block<9, 9>(3, 3) = H9x9 * Vdt2;
         body_hessian(i)     = H;
     }
+    // perf round 5 (w3): device-side proof that the spread launch geometry is
+    // bit-identical. The same kernel is run a second time with the
+    // occupancy-max geometry into scratch buffers and every 64-bit word of
+    // both outputs is compared. UIPC_GRID_SPREAD_VERIFY=1 turns it on.
+    __global__ void ortho_potential_spread_verify_kernel(
+        cuda_tool::CBufferView<Vector12>            a_g,
+        cuda_tool::CBufferView<Vector12>            b_g,
+        cuda_tool::CBufferView<Matrix12x12>         a_h,
+        cuda_tool::CBufferView<Matrix12x12>         b_h,
+        bool                                        gradient_only,
+        cuda_tool::BufferView<unsigned long long>   counters,
+        int                                         n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        unsigned long long mismatch = 0;
+        unsigned long long words    = 0;
+        const unsigned long long* pa =
+            reinterpret_cast<const unsigned long long*>(a_g(i).data());
+        const unsigned long long* pb =
+            reinterpret_cast<const unsigned long long*>(b_g(i).data());
+        for(int k = 0; k < 12; ++k)
+            mismatch += (pa[k] != pb[k]) ? 1 : 0;
+        words += 12;
+        if(!gradient_only)
+        {
+            const unsigned long long* qa =
+                reinterpret_cast<const unsigned long long*>(a_h(i).data());
+            const unsigned long long* qb =
+                reinterpret_cast<const unsigned long long*>(b_h(i).data());
+            for(int k = 0; k < 144; ++k)
+                mismatch += (qa[k] != qb[k]) ? 1 : 0;
+            words += 144;
+        }
+        atomicAdd(&counters(0), words);
+        if(mismatch)
+            atomicAdd(&counters(1), mismatch);
+    }
 }  // namespace
 
 class OrthoPotential final : public AffineBodyConstitution
@@ -88,10 +128,40 @@ class OrthoPotential final : public AffineBodyConstitution
     // 9x9 PSD projection (the pre-round-5 path); default = tridiagonal QL
     bool m_tql2 = true;
 
+    // perf round 5 (w3): UIPC_GRID_SPREAD_VERIFY=1 -> also run the G/H kernel
+    // with the old (occupancy-max) launch geometry into scratch buffers and
+    // count mismatching 64-bit words on device.
+    bool                                        m_spread_verify = false;
+    cuda_tool::DeviceBuffer<Vector12>           m_verify_g;
+    cuda_tool::DeviceBuffer<Matrix12x12>        m_verify_h;
+    cuda_tool::DeviceBuffer<unsigned long long> m_verify_counters;
+    unsigned long long                          m_verify_words     = 0;
+    unsigned long long                          m_verify_mismatches = 0;
+
     virtual void do_build(AffineBodyConstitution::BuildInfo& info) override
     {
         const char* t = std::getenv("UIPC_MAKE_SPD_JACOBI");
         m_tql2        = !(t && t[0] == '0');
+        if(const char* e = std::getenv("UIPC_GRID_SPREAD_VERIFY"))
+            m_spread_verify = !(e[0] == '0');
+        if(m_spread_verify)
+            logger::warn("[OrthoSpreadVerify] on: the occupancy-max geometry is the reference");
+    }
+
+    ~OrthoPotential() override
+    {
+        if(m_spread_verify)
+        {
+            unsigned long long h[2] = {0, 0};
+            if(m_verify_counters.size() == 2)
+                cudaMemcpy(h, m_verify_counters.data(), sizeof(h), cudaMemcpyDeviceToHost);
+            m_verify_words += h[0];
+            m_verify_mismatches += h[1];
+            std::fprintf(stderr,
+                         "[OrthoSpreadVerify] total: %llu output words compared, %llu mismatching\n",
+                         m_verify_words,
+                         m_verify_mismatches);
+        }
     }
 
     U64 get_uid() const override { return ConstitutionUID; }
@@ -134,7 +204,7 @@ class OrthoPotential final : public AffineBodyConstitution
         auto k = ortho_potential_compute_energy_kernel;
         int  n = (int)body_count;
         if(n > 0)
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            k<<<cuda_tool::spread_grid_dim(n, k), cuda_tool::spread_block_dim(n, k), 0, nullptr>>>(
                 info.energies(), info.qs(), kappas.cview(), info.volumes(), info.dt(), n);
     }
 
@@ -149,11 +219,27 @@ class OrthoPotential final : public AffineBodyConstitution
         int  n      = (int)N;
         auto launch = [&](auto k)
         {
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            k<<<cuda_tool::spread_grid_dim(n, k), cuda_tool::spread_block_dim(n, k), 0, nullptr>>>(
                 info.qs(),
                 info.volumes(),
                 info.gradients(),
                 info.hessians(),
+                kappas.cview(),
+                info.dt(),
+                gradient_only,
+                n);
+        };
+        // the s20 verification reference: the SAME solver instantiation, launched
+        // with the geometry best_block_dim would have picked. Differing only in
+        // geometry is what makes the bit-identity comparison mean anything once
+        // s19 (solver choice) and s20 (launch shape) are composed.
+        auto launch_ref = [&](auto k)
+        {
+            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+                info.qs(),
+                info.volumes(),
+                m_verify_g.view(),
+                m_verify_h.view(),
                 kappas.cview(),
                 info.dt(),
                 gradient_only,
@@ -165,6 +251,31 @@ class OrthoPotential final : public AffineBodyConstitution
                 launch(ortho_potential_compute_gradient_hessian_kernel<1>);
             else
                 launch(ortho_potential_compute_gradient_hessian_kernel<0>);
+        }
+
+        if(m_spread_verify && n > 0)
+        {
+            m_verify_g.resize(n);
+            m_verify_h.resize(n);
+            if(m_verify_counters.size() != 2)
+            {
+                m_verify_counters.resize(2);
+                CUDA_TOOL_CHECK(cudaMemset(
+                    m_verify_counters.data(), 0, 2 * sizeof(unsigned long long)));
+            }
+            if(m_tql2)
+                launch_ref(ortho_potential_compute_gradient_hessian_kernel<1>);
+            else
+                launch_ref(ortho_potential_compute_gradient_hessian_kernel<0>);
+            auto vk = ortho_potential_spread_verify_kernel;
+            vk<<<cuda_tool::best_grid_dim(n, vk), cuda_tool::best_block_dim(vk), 0, nullptr>>>(
+                info.gradients(),
+                m_verify_g.cview(),
+                info.hessians(),
+                m_verify_h.cview(),
+                gradient_only,
+                m_verify_counters.view(),
+                n);
         }
     }
 };

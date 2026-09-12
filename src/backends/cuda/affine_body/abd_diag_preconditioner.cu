@@ -6,6 +6,7 @@
 #include <kernel_cout.h>
 #include <cstdlib>
 #include <cstdio>
+#include <cuda_tool/spread_launch.h>
 
 namespace uipc::backend::cuda
 {
@@ -20,6 +21,29 @@ namespace
         if(i >= n)
             return;
         diag_inv(i) = cuda_tool::eigen::inverse(diag_hessian(i));
+    }
+
+    // perf round 5 (w3): device-side proof that the spread launch geometry is
+    // bit-identical (UIPC_GRID_SPREAD_VERIFY=1).
+    __global__ void abd_diag_spread_verify_kernel(
+        cuda_tool::CBufferView<Matrix12x12>       a,
+        cuda_tool::CBufferView<Matrix12x12>       b,
+        cuda_tool::BufferView<unsigned long long> counters,
+        int                                       n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        unsigned long long mismatch = 0;
+        const unsigned long long* pa =
+            reinterpret_cast<const unsigned long long*>(a(i).data());
+        const unsigned long long* pb =
+            reinterpret_cast<const unsigned long long*>(b(i).data());
+        for(int k = 0; k < 144; ++k)
+            mismatch += (pa[k] != pb[k]) ? 1 : 0;
+        atomicAdd(&counters(0), 144ull);
+        if(mismatch)
+            atomicAdd(&counters(1), mismatch);
     }
 
     // one thread per body, the whole 12x12 FP64 matvec through Eigen
@@ -147,6 +171,14 @@ class ABDDiagPreconditioner final : public LocalPreconditioner
     bool                                       m_verify = false;
     cuda_tool::DeviceBuffer<Float>             m_z_ref;
     cuda_tool::DeviceBuffer<unsigned long long> m_verify_counters;
+    // perf round 5 (w3): UIPC_GRID_SPREAD_VERIFY=1 -> also run the assembly
+    // with the old (occupancy-max) launch geometry into a scratch buffer and
+    // count mismatching 64-bit words on device.
+    bool                                        m_spread_verify = false;
+    cuda_tool::DeviceBuffer<Matrix12x12>        m_spread_ref;
+    cuda_tool::DeviceBuffer<unsigned long long> m_spread_counters;
+    unsigned long long                          m_spread_words      = 0;
+    unsigned long long                          m_spread_mismatches = 0;
     unsigned long long                         m_verify_applies    = 0;
     unsigned long long                         m_verify_mismatches = 0;
 
@@ -169,6 +201,10 @@ class ABDDiagPreconditioner final : public LocalPreconditioner
             m_lanes = !(e[0] == '0');
         if(const char* e = std::getenv("UIPC_ABD_DIAG_APPLY_VERIFY"))
             m_verify = !(e[0] == '0');
+        if(const char* e = std::getenv("UIPC_GRID_SPREAD_VERIFY"))
+            m_spread_verify = !(e[0] == '0');
+        if(m_spread_verify)
+            logger::warn("[ABDDiagSpreadVerify] on: the occupancy-max geometry is the reference");
         if(m_verify)
             logger::warn("[ABDDiagApplyVerify] on: lanes={} (the other kernel is the reference)",
                          m_lanes);
@@ -191,6 +227,18 @@ class ABDDiagPreconditioner final : public LocalPreconditioner
                          m_verify_applies,
                          m_verify_mismatches,
                          (int)m_lanes);
+        }
+        if(m_spread_verify)
+        {
+            unsigned long long h[2] = {0, 0};
+            if(m_spread_counters.size() == 2)
+                cudaMemcpy(h, m_spread_counters.data(), sizeof(h), cudaMemcpyDeviceToHost);
+            m_spread_words += h[0];
+            m_spread_mismatches += h[1];
+            std::fprintf(stderr,
+                         "[ABDDiagSpreadVerify] total: %llu output words compared, %llu mismatching\n",
+                         m_spread_words,
+                         m_spread_mismatches);
         }
         // best effort: the CUDA context may already be gone at exit
         if(m_join)
@@ -255,8 +303,23 @@ class ABDDiagPreconditioner final : public LocalPreconditioner
                 CUDA_TOOL_CHECK(cudaStreamWaitEvent(s, m_fork, 0));
             }
             auto k = abd_diag_preconditioner_do_assemble_kernel;
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, s>>>(
+            k<<<cuda_tool::spread_grid_dim(n, k), cuda_tool::spread_block_dim(n, k), 0, s>>>(
                 diag_hessian, diag_inv.view(), n);
+            if(m_spread_verify)
+            {
+                m_spread_ref.resize(n);
+                if(m_spread_counters.size() != 2)
+                {
+                    m_spread_counters.resize(2);
+                    CUDA_TOOL_CHECK(cudaMemset(
+                        m_spread_counters.data(), 0, 2 * sizeof(unsigned long long)));
+                }
+                k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, s>>>(
+                    diag_hessian, m_spread_ref.view(), n);
+                auto vk = abd_diag_spread_verify_kernel;
+                vk<<<cuda_tool::best_grid_dim(n, vk), cuda_tool::best_block_dim(vk), 0, s>>>(
+                    diag_inv.cview(), m_spread_ref.cview(), m_spread_counters.view(), n);
+            }
             if(m_side)
             {
                 CUDA_TOOL_CHECK(cudaEventRecord(m_join, s));
