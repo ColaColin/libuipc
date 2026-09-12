@@ -966,6 +966,10 @@ namespace
         cuda_tool::CVarView<IndexT>   codimp_alle_count,
         cuda_tool::CVarView<IndexT>   alle_alle_count,
         cuda_tool::CVarView<IndexT>   allp_allt_count,
+        cuda_tool::CVarView<int>      allp_codimp_broad,
+        cuda_tool::CVarView<int>      codimp_alle_broad,
+        cuda_tool::CVarView<int>      alle_alle_broad,
+        cuda_tool::CVarView<int>      allp_allt_broad,
         cuda_tool::BufferView<IndexT> counts)
     {
         if(blockIdx.x != 0 || threadIdx.x != 0)
@@ -974,6 +978,13 @@ namespace
         counts(1) = *codimp_alle_count;
         counts(2) = *alle_alle_count;
         counts(3) = *allp_allt_count;
+        // perf/round5 (w2): the two-phase broad-stage capacity counters travel
+        // in the same transfer; prepare_query_result used to fetch each of
+        // them with its own blocking D2H.
+        counts(4) = (IndexT)*allp_codimp_broad;
+        counts(5) = (IndexT)*codimp_alle_broad;
+        counts(6) = (IndexT)*alle_alle_broad;
+        counts(7) = (IndexT)*allp_allt_broad;
     }
 
     /****************************************************
@@ -1204,7 +1215,7 @@ void InfoStacklessBVHSimplexTrajectoryFilter::do_build(BuildInfo&)
         throw SimSystemException("Info stackless BVH unused");
     }
 
-    m_impl.query_counts.resize(4);
+    m_impl.query_counts.resize(8);
     m_impl.selected_counts.resize(4);
 
     // perf/kernels: BVH refit for the per-iteration trajectory detects
@@ -1511,18 +1522,22 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
         candidate_CodimP_AllE_pairs.m_cpNum.cview(),
         candidate_AllE_AllE_pairs.m_cpNum.cview(),
         candidate_AllP_AllT_pairs.m_cpNum.cview(),
+        candidate_AllP_CodimP_pairs.m_broadNum.cview(),
+        candidate_CodimP_AllE_pairs.m_broadNum.cview(),
+        candidate_AllE_AllE_pairs.m_broadNum.cview(),
+        candidate_AllP_AllT_pairs.m_broadNum.cview(),
         query_counts.view());
 
-    std::array<IndexT, 4> host_counts{};
+    std::array<IndexT, 8> host_counts{};
     query_counts.copy_to(host_counts.data());
 
-    if(lbvh_CodimP.prepare_query_result(candidate_AllP_CodimP_pairs, host_counts[0]))
+    if(lbvh_CodimP.prepare_query_result(candidate_AllP_CodimP_pairs, host_counts[0], bvh_batch_counts_enabled() ? (int)host_counts[0+4] : -1))
         launch_allp_codimp(false);
-    if(lbvh_E.prepare_query_result(candidate_CodimP_AllE_pairs, host_counts[1]))
+    if(lbvh_E.prepare_query_result(candidate_CodimP_AllE_pairs, host_counts[1], bvh_batch_counts_enabled() ? (int)host_counts[1+4] : -1))
         launch_codimp_alle(false);
-    if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, host_counts[2]))
+    if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, host_counts[2], bvh_batch_counts_enabled() ? (int)host_counts[2+4] : -1))
         launch_alle_alle();
-    if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, host_counts[3]))
+    if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, host_counts[3], bvh_batch_counts_enabled() ? (int)host_counts[3+4] : -1))
         launch_allp_allt(false);
 
     // DIAGNOSTIC (env UIPC_BVH_SELF_CULL_VERIFY=1, K11): redo the edge-edge
@@ -1554,12 +1569,16 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
                 candidate_CodimP_AllE_pairs.m_cpNum.cview(),
                 candidate_AllE_AllE_pairs.m_cpNum.cview(),
                 candidate_AllP_AllT_pairs.m_cpNum.cview(),
+                candidate_AllP_CodimP_pairs.m_broadNum.cview(),
+                candidate_CodimP_AllE_pairs.m_broadNum.cview(),
+                candidate_AllE_AllE_pairs.m_broadNum.cview(),
+                candidate_AllP_AllT_pairs.m_broadNum.cview(),
                 query_counts.view());
-            std::array<IndexT, 4> c{};
+            std::array<IndexT, 8> c{};
             query_counts.copy_to(c.data());
-            if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, c[2]))
+            if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, c[2], bvh_batch_counts_enabled() ? (int)c[2+4] : -1))
                 launch_alle_alle();
-            if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, c[3]))
+            if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, c[3], bvh_batch_counts_enabled() ? (int)c[3+4] : -1))
                 launch_allp_allt(false);
         };
         std::vector<Vector2i> ee_a, ee_b, pt_a, pt_b;
@@ -1615,10 +1634,14 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
                 candidate_CodimP_AllE_pairs.m_cpNum.cview(),
                 candidate_AllE_AllE_pairs.m_cpNum.cview(),
                 candidate_AllP_AllT_pairs.m_cpNum.cview(),
+                candidate_AllP_CodimP_pairs.m_broadNum.cview(),
+                candidate_CodimP_AllE_pairs.m_broadNum.cview(),
+                candidate_AllE_AllE_pairs.m_broadNum.cview(),
+                candidate_AllP_AllT_pairs.m_broadNum.cview(),
                 query_counts.view());
-            std::array<IndexT, 4> c{};
+            std::array<IndexT, 8> c{};
             query_counts.copy_to(c.data());
-            if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, c[2]))
+            if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, c[2], bvh_batch_counts_enabled() ? (int)c[2+4] : -1))
                 launch_alle_alle();
         };
         std::vector<Vector2i> cull_set, full_set;
@@ -1691,16 +1714,20 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
             candidate_CodimP_AllE_pairs.m_cpNum.cview(),
             candidate_AllE_AllE_pairs.m_cpNum.cview(),
             candidate_AllP_AllT_pairs.m_cpNum.cview(),
+            candidate_AllP_CodimP_pairs.m_broadNum.cview(),
+            candidate_CodimP_AllE_pairs.m_broadNum.cview(),
+            candidate_AllE_AllE_pairs.m_broadNum.cview(),
+            candidate_AllP_AllT_pairs.m_broadNum.cview(),
             query_counts.view());
-        std::array<IndexT, 4> counts2{};
+        std::array<IndexT, 8> counts2{};
         query_counts.copy_to(counts2.data());
-        if(lbvh_CodimP.prepare_query_result(candidate_AllP_CodimP_pairs, counts2[0]))
+        if(lbvh_CodimP.prepare_query_result(candidate_AllP_CodimP_pairs, counts2[0], bvh_batch_counts_enabled() ? (int)counts2[0+4] : -1))
             launch_allp_codimp(false);
-        if(lbvh_E.prepare_query_result(candidate_CodimP_AllE_pairs, counts2[1]))
+        if(lbvh_E.prepare_query_result(candidate_CodimP_AllE_pairs, counts2[1], bvh_batch_counts_enabled() ? (int)counts2[1+4] : -1))
             launch_codimp_alle(false);
-        if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, counts2[2]))
+        if(lbvh_E.prepare_query_result(candidate_AllE_AllE_pairs, counts2[2], bvh_batch_counts_enabled() ? (int)counts2[2+4] : -1))
             launch_alle_alle();
-        if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, counts2[3]))
+        if(lbvh_T.prepare_query_result(candidate_AllP_AllT_pairs, counts2[3], bvh_batch_counts_enabled() ? (int)counts2[3+4] : -1))
             launch_allp_allt(false);
         snapshot(build_sets);
 
@@ -1888,7 +1915,7 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
                           temp_EEs.size(),
                           InfoStacklessBVHSimplexTrajectoryFilter_filter_active_EE_pred{});
 
-        std::array<IndexT, 4> host_counts{};
+        std::array<IndexT, 8> host_counts{};
         selected_counts.copy_to(host_counts.data());
 
         IndexT PP_count = host_counts[0];

@@ -1495,7 +1495,66 @@ inline void InfoStacklessBVH::build(cuda_tool::CBufferView<AABB> aabbs)
     m_impl.build(aabbs, {}, {});
 }
 
-inline bool InfoStacklessBVH::prepare_query_result(QueryBuffer& qbuffer, int count)
+// perf/round5 (w2, D2H round trips): the BVH capacity bookkeeping used to cost
+// two *separate* blocking device->host readbacks per query -- the pair count and
+// the two-phase broad-stage count -- each one a full host round trip during
+// which the GPU has nothing queued. They are read together now.
+// UIPC_BVH_BATCH_COUNTS=0 restores the two separate reads.
+inline bool bvh_batch_counts_enabled()
+{
+    static const bool v = []
+    {
+        const char* e = std::getenv("UIPC_BVH_BATCH_COUNTS");
+        return !(e && e[0] == '0');
+    }();
+    return v;
+}
+
+inline bool bvh_batch_counts_verify()
+{
+    static const bool v = []
+    {
+        const char* e = std::getenv("UIPC_BVH_BATCH_COUNTS_VERIFY");
+        return e && e[0] != '0';
+    }();
+    return v;
+}
+inline long long& bvh_batch_counts_verify_calls()
+{
+    static long long n = 0;
+    return n;
+}
+inline long long& bvh_batch_counts_verify_bad()
+{
+    static long long n = 0;
+    return n;
+}
+
+inline void InfoStacklessBVH::read_query_counts(QueryBuffer& qbuffer, int& cp_count, int& broad_count)
+{
+    if(!bvh_batch_counts_enabled() || !m_impl.two_phase)
+    {
+        cp_count    = qbuffer.m_cpNum;
+        broad_count = m_impl.two_phase ? (int)qbuffer.m_broadNum : 0;
+        return;
+    }
+    // gather both counters into one 2-int staging slot (device-to-device, no
+    // sync), then a single blocking readback
+    auto s = cuda_tool::default_stream();
+    CUDA_TOOL_CHECK(cudaMemcpyAsync(
+        qbuffer.m_count2.data(), qbuffer.m_cpNum.data(), sizeof(int), cudaMemcpyDeviceToDevice, s));
+    CUDA_TOOL_CHECK(cudaMemcpyAsync(qbuffer.m_count2.data() + 1,
+                                    qbuffer.m_broadNum.data(),
+                                    sizeof(int),
+                                    cudaMemcpyDeviceToDevice,
+                                    s));
+    int h[2] = {0, 0};
+    qbuffer.m_count2.view().copy_to(h, s);
+    cp_count    = h[0];
+    broad_count = h[1];
+}
+
+inline bool InfoStacklessBVH::prepare_query_result(QueryBuffer& qbuffer, int count, int broad_count)
 {
     UIPC_ASSERT(count >= 0, "BVH query count must be non-negative, got %d", count);
 
@@ -1513,7 +1572,24 @@ inline bool InfoStacklessBVH::prepare_query_result(QueryBuffer& qbuffer, int cou
     // synchronising) point.
     if(m_impl.two_phase)
     {
-        int broad_count = qbuffer.m_broadNum;
+        if(broad_count < 0)  // not supplied by a batched read: read it here
+            broad_count = qbuffer.m_broadNum;
+        else if(bvh_batch_counts_verify())
+        {
+            // UIPC_BVH_BATCH_COUNTS_VERIFY=1: re-read the counter the old way
+            // and check the batched transfer delivered the same value.
+            const int direct = qbuffer.m_broadNum;
+            ++bvh_batch_counts_verify_calls();
+            if(direct != broad_count)
+            {
+                ++bvh_batch_counts_verify_bad();
+                logger::warn("[bvh-batch-counts-verify] broad count {} != batched {}", direct, broad_count);
+            }
+            if(bvh_batch_counts_verify_calls() % 1000 == 0)
+                logger::warn("[bvh-batch-counts-verify] {} checks, {} mismatches",
+                             bvh_batch_counts_verify_calls(),
+                             bvh_batch_counts_verify_bad());
+        }
         if(broad_count > 0 && static_cast<size_t>(broad_count) > qbuffer.m_broad.size())
         {
             const auto new_size = static_cast<size_t>(broad_count * m_impl.config.reserve_ratio);
@@ -1557,8 +1633,9 @@ inline void InfoStacklessBVH::detect(cuda_tool::CBuffer2DView<IndexT> cmts,
                                      QueryBuffer&                     qbuffer)
 {
     launch_detect(cmts, np, lp, qbuffer);
-    int h_cp_num = qbuffer.m_cpNum;
-    if(prepare_query_result(qbuffer, h_cp_num))
+    int h_cp_num = 0, h_broad_num = -1;
+    read_query_counts(qbuffer, h_cp_num, h_broad_num);
+    if(prepare_query_result(qbuffer, h_cp_num, h_broad_num))
         launch_detect(cmts, np, lp, qbuffer);
 }
 
@@ -1608,8 +1685,9 @@ inline void InfoStacklessBVH::query(cuda_tool::CBufferView<AABB>   query_aabbs,
                                     QueryBuffer&                     qbuffer)
 {
     launch_query(query_aabbs, query_BIDs, query_CIDs, cmts, np, lp, qbuffer, true);
-    int h_cp_num = qbuffer.m_cpNum;
-    if(prepare_query_result(qbuffer, h_cp_num))
+    int h_cp_num = 0, h_broad_num = -1;
+    read_query_counts(qbuffer, h_cp_num, h_broad_num);
+    if(prepare_query_result(qbuffer, h_cp_num, h_broad_num))
         launch_query(query_aabbs, query_BIDs, query_CIDs, cmts, np, lp, qbuffer, false);
 }
 

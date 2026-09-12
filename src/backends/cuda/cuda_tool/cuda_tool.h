@@ -8,6 +8,7 @@
 // thousands of lines per TU), so the ~20 files that actually use the
 // Device* wrappers include it explicitly.
 #include <cuda_tool/stream.h>
+#include <cuda_tool/host_sync.h>
 #include <cuda_tool/view.h>
 #include <cuda_tool/view_nd.h>
 #include <cuda_tool/launch.h>
