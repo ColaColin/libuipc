@@ -702,9 +702,16 @@ void MatrixConverter<T, N>::_make_unique_block_warp_reduction(
 
     auto blocks = to.values();
 
+    // The keys are the exclusive sum of the segment-end marks over the whole
+    // sorted input, so they run densely over [0, h_count) and every slot of
+    // `blocks` is the key of at least one element -- SegOutInit::CrossWarpOnly's
+    // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
+    // size, not capacity), so there is no tail beyond the key space either.
     FastSegmentalReduce<>().reduce(std::as_const(sorted_partition_output).view(),
                                    std::as_const(blocks_sorted).view(),
-                                   blocks);
+                                   blocks,
+                                   ::cuda::std::plus<T>{},
+                                   cuda_tool::SegOutInit::CrossWarpOnly);
 }
 
 template <typename T, int N>
@@ -865,9 +872,16 @@ void MatrixConverter<T, N>::_make_unique_segment_warp_reduction(
 
     auto segments = to.values();
 
+    // The keys are the exclusive sum of the segment-end marks over the whole
+    // sorted input, so they run densely over [0, h_count) and every slot of
+    // `segments` is the key of at least one element -- SegOutInit::CrossWarpOnly's
+    // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
+    // size, not capacity), so there is no tail beyond the key space either.
     FastSegmentalReduce<64, 32>().reduce(std::as_const(sorted_partition_output).view(),
                                          std::as_const(segments_sorted).view(),
-                                         segments);
+                                         segments,
+                                         ::cuda::std::plus<T>{},
+                                         cuda_tool::SegOutInit::CrossWarpOnly);
 }
 
 template <typename T, int N>
@@ -1189,12 +1203,19 @@ void MatrixConverter<T, N>::convert_sym(const cuda_tool::DeviceTripletMatrix<T, 
         // gather folded into the reduce: no staged copy of the sorted blocks
         matrix_converter_permuted_value_op<T, N> value_op{src_blocks.data(),
                                                           sort_index.data()};
+    // The keys are the exclusive sum of the segment-end marks over the whole
+    // sorted input, so they run densely over [0, h_count) and every slot of
+    // `blocks` is the key of at least one element -- SegOutInit::CrossWarpOnly's
+    // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
+    // size, not capacity), so there is no tail beyond the key space either.
         FastSegmentalReduce<>().reduce(
             (size_t)m,
             blocks,
             fast_segmental_reduce_get_offset_key_op{
                 std::as_const(sorted_partition_output).view()},
-            value_op);
+            value_op,
+            ::cuda::std::plus<T>{},
+            cuda_tool::SegOutInit::CrossWarpOnly);
     }
     else
     {
@@ -1203,9 +1224,16 @@ void MatrixConverter<T, N>::convert_sym(const cuda_tool::DeviceTripletMatrix<T, 
             <<<(m + 256 - 1) / 256, 256, 0, nullptr>>>(
                 src_blocks, sort_index.cview(), blocks_sorted.view(), m);
 
+    // The keys are the exclusive sum of the segment-end marks over the whole
+    // sorted input, so they run densely over [0, h_count) and every slot of
+    // `blocks` is the key of at least one element -- SegOutInit::CrossWarpOnly's
+    // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
+    // size, not capacity), so there is no tail beyond the key space either.
         FastSegmentalReduce<>().reduce(std::as_const(sorted_partition_output).view(),
                                        std::as_const(blocks_sorted).view(),
-                                       blocks);
+                                       blocks,
+                                       ::cuda::std::plus<T>{},
+                                       cuda_tool::SegOutInit::CrossWarpOnly);
     }
 }
 
