@@ -165,6 +165,11 @@ class MASPreconditionerEngine
                              cudaStream_t stream = nullptr);
     // s12 probe (UIPC_MAS_APPLY_VERIFY): re-runs restrict + local solve with the
     // other (mode 1) or the same (mode 2) code path and compares R / Z.
+    // 0 = off; read once from the environment.
+    static int apply_verify_mode();
+    // Reference snapshot for the probe. Must be taken *before* collect_final_Z,
+    // which since s13b re-zeroes the coarse tail of multi_level_R.
+    void verify_apply_snapshot(cudaStream_t stream);
     void verify_apply(cuda_tool::CDenseVectorView<Float> r,
                       cuda_tool::CVarView<IndexT>        converged,
                       cudaStream_t                       stream,

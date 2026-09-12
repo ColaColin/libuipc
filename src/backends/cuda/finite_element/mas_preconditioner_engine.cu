@@ -2414,21 +2414,60 @@ void MASPreconditionerEngine::apply(cuda_tool::CDenseVectorView<Float> r,
     // 2. Local solve: Z = cluster_inverse * R at each level
     schwarz_local_solve(converged, stream);
 
+    // s12 verification probe: UIPC_MAS_APPLY_VERIFY=1 re-runs the restrict +
+    // local-solve phases with the *other* code path into the same scratch
+    // buffers (the output z has already been written below), =2 re-runs the
+    // *same* one -- that is the path's own atomic-order noise -- and reports
+    // max |diff| / max |ref| over the multi-level R and Z arrays.
+    //
+    // The reference has to be snapshotted *here*, between the local solve and
+    // collect_final_Z: since s13b, collect_final_Z re-zeroes the coarse tail of
+    // multi_level_R for the next apply, so a snapshot taken after it would hold
+    // zeros for every coarse entry and the comparison would be meaningless.
+    if(apply_verify_mode())
+        verify_apply_snapshot(stream);
+
     // 3. Prolongate: sum Z from all levels back to fine nodes
     collect_final_Z(z, converged, stream);
 
-    // s12 verification probe: UIPC_MAS_APPLY_VERIFY=1 re-runs the restrict +
-    // local-solve phases with the *other* code path into the same scratch
-    // buffers (the output z has already been written above), =2 re-runs the
-    // *same* one -- that is the path's own atomic-order noise -- and reports
-    // max |diff| / max |ref| over the multi-level R and Z arrays.
-    static const int apply_verify_mode = []
+    if(apply_verify_mode())
+        verify_apply(r, converged, stream, apply_verify_mode());
+}
+
+int MASPreconditionerEngine::apply_verify_mode()
+{
+    static const int mode = []
     {
         const char* e = std::getenv("UIPC_MAS_APPLY_VERIFY");
         return e ? std::atoi(e) : 0;
     }();
-    if(apply_verify_mode)
-        verify_apply(r, converged, stream, apply_verify_mode);
+    return mode;
+}
+
+// Copy the production multi-level R / Z of this apply into the probe's
+// reference buffers. Called from apply() before collect_final_Z (see there).
+void MASPreconditionerEngine::verify_apply_snapshot(cudaStream_t stream)
+{
+    using namespace cuda_tool;
+
+    // Never inside a captured graph (the probe reads results back to the host).
+    cudaStreamCaptureStatus status = cudaStreamCaptureStatusNone;
+    if(cudaStreamIsCapturing(stream, &status) != cudaSuccess
+       || status != cudaStreamCaptureStatusNone)
+        return;
+
+    int n = m_total_num_clusters;
+    if(n < 1)
+        return;
+
+    if(static_cast<int>(m_apply_R_verify.size()) < n)
+    {
+        m_apply_R_verify.resize(n);
+        m_apply_Z_verify.resize(n);
+    }
+
+    m_apply_R_verify.view(0, n).copy_from(multi_level_R.view(0, n));
+    m_apply_Z_verify.view(0, n).copy_from(multi_level_Z.view(0, n));
 }
 
 void MASPreconditionerEngine::verify_apply(cuda_tool::CDenseVectorView<Float> r,
@@ -2456,22 +2495,17 @@ void MASPreconditionerEngine::verify_apply(cuda_tool::CDenseVectorView<Float> r,
     if(h_converged != 0)
         return;
 
+    // The reference was taken by verify_apply_snapshot() before collect_final_Z.
     if(static_cast<int>(m_apply_R_verify.size()) < n)
-    {
-        m_apply_R_verify.resize(n);
-        m_apply_Z_verify.resize(n);
-    }
+        return;
     if(m_verify_stat.size() < 2)
         m_verify_stat.resize(2);
 
-    m_apply_R_verify.view(0, n).copy_from(multi_level_R.view(0, n));
-    m_apply_Z_verify.view(0, n).copy_from(multi_level_Z.view(0, n));
-
-    if(m_total_num_clusters > m_total_map_nodes)
-    {
-        multi_level_R.view(m_total_map_nodes, m_total_num_clusters - m_total_map_nodes)
-            .fill(Eigen::Vector3f::Zero(), stream);
-    }
+    // Zero *all* of multi_level_R for the re-run: the fine entries are plain
+    // writes of build_multi_level_R, the coarse tail is an atomic accumulator
+    // and must start at zero exactly as it does at the entry of a production
+    // apply.
+    multi_level_R.view(0, n).fill(Eigen::Vector3f::Zero(), stream);
     multi_level_Z.view(0, n).fill(float3{0, 0, 0}, stream);
 
     bool rowdot = (mode == 2) ? local_solve_rowdot_enabled() : !local_solve_rowdot_enabled();
@@ -2515,6 +2549,16 @@ void MASPreconditionerEngine::verify_apply(cuda_tool::CDenseVectorView<Float> r,
             rel,
             m_apply_worst_abs[a],
             m_apply_worst_rel[a]);
+    }
+
+    // Leave the coarse tail in the zeroed state the next production apply
+    // expects (with the s13b fold on, collect_final_Z is what normally leaves
+    // it that way, and the re-run above has just filled it again). Without
+    // this, enabling the probe would perturb the solve.
+    if(n > m_total_map_nodes)
+    {
+        multi_level_R.view(m_total_map_nodes, n - m_total_map_nodes)
+            .fill(Eigen::Vector3f::Zero(), stream);
     }
 }
 
