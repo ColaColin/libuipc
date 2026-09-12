@@ -1,3 +1,4 @@
+#include <cuda_tool/spread_launch.h>
 #include <contact_system/simplex_frictional_contact.h>
 #include <contact_system/contact_models/codim_ipc_simplex_frictional_contact_function.h>
 #include <utils/codim_thickness.h>
@@ -507,72 +508,117 @@ class IPCSimplexFrictionalContact final : public SimplexFrictionalContact
     virtual void do_compute_energy(EnergyInfo& info) override
     {
         using namespace cuda_tool;
+        static cuda_tool::SpreadVerifier sv_energy{"IPCSimplexFrictionalContact::energy"};
         using namespace sym::codim_ipc_contact;
 
         // Compute Point-Triangle energy
         auto PT_count = info.friction_PTs().size();
-        if(PT_count > 0)
-            do_compute_energy_k1_kernel<<<cuda_tool::best_grid_dim((int)PT_count, do_compute_energy_k1_kernel), cuda_tool::best_block_dim(do_compute_energy_k1_kernel), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.friction_PTs().viewer(),
-                info.friction_PT_energies().viewer(),
-                info.positions().viewer(),
-                info.prev_positions().viewer(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.eps_velocity(),
-                info.dt(),
-                (int)PT_count);
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(PT_count),
+            do_compute_energy_k1_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_k1_kernel<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.friction_PTs().viewer(),
+                    info.friction_PT_energies().viewer(),
+                    info.positions().viewer(),
+                    info.prev_positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.eps_velocity(),
+                    info.dt(),
+                    (int)PT_count);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.friction_PT_energies());
+            });
+
 
         // Compute Edge-Edge energy
         auto EE_count = info.friction_EEs().size();
-        if(EE_count > 0)
-            do_compute_energy_k2_kernel<<<cuda_tool::best_grid_dim((int)EE_count, do_compute_energy_k2_kernel), cuda_tool::best_block_dim(do_compute_energy_k2_kernel), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.friction_EEs().viewer(),
-                info.friction_EE_energies().viewer(),
-                info.positions().viewer(),
-                info.prev_positions().viewer(),
-                info.rest_positions().viewer(),
-                info.eps_velocity(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.dt(),
-                (int)EE_count);
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(EE_count),
+            do_compute_energy_k2_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_k2_kernel<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.friction_EEs().viewer(),
+                    info.friction_EE_energies().viewer(),
+                    info.positions().viewer(),
+                    info.prev_positions().viewer(),
+                    info.rest_positions().viewer(),
+                    info.eps_velocity(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.dt(),
+                    (int)EE_count);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.friction_EE_energies());
+            });
+
 
         // Compute Point-Edge energy
         auto PE_count = info.friction_PEs().size();
-        if(PE_count > 0)
-            do_compute_energy_k3_kernel<<<cuda_tool::best_grid_dim((int)PE_count, do_compute_energy_k3_kernel), cuda_tool::best_block_dim(do_compute_energy_k3_kernel), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.friction_PEs().viewer(),
-                info.friction_PE_energies().viewer(),
-                info.positions().viewer(),
-                info.prev_positions().viewer(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.eps_velocity(),
-                info.dt(),
-                (int)PE_count);
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(PE_count),
+            do_compute_energy_k3_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_k3_kernel<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.friction_PEs().viewer(),
+                    info.friction_PE_energies().viewer(),
+                    info.positions().viewer(),
+                    info.prev_positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.eps_velocity(),
+                    info.dt(),
+                    (int)PE_count);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.friction_PE_energies());
+            });
+
 
         // Compute Point-Point energy
         auto PP_count = info.friction_PPs().size();
-        if(PP_count > 0)
-            do_compute_energy_k4_kernel<<<cuda_tool::best_grid_dim((int)PP_count, do_compute_energy_k4_kernel), cuda_tool::best_block_dim(do_compute_energy_k4_kernel), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.friction_PPs().viewer(),
-                info.friction_PP_energies().viewer(),
-                info.positions().viewer(),
-                info.prev_positions().viewer(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.eps_velocity(),
-                info.dt(),
-                (int)PP_count);
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(PP_count),
+            do_compute_energy_k4_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_k4_kernel<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.friction_PPs().viewer(),
+                    info.friction_PP_energies().viewer(),
+                    info.positions().viewer(),
+                    info.prev_positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.eps_velocity(),
+                    info.dt(),
+                    (int)PP_count);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.friction_PP_energies());
+            });
+
     }
 
     virtual void do_assemble(ContactInfo& info) override
@@ -580,6 +626,7 @@ class IPCSimplexFrictionalContact final : public SimplexFrictionalContact
         using namespace cuda_tool;
         using namespace sym::codim_ipc_contact;
 
+        static cuda_tool::SpreadVerifier sv_assemble{"IPCSimplexFrictionalContact::assemble"};
         auto pt_count = (IndexT)info.friction_PTs().size();
         auto ee_count = (IndexT)info.friction_EEs().size();
         auto pe_count = (IndexT)info.friction_PEs().size();
@@ -599,32 +646,51 @@ class IPCSimplexFrictionalContact final : public SimplexFrictionalContact
         auto launch = [&]<bool GradientOnly>()
         {
             auto k = do_assemble_kernel<GradientOnly>;
-            k<<<cuda_tool::best_grid_dim(total, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.positions().viewer(),
-                info.prev_positions().viewer(),
-                info.rest_positions().viewer(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.eps_velocity(),
-                info.dt(),
-                info.friction_PTs().viewer(),
-                info.friction_PT_gradients().viewer(),
-                info.friction_PT_hessians().viewer(),
-                info.friction_EEs().viewer(),
-                info.friction_EE_gradients().viewer(),
-                info.friction_EE_hessians().viewer(),
-                info.friction_PEs().viewer(),
-                info.friction_PE_gradients().viewer(),
-                info.friction_PE_hessians().viewer(),
-                info.friction_PPs().viewer(),
-                info.friction_PP_gradients().viewer(),
-                info.friction_PP_hessians().viewer(),
-                ee_offset,
-                pe_offset,
-                pp_offset,
-                total);
+            cuda_tool::launch_spread(
+                sv_assemble,
+                (int)(total),
+                k,
+                [&](int grid, int block)
+                {
+                    k<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.positions().viewer(),
+                    info.prev_positions().viewer(),
+                    info.rest_positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.eps_velocity(),
+                    info.dt(),
+                    info.friction_PTs().viewer(),
+                    info.friction_PT_gradients().viewer(),
+                    info.friction_PT_hessians().viewer(),
+                    info.friction_EEs().viewer(),
+                    info.friction_EE_gradients().viewer(),
+                    info.friction_EE_hessians().viewer(),
+                    info.friction_PEs().viewer(),
+                    info.friction_PE_gradients().viewer(),
+                    info.friction_PE_hessians().viewer(),
+                    info.friction_PPs().viewer(),
+                    info.friction_PP_gradients().viewer(),
+                    info.friction_PP_hessians().viewer(),
+                    ee_offset,
+                    pe_offset,
+                    pp_offset,
+                    total);
+                },
+                [&](cuda_tool::SpreadVerifier& v)
+                {
+                    v.add_doublet(info.friction_PT_gradients());
+                v.add_triplet(info.friction_PT_hessians());
+                    v.add_doublet(info.friction_EE_gradients());
+                v.add_triplet(info.friction_EE_hessians());
+                    v.add_doublet(info.friction_PE_gradients());
+                v.add_triplet(info.friction_PE_hessians());
+                    v.add_doublet(info.friction_PP_gradients());
+                v.add_triplet(info.friction_PP_hessians());
+                });
+
         };
 
         if(info.gradient_only())

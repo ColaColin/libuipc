@@ -1,3 +1,4 @@
+#include <cuda_tool/spread_launch.h>
 #include <contact_system/vertex_half_plane_normal_contact.h>
 #include <implicit_geometry/half_plane.h>
 #include <contact_system/contact_models/ipc_vertex_half_plane_contact_function.h>
@@ -115,44 +116,70 @@ class IPCVertexHalfPlaneNormalContact final : public VertexHalfPlaneNormalContac
     virtual void do_compute_energy(EnergyInfo& info)
     {
         using namespace cuda_tool;
+        static cuda_tool::SpreadVerifier sv_energy{"IPCVertexHalfPlaneNormalContact::energy"};
 
-        if(info.PHs().size() > 0)
-            do_compute_energy_kernel<<<cuda_tool::best_grid_dim((int)info.PHs().size(), do_compute_energy_kernel), cuda_tool::best_block_dim(do_compute_energy_kernel), 0, nullptr>>>(
-                info.energies().viewer(),
-                info.PHs().viewer(),
-                half_plane->positions().viewer(),
-                half_plane->normals().viewer(),
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.positions().viewer(),
-                info.thicknesses().viewer(),
-                info.half_plane_vertex_offset(),
-                info.d_hats().viewer(),
-                info.dt(),
-                (int)info.PHs().size());
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(info.PHs().size()),
+            do_compute_energy_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_kernel<<<grid, block, 0, nullptr>>>(
+                    info.energies().viewer(),
+                    info.PHs().viewer(),
+                    half_plane->positions().viewer(),
+                    half_plane->normals().viewer(),
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.half_plane_vertex_offset(),
+                    info.d_hats().viewer(),
+                    info.dt(),
+                    (int)info.PHs().size());
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.energies());
+            });
+
     }
 
     virtual void do_assemble(ContactInfo& info) override
     {
         using namespace cuda_tool;
+        static cuda_tool::SpreadVerifier sv_assemble{"IPCVertexHalfPlaneNormalContact::assemble"};
 
         if(info.PHs().size())
         {
-            do_assemble_kernel<<<cuda_tool::best_grid_dim((int)info.PHs().size(), do_assemble_kernel), cuda_tool::best_block_dim(do_assemble_kernel), 0, nullptr>>>(
-                info.gradient_only(),
-                info.gradients().viewer(),
-                info.hessians().viewer(),
-                info.PHs().viewer(),
-                half_plane->positions().viewer(),
-                half_plane->normals().viewer(),
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.positions().viewer(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.half_plane_vertex_offset(),
-                info.dt(),
-                (int)info.PHs().size());
+            cuda_tool::launch_spread(
+                sv_assemble,
+                (int)(info.PHs().size()),
+                do_assemble_kernel,
+                [&](int grid, int block)
+                {
+                    do_assemble_kernel<<<grid, block, 0, nullptr>>>(
+                    info.gradient_only(),
+                    info.gradients().viewer(),
+                    info.hessians().viewer(),
+                    info.PHs().viewer(),
+                    half_plane->positions().viewer(),
+                    half_plane->normals().viewer(),
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.half_plane_vertex_offset(),
+                    info.dt(),
+                    (int)info.PHs().size());
+                },
+                [&](cuda_tool::SpreadVerifier& v)
+                {
+                    v.add_doublet(info.gradients());
+                    v.add_triplet(info.hessians());
+                });
+
         }
     }
 
