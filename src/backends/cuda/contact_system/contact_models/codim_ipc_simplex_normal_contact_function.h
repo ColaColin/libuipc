@@ -598,13 +598,13 @@ namespace sym::codim_ipc_simplex_contact
     // Reduce the SPD projection of H (N x N, N = 3 * n vertices, only the M
     // active vertex blocks at slots `act` are non-zero) to the (M+1)x(M+1)
     // eigenproblem carried by the basis Q of `barrier_range_basis`.
-    // round-5 (s24): `Solver` selects the eigen-solve behind `make_spd<M+1>`
+    // round-5 (s25): `Solver` selects the eigen-solve behind `make_spd<M+1>`
     // exactly as s19's `make_spd<N, Solver>` does -- 0 = Eigen's
     // SelfAdjointEigenSolver (every round up to 4), 1 = the fixed-size
     // Householder + implicit-QL of `cuda_tool::eigen::evd_tridiag_ql`. It is a
     // template parameter so each instantiation carries one code path's stack
     // frame (the s14 lesson); M + 1 <= 3 takes Eigen's closed form either way.
-    // round-5 (s26): `Basis` selects how that same subspace is carried.
+    // round-5 (s31): `Basis` selects how that same subspace is carried.
     // 0 = the explicit 3M x (M+1) matrix Q of `barrier_range_basis` and its
     // Q^T Hs Q / Q Hred Q^T products (every round up to 5). 1 = the
     // basis-free form below, for M <= 3.
@@ -738,7 +738,7 @@ namespace sym::codim_ipc_simplex_contact
     }
 
     //tex: $$ \text{reduced } make\_spd \text{ of the PT barrier Hessian (12x12)}$$
-    // round-5 (s24): `Solver` is forwarded to `make_spd_contact`; the PT
+    // round-5 (s25): `Solver` is forwarded to `make_spd_contact`; the PT
     // branch lives in contact part 1, whose projection this step measures.
     template <int Solver = 0, int Basis = 0>
     inline __device__ void PT_barrier_make_spd(Matrix12x12&    H,
@@ -787,7 +787,7 @@ namespace sym::codim_ipc_simplex_contact
     }
 
     //tex: $$ \text{reduced } make\_spd \text{ of the PE barrier Hessian (9x9)}$$
-    // round-5 (s26): `Solver` and `Basis` are forwarded to `make_spd_contact`;
+    // round-5 (s31): `Solver` and `Basis` are forwarded to `make_spd_contact`;
     // the PE branch lives in contact part 2, whose projection this step
     // measures (dim 3 alone is 40 % of that kernel).
     template <int Solver = 0, int Basis = 0>
@@ -828,7 +828,7 @@ namespace sym::codim_ipc_simplex_contact
     // exactly `den > 0` of the two-line closest-point solve below, with a
     // condition number bounded by 1e3, so the dim == 4 branch cannot divide by
     // a vanishing determinant.
-    // round-5 (s24): `Solver` is forwarded to `make_spd_contact`; the EE
+    // round-5 (s25): `Solver` is forwarded to `make_spd_contact`; the EE
     // branch lives in contact part 1, whose projection this step measures.
     template <int Solver = 0, int Basis = 0>
     inline __device__ void EE_barrier_make_spd(Matrix12x12&    H,
@@ -886,7 +886,7 @@ namespace sym::codim_ipc_simplex_contact
     }
 
     //tex: $$ \text{reduced } make\_spd \text{ of the PP barrier Hessian (6x6)}$$
-    // round-5 (s26): see `PE_barrier_make_spd`.
+    // round-5 (s31): see `PE_barrier_make_spd`.
     template <int Solver = 0, int Basis = 0>
     inline __device__ void PP_barrier_make_spd(Matrix6x6&      H,
                                                const Vector2i& flag,

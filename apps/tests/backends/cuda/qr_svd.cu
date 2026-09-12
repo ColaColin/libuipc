@@ -37,7 +37,7 @@ TEST_CASE("float Wilkinson shift is stable on GPU", "[cuda][qr_svd]")
           == Catch::Approx(-1.0f));
 }
 
-// r5-s01: randomised device-side verifier for the fixed-sweep Jacobi SVD
+// s23: randomised device-side verifier for the fixed-sweep Jacobi SVD
 // (math::qr_svd_fixed) against the shipped iterative QR-SVD (math::qr_svd).
 // Runs the *real device* functions - the fixed-sweep path calls ::rsqrt on
 // device and 1/sqrt on host, so a host-only check would not cover it.

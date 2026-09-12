@@ -79,13 +79,13 @@ class LinearFusedPCG : public IterativeSolver
     // s13 probe accumulator: [0] = non-zero count, [1] = max |Ap| bit pattern
     cuda_tool::DeviceVector<unsigned long long> m_ap_zero_acc;
 
-    // s27: last-block ticket for the fused dot + scalar kernel; always 0
+    // R7: last-block ticket for the fused dot + scalar kernel; always 0
     // between launches (the last block resets it).
     cuda_tool::DeviceVar<unsigned int> m_dot_ticket{0u};
-    // s27 fold mode 1: this iteration's rz, carried aside by fused_update_xr
+    // R7 fold mode 1: this iteration's rz, carried aside by fused_update_xr
     // so the folded update_p kernel can divide by it after d_rz is overwritten.
     cuda_tool::DeviceVar<Float> d_rz_prev;
-    // s27 probe (UIPC_PCG_FUSE_DOT_VERIFY=1): shadow scalars written by the
+    // R7 probe (UIPC_PCG_FUSE_DOT_VERIFY=1): shadow scalars written by the
     // fused tail, compared on device against the original node's live ones.
     cuda_tool::DeviceVar<Float>                 m_v_rz;
     cuda_tool::DeviceVar<Float>                 m_v_beta;

@@ -376,7 +376,7 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         if(n == 0)
             return;
 
-        // s21 (w3): grid-fitted launch geometry, see cuda_tool/spread_launch.h.
+        // s24 (w3): grid-fitted launch geometry, see cuda_tool/spread_launch.h.
         // The hinge is the wave-quantisation case w0 found: <<<48, 256>>> at
         // 255 registers is one resident block per SM and therefore two waves
         // for 1.2 waves of work.

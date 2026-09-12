@@ -481,7 +481,7 @@ namespace
 namespace
 {
     // ---------------------------------------------------------------------
-    // perf/round5 (s25): is the triplet zero-fill dead work?
+    // perf/round5 (s26): is the triplet zero-fill dead work?
     //
     // `_assemble_linear_system` used to open with
     //
@@ -501,7 +501,7 @@ namespace
     // block together: a slot is either fully written or untouched. There is no
     // accumulate path and no partial-block write.
     //
-    // s25 therefore drops the values fill, keeps the (cheap, 4-byte) index
+    // s26 therefore drops the values fill, keeps the (cheap, 4-byte) index
     // fills as the unwritten-slot marker, and adds the `row >= 0` term the
     // comment always implied to the converter's ge2sym filters, so that an
     // unwritten slot is *dropped* instead of corrupting the pattern. That
@@ -857,7 +857,7 @@ void GlobalLinearSystem::Impl::_assemble_linear_system()
 {
     auto HA = triplet_A.view();
 
-    // perf/round5 (s25): the value fill is dead work -- see the note above
+    // perf/round5 (s26): the value fill is dead work -- see the note above
     // `build_linear_system`. The index fills stay: they are 4 bytes per triplet
     // against 72, and they are what makes an unwritten slot detectable (by the
     // probe) and droppable (by the converter's `row >= 0` filter).

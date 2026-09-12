@@ -26,7 +26,7 @@ namespace
     // reads the original block array. Same values in the same order.
     // ---------------------------------------------------------------
 
-    // perf/round5 (s25): drop triplet slots the assembly never wrote.
+    // perf/round5 (s26): drop triplet slots the assembly never wrote.
     //
     // A slot the subsystems did not write carries row = col = -1 (the caller
     // fills the index arrays with -1 before assembly). `row <= col` alone
@@ -393,7 +393,7 @@ namespace
         MatrixConverterBlockT<T, N>* __restrict__ dst       = block_temp.data();
         int* __restrict__ cnt                               = counts.data();
 
-        // s25: see matrix_converter_drop_invalid
+        // s26: see matrix_converter_drop_invalid
         cnt[i]  = ((!drop_invalid || row[i] >= 0) && row[i] <= col[i]) ? 1 : 0;
         ij[i].x = row[i];
         ij[i].y = col[i];

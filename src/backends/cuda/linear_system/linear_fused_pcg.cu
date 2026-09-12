@@ -37,15 +37,15 @@ namespace
         // s13 probe: UIPC_PCG_AP_ZERO_VERIFY=1 checks on device, right where
         // the fill node used to be, that every Ap(i) is exactly zero.
         bool ap_zero_verify = false;
-        // s27: fold the <<<1,1>>> fused_pcg_scalar node into the tail of the
-        // r^T z dot reduction. The last block to finish the reduction (a
+        // R7 (REJECTED, default-off): fold the <<<1,1>>> fused_pcg_scalar
+        // node into the tail of the r^T z dot reduction. The last block (a
         // ticket atomic + __threadfence, the CUDA threadFenceReduction
         // pattern) reads the completed accumulator and runs exactly the
         // scalar kernel's body. One fewer node per captured PCG iteration.
-        // s27 VERDICT: **rejected, default 0** -- the node is not worth what
+        // R7 VERDICT: **rejected, default 0** -- the node is not worth what
         // removing it costs. The code and both fold designs stay in tree as
         // measurement arms (and for the 5090 re-test, see below); the shipped
-        // path is byte-for-byte the pre-s27 one.
+        // path is byte-for-byte the pre-R7 one.
         //
         // UIPC_PCG_FOLD selects how:
         //   0 = keep the separate node (SHIPPED)
@@ -87,19 +87,19 @@ namespace
         //       node it removes. Kept as a measurement arm; see the ledger.
         int fold         = 0;
         int fold_maxgrid = -1;  // <0 = device SM count
-        // s27 probe: UIPC_PCG_FUSE_DOT_VERIFY=1 runs BOTH paths every
+        // R7 probe: UIPC_PCG_FUSE_DOT_VERIFY=1 runs BOTH paths every
         // iteration -- the fused tail into shadow scalars, then the original
         // <<<1,1>>> node into the live ones -- and compares them on device.
         // The live state is the old path's, so the simulation is unchanged
         // while it is being checked.
         bool fuse_dot_verify = false;
-        // s27: UIPC_PCG_FOLD_VERIFY=1 runs the pre-s27 chain (scalar node +
+        // R7: UIPC_PCG_FOLD_VERIFY=1 runs the pre-R7 chain (scalar node +
         // fused_update_p_beta) as the reference, snapshots every output,
         // restores the non-idempotent ones (p and Ap are read-modify-write),
         // then runs the folded kernel and compares on device.
         bool fold_verify = false;
-        // s27 attribution probe: the memory ordering of the last-block
-        // handshake. 1 = __threadfence() (membar.gl, the shipped default),
+        // R7 attribution probe (read only when a fold is on, never shipped):
+        // the last-block handshake order. 1 = __threadfence() (membar.gl),
         // 2 = PTX `fence.acq_rel.gpu` (the weakest ordering that is still
         // correct), 0 = **no fence at all** -- incorrect by the CUDA memory
         // model, and present only to price the fence. Never ship 0.
@@ -181,7 +181,7 @@ namespace
         }
     }
 
-    // s27: the scalar update that used to be a <<<1, 1>>> kernel of its own,
+    // R7: the scalar update that used to be a <<<1, 1>>> kernel of its own,
     // as a device function so that both paths compile from ONE source
     // expression: converged = |rz_new| <= rz_tol, beta = rz_new / rz
     // (pre-swap), the guarded rz <- rz_new, then the reset of the p^T A p
@@ -202,7 +202,7 @@ namespace
         *d_pAp = Float(0);
     }
 
-    // s27: fused_dot_kernel with the scalar update appended to the LAST block
+    // R7: fused_dot_kernel with the scalar update appended to the LAST block
     // to finish the reduction. The reduction half is a character-for-character
     // copy of fused_dot_kernel above (deliberately duplicated rather than
     // templated, so the shipped dot keeps its own kernel and its own profile
@@ -268,7 +268,7 @@ namespace
                 cuda_tool::atomic_add(d_result.data(), partial);
         }
 
-        // --- s27 tail: the last block runs the scalar update ---
+        // --- R7 tail: the last block runs the scalar update ---
         if(threadIdx.x == 0)
         {
             pcg_dot_fence<FenceMode>();
@@ -297,7 +297,7 @@ namespace
         }
     }
 
-    // s27 probe: compare the fused tail's shadow scalars against the values the
+    // R7 probe: compare the fused tail's shadow scalars against the values the
     // original <<<1, 1>>> node wrote. [0] = 32-bit words compared,
     // [1] = mismatching words.
     __global__ void pcg_scalar_cmp_kernel(const Float*        rz,
@@ -367,7 +367,7 @@ namespace
         // like the memset it replaces.
         if(i == 0 && reset_rz_new)
             *d_rz_new_reset = Float(0);
-        // s27 fold mode 1: carry this iteration's rz aside for the beta of the
+        // R7 fold mode 1: carry this iteration's rz aside for the beta of the
         // folded update_p kernel, which runs after d_rz has been overwritten.
         // Thread 0 only READS d_rz here (every thread does, for alpha) and
         // writes a location nothing in this kernel reads.
@@ -455,7 +455,7 @@ namespace
         p(i)       = z(i) + beta * p(i);
     }
 
-    // s27 fold mode 1: fused_update_p_beta with the <<<1, 1>>> scalar node
+    // R7 fold mode 1: fused_update_p_beta with the <<<1, 1>>> scalar node
     // folded in. The two scalars the node computed are recomputed per thread
     // from exactly the same operands -- conv = |rz_new| <= rz_tol and
     // beta = rz_new / rz_prev, where rz_prev is the value of d_rz that the
@@ -484,7 +484,7 @@ namespace
         // All three scalars are loaded unconditionally and up front: they are
         // independent addresses, so the block pays ONE memory round trip for
         // them. (Loading rz_prev only on the not-converged path -- which is
-        // what the pre-s27 kernel did with d_beta behind the d_converged
+        // what the pre-R7 kernel did with d_beta behind the d_converged
         // test -- costs a second, dependent round trip per block: measured
         // +2.3 us per launch at gridDim 225 on mas-bunny.)
         Float  rz_new  = *d_rz_new;
@@ -521,7 +521,7 @@ namespace
                                             cuda_tool::CDense<Float> d_rz_tol,
                                             cuda_tool::Dense<Float>  d_pAp)
     {
-        // s27: the body now lives in pcg_scalar_body so that this node and the
+        // R7: the body now lives in pcg_scalar_body so that this node and the
         // fused dot tail compile from one source expression.
         pcg_scalar_body(*d_rz_new,
                         d_rz.data(),
@@ -714,7 +714,7 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
         CUDA_TOOL_CHECK(cudaMemset(m_ap_zero_acc.data(), 0, 2 * sizeof(unsigned long long)));
     }
 
-    // s27: the dot-tail ticket. The last block of every reduction resets it to
+    // R7: the dot-tail ticket. The last block of every reduction resets it to
     // 0, so this is only ever a belt-and-braces re-seed between solves; it is
     // blocking for the same reason the d_pAp seed below is (it must be ordered
     // against the graph launch stream).
@@ -733,7 +733,7 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
     if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify)
         report_ap_zero();
 
-    // s27 probe: drain the device comparison counters into the host report
+    // R7 probe: drain the device comparison counters into the host report
     if(pcg_small_env().fuse && pcg_small_env().fold == 2
        && pcg_small_env().fuse_dot_verify && m_scalar_cmp_acc.size() >= 2)
     {
@@ -816,7 +816,7 @@ void fused_dot(cuda_tool::CDenseVectorView<Float> x,
     }
 }
 
-// s27: d_result = x^T * y, and the last block of the reduction also performs
+// R7: d_result = x^T * y, and the last block of the reduction also performs
 // the scalar update that used to be its own <<<1, 1>>> graph node.
 void fused_dot_scalar(cuda_tool::CDenseVectorView<Float> x,
                       cuda_tool::CDenseVectorView<Float> y,
@@ -960,7 +960,7 @@ void fused_update_p_beta(cuda_tool::CVarView<Float>         d_beta,
     }
 }
 
-// s27 fold mode 1: p = z + beta*p with the scalar node folded in.
+// R7 fold mode 1: p = z + beta*p with the scalar node folded in.
 void fused_update_p_scalar(cuda_tool::CVarView<Float>         d_rz_new,
                            cuda_tool::CVarView<Float>         d_rz_prev,
                            cuda_tool::CVarView<Float>         d_rz_tol,
@@ -1132,7 +1132,7 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
     // rz_new = r^T * z, keep convergence flag on device for preconditioner skip.
     if(fuse_dot)
     {
-        // s27: ... and the scalar update in the tail of the same kernel, so the
+        // R7: ... and the scalar update in the tail of the same kernel, so the
         // captured iteration has one node fewer.
         fused_dot_scalar(r.cview(),
                          z.cview(),
@@ -1195,7 +1195,7 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
             }
             else
             {
-                // reference = the pre-s27 chain, then restore the
+                // reference = the pre-R7 chain, then restore the
                 // read-modify-write outputs and run the folded kernel
                 static cuda_tool::SpreadVerifier sv{"LinearFusedPCG::fold_update_p"};
                 sv.begin_inout();

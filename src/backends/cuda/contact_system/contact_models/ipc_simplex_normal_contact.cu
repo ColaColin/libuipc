@@ -297,7 +297,7 @@ namespace
         perm(slot)  = i;
     }
 
-    // round-5 (s24): `SpdTql` picks the PSD projection of contact part 1
+    // round-5 (s25): `SpdTql` picks the PSD projection of contact part 1
     // (PT + EE). false = the pre-round-5 path (Eigen's SelfAdjointEigenSolver
     // inside `make_spd`, and the dense 12x9 Helmert basis for the mollified EE
     // Hessian); true = s19's fixed-size tridiagonal QL plus K16's blocked form
@@ -305,10 +305,10 @@ namespace
     // and its two 12x9 temporaries. Same projection up to rounding; a template
     // parameter, not a runtime flag, so one stack frame per instantiation
     // (s14). Part 2 (PE + PP) is deliberately left on the old path.
-    // round-5 (s26): `Spd2` picks the PSD projection of contact part 2
-    // (PE + PP). false = the pre-s26 path (Eigen's SelfAdjointEigenSolver and
+    // round-5 (s31): `Spd2` picks the PSD projection of contact part 2
+    // (PE + PP). false = the pre-s31 path (Eigen's SelfAdjointEigenSolver and
     // the explicit range basis Q of `barrier_range_basis`); true = s19's
-    // fixed-size tridiagonal QL for the 4x4 of the PE dim-3 branch plus s26's
+    // fixed-size tridiagonal QL for the 4x4 of the PE dim-3 branch plus s31's
     // basis-free form of the same reduced projection (no Q, no 9x9 Hs / Hspd
     // temporary, no tangent frame). Same projection up to rounding; a template
     // parameter, not a runtime flag, so one stack frame per instantiation
@@ -469,7 +469,7 @@ namespace
                     // rounding, as K7 for the hinge)
                     else if(ee_reduced_spd)
                     {
-                        // round-5 (s24): K16's blocked assembly of the same
+                        // round-5 (s25): K16's blocked assembly of the same
                         // translation-free 9x9 projection -- constant Helmert
                         // weights on 3x3 blocks instead of a 12x9 basis matrix
                         // and its Q^T H Q / Q Hr Q^T temporaries
@@ -591,13 +591,13 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // contiguous and the per-warp choice above is uniform
     // (UIPC_EE_PARTITION=0 restores the natural order)
     bool                            m_ee_partition     = true;
-    // round-5 (s24): part 1's PSD projection on s19's tridiagonal-QL solver and
+    // round-5 (s25): part 1's PSD projection on s19's tridiagonal-QL solver and
     // K16's blocked translation-free basis (UIPC_CONTACT_SPD_TQL=0 restores the
     // Eigen SelfAdjointEigenSolver and the dense 12x9 basis)
     bool                            m_spd_tql          = true;
 
-    // round-5 (s26): contact part 2's (PE + PP) PSD projection on s19's
-    // tridiagonal-QL solver and s26's basis-free range reduction
+    // round-5 (s31): contact part 2's (PE + PP) PSD projection on s19's
+    // tridiagonal-QL solver and s31's basis-free range reduction
     // (UIPC_CONTACT_SPD2=0 restores Eigen + the explicit basis Q)
     bool                            m_spd2             = true;
     IndexT                          m_ee_partition_min = 64;
@@ -816,7 +816,7 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         // round-4 (s16): the reduced-range EE projection is a template
         // parameter, not a runtime flag, so the instantiation that takes it
         // does not carry the 9x9 path's stack frame (cf. s14).
-        // round-5 (s26): the part-2 projection is the third template axis. Part 1
+        // round-5 (s31): the part-2 projection is the third template axis. Part 1
         // has no PE/PP branch, so it is only ever instantiated with Spd2 = false.
         auto launch_2 = [&]<bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql>(
                             IndexT       ee_offset,
@@ -846,7 +846,7 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         {
             if constexpr(!GradientOnly && Part != 2)
             {
-                // round-5 (s24): the part-1 PSD projection solver is the second
+                // round-5 (s25): the part-1 PSD projection solver is the second
                 // template axis; gradient-only launches and part 2 never reach
                 // it, so they are only instantiated with SpdTql = false.
                 if(m_ee_reduced_range)

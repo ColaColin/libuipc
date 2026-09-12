@@ -15,7 +15,7 @@ namespace details::fast_segmental_reduce
         return b ? 1 : 0;
     }
 
-    // perf/round5 (s27): with SegOutInit::CrossWarpOnly the output fill covers
+    // perf/round5 (s32): with SegOutInit::CrossWarpOnly the output fill covers
     // only the slots the reduce kernel atomically accumulates into instead of
     // the whole buffer. UIPC_SEG_NARROW_FILL=0 restores the full fill (the
     // A/B switch and the rollback).

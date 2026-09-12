@@ -59,7 +59,7 @@ namespace
     // once, with the same expressions in the same order, is bit-identical.
     // A template parameter so that each instantiation keeps its own register /
     // stack profile (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form).
-    // r5-s01: number of cyclic Jacobi sweeps in the fixed-iteration SVD.
+    // s23: number of cyclic Jacobi sweeps in the fixed-iteration SVD.
     // 4 is the smallest count that reaches full double precision: over 65 536
     // samples of every deformation regime probed, the worst case needs 4
     // (mean 3.2, median 3, p95 4) - the same shape as the iterative path's
@@ -68,7 +68,7 @@ namespace
     // costs 153 more FP64 instructions.
     constexpr int SnkSvdSweeps = 4;
 
-    // s27: the kernel body lives in a __device__ function so that two
+    // s30: the kernel body lives in a __device__ function so that two
     // __global__ wrappers can compile the *same PTX* under different
     // `__launch_bounds__`. Nothing else differs between them -- ptxas only
     // reallocates registers, it does not touch floating-point semantics
@@ -172,7 +172,7 @@ namespace
         constexpr int TwistFlipPairs[3][2] = {{1, 2}, {0, 2}, {0, 1}};
 
         // s15: sw[m][i] = (U diag(block_vectors.col(m)) V^T) * shape_gradients.col(i)
-        // s26: Stencil2 always uses the hoisted form (it is the only one that
+        // s29: Stencil2 always uses the hoisted form (it is the only one that
         // keeps every `sw` index a compile-time constant), so
         // UIPC_SNK1_HOIST_STRETCH has no effect when UIPC_SNK1_STENCIL2=1.
         Vector3 sw[3][StencilSize];
@@ -197,7 +197,7 @@ namespace
             }
         }
 
-        // s26: one 3x3 stencil block, always in the *canonical* (a, b)
+        // s29: one 3x3 stencil block, always in the *canonical* (a, b)
         // orientation, i.e. sum_m l_m * w_m_a * w_m_b^T. The old path folded
         // the (tet(a) > tet(b)) swap into the accumulation, which made every
         // `sa[..]` / `sw[..]` index data dependent -- and a thread-local array
@@ -403,7 +403,7 @@ namespace
             UIPC_SNK1_GH_CALL);
     }
 
-    // s27: the same body under an occupancy bound. Without it ptxas takes 254
+    // s30: the same body under an occupancy bound. Without it ptxas takes 254
     // registers and the SM holds one 256-thread block = 8 warps; the kernel is
     // latency bound, not instruction bound, and paying 1.1 KB of frame and
     // ~1.6 KB of genuine spill traffic to reach 12 warps is a large net win
@@ -442,18 +442,18 @@ class StableNeoHookean3D final : public FEM3DConstitution
     // (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form). Bit-identical.
     bool m_hoist_stretch = true;
 
-    // r5-s01: fixed-sweep branch-free Jacobi SVD instead of the iterative
+    // s23: fixed-sweep branch-free Jacobi SVD instead of the iterative
     // Wilkinson-shift bidiagonal QR (UIPC_QR_SVD_FIXED=0 restores the old
     // path). Rounding-level change, not bit-identical.
     bool m_fixed_svd = true;
 
-    // s26: canonical-orientation stencil assembly (no data-dependent index
+    // s29: canonical-orientation stencil assembly (no data-dependent index
     // into the thread-local `sa` / `sw`) plus the four node-0 blocks derived
     // from sum_k w_k = 0 (UIPC_SNK1_STENCIL2=0 restores the old loop).
     // Rounding-level, not bit-identical.
     bool m_stencil2 = true;
 
-    // s27: occupancy bound on the G/H kernel (UIPC_SNK1_OCC=0 = unbounded).
+    // s30: occupancy bound on the G/H kernel (UIPC_SNK1_OCC=0 = unbounded).
     // Bit-identical: same PTX body, ptxas only reallocates registers.
     bool m_occ = true;
 

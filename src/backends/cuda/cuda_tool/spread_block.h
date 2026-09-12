@@ -11,7 +11,7 @@
 // and `buffer.h` -- which host cuda_tool's own elementwise fill kernels -- can
 // not include it. The heuristic itself has no such dependency, so it lives
 // here and `spread_launch.h` includes this file. One heuristic, one place
-// (s21's consolidation rule), now including the shared infrastructure.
+// (s24's consolidation rule), now including the shared infrastructure.
 // ---------------------------------------------------------------------------
 namespace uipc::backend::cuda_tool
 {

@@ -10,8 +10,8 @@
 
 namespace uipc::backend::cuda_tool
 {
-// perf round 5, launch geometry (w3 s20 + w0 s20, consolidated here by w3 in
-// s21). `cudaOccupancyMaxPotentialBlockSize` -- which is what
+// perf round 5, launch geometry (ledger s20 by w3 + s21 by w0, consolidated
+// here by w3 in s24). `cudaOccupancyMaxPotentialBlockSize` -- which is what
 // `cuda_tool::best_block_dim` calls -- maximises resident warps *per SM*. That
 // is the wrong objective whenever the launch is small relative to the machine,
 // and the backend is full of such launches:
@@ -43,9 +43,9 @@ namespace uipc::backend::cuda_tool
 
 // Block dim for launching `kernel` over n items.
 //
-// round-5 consolidation (w3 s21, merging w0's `utils/proj_launch.h`
-// `fitted_block_dim` with w3's s20 `spread_block_dim`): start from the
-// occupancy-max block size and halve it **in whole warps**, down to one warp,
+// round-5 consolidation (s24 by w3, merging w0's s21 `utils/proj_launch.h`
+// `fitted_block_dim`, now gone, with w3's s20 `spread_block_dim`): start from
+// the occupancy-max block size and halve it **in whole warps**, down to one warp,
 // while the resulting grid is smaller than `blocks_per_sm` blocks per SM.
 // Once n is big enough that the grid already covers the device several times
 // over, the occupancy-max answer is returned unchanged, so this only ever acts
@@ -142,7 +142,7 @@ class SpreadVerifier
     // UIPC_GRID_SPREAD_ONLY=<substring> restricts the spread geometry to the
     // call sites whose tag contains <substring>; every other site keeps the
     // occupancy-max geometry. This is the per-site A/B instrument: it is how
-    // the s21 sites are measured against the s20 ones in one build.
+    // the s24 sites are measured against the s20 ones in one build.
     bool spread() const
     {
         static const char* only = std::getenv("UIPC_GRID_SPREAD_ONLY");
