@@ -570,7 +570,7 @@ namespace
         // Per-thread work, coalescing and the per-triplet contributions are
         // unchanged; only the order in which one thread's dot contributions
         // are summed differs (rounding level; y was already nondeterministic
-        // through its atomics). With the capacity grid (UIPC_SPMV_GRID_STRIDE=0)
+        // through its atomics). With the capacity grid (the default; UIPC_SPMV_GRID_STRIDE=1 opts in)
         // every block breaks after one pass, i.e. the old behaviour exactly.
         //
         // s02's early exit, kept verbatim: a block with no triplet at all must
@@ -798,9 +798,14 @@ namespace
         // s22: cap the SpMV+dot grid at what the device can hold resident and
         // let each block grid-stride over virtual blocks, instead of launching
         // one block per 256 triplets of the reserved *capacity*.
-        // UIPC_SPMV_GRID_STRIDE=0 = the old capacity-sized grid (with which the
+        // Default = the old capacity-sized grid (UIPC_SPMV_GRID_STRIDE=1 opts in; with the default the
         // kernel's loop breaks after one pass, i.e. the old behaviour).
-        bool grid_stride = true;
+        // R6: REJECTED on cc 7.5 (scope -6.6 % disjoint, end-to-end unresolvable with PCG
+        // counts moving +2 % against it), so the round ships the OLD capacity-sized grid and
+        // this path is opt-in -- same treatment as R7's UIPC_PCG_FOLD. Set
+        // UIPC_SPMV_GRID_STRIDE=1 to enable it; the 5090 acceptance run tests it as a
+        // one-variable arm, where the idle-block share is predicted to grow.
+        bool grid_stride = false;
     };
     // s22: how many blocks of this kernel the device can hold resident.
     // Queried once per C (the occupancy API is a driver call; the result is a
