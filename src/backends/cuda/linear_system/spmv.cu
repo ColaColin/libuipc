@@ -536,13 +536,9 @@ namespace
         __shared__ Float s_dot_partials[block_dim / warp_size];
 
         const int triplet_count = (int)(*d_triplet_count);
-        const int block_first   = (int)blockIdx.x * (block_dim * C);
-        if(block_first >= triplet_count)  // uniform per block: no barrier skipped
-            return;
 
-        const int  begin = block_first + (int)threadIdx.x * C;
-        const bool unit  = (a == Float(1));
-        auto       acc   = [](Float* p, Float v)
+        const bool unit = (a == Float(1));
+        auto       acc  = [](Float* p, Float v)
         {
             if constexpr(MODE == 2)
                 *p = v;
@@ -552,135 +548,181 @@ namespace
         [[maybe_unused]] unsigned long long chk = 0;
 
         Float dot_local = 0;
-        int   cur_i     = -1;
-        Float xi0 = 0, xi1 = 0, xi2 = 0;
-        Float r0 = 0, r1 = 0, r2 = 0;
 
-        [[maybe_unused]] bool twice = false;  // C == 1 only, see below
+        // perf/round5 (s22): grid-stride over *virtual* blocks. The grid used
+        // to cover the reserved triplet *capacity*, so that a CUDA graph
+        // capturing this launch stays valid when the nnz changes (the count
+        // lives on device). But the capacity is sized from the raw, unreduced
+        // triplet count, and on the FEM scenes the duplicate reduce is ~7x:
+        // stiff-gipc-case2 assembles 1 856 397 raw triplets that reduce to
+        // 286 419, so of the 7 977 blocks launched only 1 119 hold a triplet
+        // and 6 858 exist only to read the count and exit. A standalone
+        // sm_75 probe puts such a block at 1.45 ns, i.e. ~10 us of a 113 us
+        // launch, and that is what the measurement recovers.
+        // A block now walks virtual blocks `blockIdx.x, +gridDim.x, ...`, so
+        // the grid is capped at what the device can hold resident
+        // (`resident_blocks`) and depends on neither the count nor the
+        // capacity — strictly safer for graph replay than the capacity grid,
+        // not less safe. Sizing the grid from the *host-side* count instead
+        // is not an option and was measured: the count recorded at capture
+        // time goes stale on replay, triplets past it are dropped, and
+        // case2's line search then fails to converge from ~Newton 100 on.
+        // Per-thread work, coalescing and the per-triplet contributions are
+        // unchanged; only the order in which one thread's dot contributions
+        // are summed differs (rounding level; y was already nondeterministic
+        // through its atomics). With the capacity grid (UIPC_SPMV_GRID_STRIDE=0)
+        // every block breaks after one pass, i.e. the old behaviour exactly.
+        //
+        // s02's early exit, kept verbatim: a block with no triplet at all must
+        // leave *before* the block reduction, not fall into it — three empty
+        // warp reductions, a barrier and a same-address atomicAdd(+0.0) per
+        // idle block cost more than the idle launch itself (measured: letting
+        // them fall through takes the capacity-grid path from 112 to 217 us
+        // per launch on case2).
+        if((int)blockIdx.x * (block_dim * C) >= triplet_count)  // uniform per block
+            return;
 
-        auto flush = [&]()
+        for(int vb = (int)blockIdx.x;; vb += (int)gridDim.x)
         {
-            // dot += x_i . rowsum_i ; y_i += a * rowsum_i
-            Float d = xi0 * r0;
-            d       = __fma_rn(xi1, r1, d);
-            d       = __fma_rn(xi2, r2, d);
-            if constexpr(C == 1)
-                dot_local += twice ? d + d : d;
-            else
-                dot_local += d;
-            Float* yi = y + 3 * cur_i;
-            if(unit)
-            {
-                acc(yi + 0, r0);
-                acc(yi + 1, r1);
-                acc(yi + 2, r2);
-            }
-            else
-            {
-                acc(yi + 0, a * r0);
-                acc(yi + 1, a * r1);
-                acc(yi + 2, a * r2);
-            }
-        };
-
-#pragma unroll
-        for(int k = 0; k < C; ++k)
-        {
-            const int t = begin + k;
-            if(t >= triplet_count)  // sorted: every later t is past the end too
+            const int block_first = vb * (block_dim * C);
+            if(block_first >= triplet_count)  // uniform per block: no barrier skipped
                 break;
-            const int i = rows[t];
-            const int j = cols[t];
 
-            const Matrix3x3 A = vals[t];  // 9 doubles into registers
+            const int begin = block_first + (int)threadIdx.x * C;
 
-            const Float* xj  = x + 3 * j;
-            const Float  xj0 = __ldg(xj + 0);
-            const Float  xj1 = __ldg(xj + 1);
-            const Float  xj2 = __ldg(xj + 2);
+            int   cur_i = -1;
+            Float xi0 = 0, xi1 = 0, xi2 = 0;
+            Float r0 = 0, r1 = 0, r2 = 0;
 
-            if constexpr(MODE == 3)
+            [[maybe_unused]] bool twice = false;  // C == 1 only, see below
+
+            auto flush = [&]()
             {
-                const Float* xi = x + 3 * i;
-                for(int e = 0; e < 9; ++e)
-                    chk ^= (unsigned long long)__double_as_longlong(A.data()[e]);
-                chk ^= (unsigned long long)__double_as_longlong(
-                    xj0 + xj1 + xj2 + __ldg(xi) + __ldg(xi + 1) + __ldg(xi + 2));
-                continue;
-            }
-
-            if(i != cur_i)
-            {
-                if(cur_i >= 0)
-                    flush();
-                cur_i = i;
-                r0 = r1 = r2    = 0;
-                const Float* xi = x + 3 * i;
-                xi0             = __ldg(xi + 0);
-                xi1             = __ldg(xi + 1);
-                xi2             = __ldg(xi + 2);
-            }
-
-            // rowsum += A * x_j  (9 FMA)
-            r0 = __fma_rn(A(0, 0), xj0, r0);
-            r0 = __fma_rn(A(0, 1), xj1, r0);
-            r0 = __fma_rn(A(0, 2), xj2, r0);
-            r1 = __fma_rn(A(1, 0), xj0, r1);
-            r1 = __fma_rn(A(1, 1), xj1, r1);
-            r1 = __fma_rn(A(1, 2), xj2, r1);
-            r2 = __fma_rn(A(2, 0), xj0, r2);
-            r2 = __fma_rn(A(2, 1), xj1, r2);
-            r2 = __fma_rn(A(2, 2), xj2, r2);
-
-            if(MODE != 1 && i != j)
-            {
-                // w = A^T x_i  (3 MUL + 6 FMA); dot += x_j . w ; y_j += a * w
-                Float w0 = A(0, 0) * xi0;
-                w0       = __fma_rn(A(1, 0), xi1, w0);
-                w0       = __fma_rn(A(2, 0), xi2, w0);
-                Float w1 = A(0, 1) * xi0;
-                w1       = __fma_rn(A(1, 1), xi1, w1);
-                w1       = __fma_rn(A(2, 1), xi2, w1);
-                Float w2 = A(0, 2) * xi0;
-                w2       = __fma_rn(A(1, 2), xi1, w2);
-                w2       = __fma_rn(A(2, 2), xi2, w2);
-
+                // dot += x_i . rowsum_i ; y_i += a * rowsum_i
+                Float d = xi0 * r0;
+                d       = __fma_rn(xi1, r1, d);
+                d       = __fma_rn(xi2, r2, d);
                 if constexpr(C == 1)
-                {
-                    // one block per thread: x_j.w == x_i.(A x_j) = x_i.rowsum,
-                    // which the flush adds once; add it a second time there
-                    // (2 x_i.(A x_j), exact doubling) instead of 3 more FMAs
-                    twice = true;
-                }
+                    dot_local += twice ? d + d : d;
                 else
-                {
-                    dot_local = __fma_rn(xj0, w0, dot_local);
-                    dot_local = __fma_rn(xj1, w1, dot_local);
-                    dot_local = __fma_rn(xj2, w2, dot_local);
-                }
-
-                Float* yj = y + 3 * j;
+                    dot_local += d;
+                Float* yi = y + 3 * cur_i;
                 if(unit)
                 {
-                    acc(yj + 0, w0);
-                    acc(yj + 1, w1);
-                    acc(yj + 2, w2);
+                    acc(yi + 0, r0);
+                    acc(yi + 1, r1);
+                    acc(yi + 2, r2);
                 }
                 else
                 {
-                    acc(yj + 0, a * w0);
-                    acc(yj + 1, a * w1);
-                    acc(yj + 2, a * w2);
+                    acc(yi + 0, a * r0);
+                    acc(yi + 1, a * r1);
+                    acc(yi + 2, a * r2);
+                }
+            };
+
+    #pragma unroll
+            for(int k = 0; k < C; ++k)
+            {
+                const int t = begin + k;
+                if(t >= triplet_count)  // sorted: every later t is past the end too
+                    break;
+                const int i = rows[t];
+                const int j = cols[t];
+
+                const Matrix3x3 A = vals[t];  // 9 doubles into registers
+
+                const Float* xj  = x + 3 * j;
+                const Float  xj0 = __ldg(xj + 0);
+                const Float  xj1 = __ldg(xj + 1);
+                const Float  xj2 = __ldg(xj + 2);
+
+                if constexpr(MODE == 3)
+                {
+                    const Float* xi = x + 3 * i;
+                    for(int e = 0; e < 9; ++e)
+                        chk ^= (unsigned long long)__double_as_longlong(A.data()[e]);
+                    chk ^= (unsigned long long)__double_as_longlong(
+                        xj0 + xj1 + xj2 + __ldg(xi) + __ldg(xi + 1) + __ldg(xi + 2));
+                    continue;
+                }
+
+                if(i != cur_i)
+                {
+                    if(cur_i >= 0)
+                        flush();
+                    cur_i = i;
+                    r0 = r1 = r2    = 0;
+                    const Float* xi = x + 3 * i;
+                    xi0             = __ldg(xi + 0);
+                    xi1             = __ldg(xi + 1);
+                    xi2             = __ldg(xi + 2);
+                }
+
+                // rowsum += A * x_j  (9 FMA)
+                r0 = __fma_rn(A(0, 0), xj0, r0);
+                r0 = __fma_rn(A(0, 1), xj1, r0);
+                r0 = __fma_rn(A(0, 2), xj2, r0);
+                r1 = __fma_rn(A(1, 0), xj0, r1);
+                r1 = __fma_rn(A(1, 1), xj1, r1);
+                r1 = __fma_rn(A(1, 2), xj2, r1);
+                r2 = __fma_rn(A(2, 0), xj0, r2);
+                r2 = __fma_rn(A(2, 1), xj1, r2);
+                r2 = __fma_rn(A(2, 2), xj2, r2);
+
+                if(MODE != 1 && i != j)
+                {
+                    // w = A^T x_i  (3 MUL + 6 FMA); dot += x_j . w ; y_j += a * w
+                    Float w0 = A(0, 0) * xi0;
+                    w0       = __fma_rn(A(1, 0), xi1, w0);
+                    w0       = __fma_rn(A(2, 0), xi2, w0);
+                    Float w1 = A(0, 1) * xi0;
+                    w1       = __fma_rn(A(1, 1), xi1, w1);
+                    w1       = __fma_rn(A(2, 1), xi2, w1);
+                    Float w2 = A(0, 2) * xi0;
+                    w2       = __fma_rn(A(1, 2), xi1, w2);
+                    w2       = __fma_rn(A(2, 2), xi2, w2);
+
+                    if constexpr(C == 1)
+                    {
+                        // one block per thread: x_j.w == x_i.(A x_j) = x_i.rowsum,
+                        // which the flush adds once; add it a second time there
+                        // (2 x_i.(A x_j), exact doubling) instead of 3 more FMAs
+                        twice = true;
+                    }
+                    else
+                    {
+                        dot_local = __fma_rn(xj0, w0, dot_local);
+                        dot_local = __fma_rn(xj1, w1, dot_local);
+                        dot_local = __fma_rn(xj2, w2, dot_local);
+                    }
+
+                    Float* yj = y + 3 * j;
+                    if(unit)
+                    {
+                        acc(yj + 0, w0);
+                        acc(yj + 1, w1);
+                        acc(yj + 2, w2);
+                    }
+                    else
+                    {
+                        acc(yj + 0, a * w0);
+                        acc(yj + 1, a * w1);
+                        acc(yj + 2, a * w2);
+                    }
                 }
             }
-        }
+            if constexpr(MODE == 3)
+            {
+                y[begin % 3 + 3 * (int)(chk % 7)] = __longlong_as_double((long long)chk);
+                continue;
+            }
+            if(cur_i >= 0)
+                flush();
+        }  // virtual-block loop
+
         if constexpr(MODE == 3)
-        {
-            y[begin % 3 + 3 * (int)(chk % 7)] = __longlong_as_double((long long)chk);
             return;
-        }
-        if(cur_i >= 0)
-            flush();
         if(!unit)
             dot_local *= a;
 
@@ -753,7 +795,41 @@ namespace
         // whole output vector, so rbk_sym_spmv_dot must not fill it again.
         // rbk_sym_spmv_dot is called only from LinearFusedPCG.
         bool pcg_fuse_ap_zero = true;
+        // s22: cap the SpMV+dot grid at what the device can hold resident and
+        // let each block grid-stride over virtual blocks, instead of launching
+        // one block per 256 triplets of the reserved *capacity*.
+        // UIPC_SPMV_GRID_STRIDE=0 = the old capacity-sized grid (with which the
+        // kernel's loop breaks after one pass, i.e. the old behaviour).
+        bool grid_stride = true;
     };
+    // s22: how many blocks of this kernel the device can hold resident.
+    // Queried once per C (the occupancy API is a driver call; the result is a
+    // property of the kernel and the device, never of the matrix, so a grid
+    // built from it is stable across CUDA-graph replays).
+    template <int C>
+    int resident_blocks()
+    {
+        static const int n = []
+        {
+            int device = 0, sm_count = 1, per_sm = 1;
+            cudaGetDevice(&device);
+            cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, device);
+            cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+                &per_sm, Spmv_rbk_sym_spmv_dot_chunked_kernel<C, 0>, 256, 0);
+            if(per_sm < 1)
+                per_sm = 1;
+            int waves = 1;  // measured flat 1..16, see the round-5 record (s22)
+            if(const char* e = std::getenv("UIPC_SPMV_GRID_WAVES"))
+            {
+                int w = std::atoi(e);
+                if(w > 0)
+                    waves = w;
+            }
+            return sm_count * per_sm * waves;
+        }();
+        return n;
+    }
+
     const SpmvEnv& spmv_env()
     {
         static const SpmvEnv env = []
@@ -780,6 +856,8 @@ namespace
                 e.pcg_fuse_scalar = !(s[0] == '0');
             if(const char* s = std::getenv("UIPC_PCG_FUSE_AP_ZERO"))
                 e.pcg_fuse_ap_zero = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_SPMV_GRID_STRIDE"))
+                e.grid_stride = !(s[0] == '0');
             return e;
         }();
         return env;
@@ -931,9 +1009,14 @@ void Spmv::rbk_sym_spmv_dot(Float                                a,
         const IndexT*    cnt  = d_triplet_count.data();
 #define UIPC_SPMV_LAUNCH_CHUNKED(CC)                                                       \
     case CC:                                                                               \
+    {                                                                                      \
+        int bc = env.grid_stride ?                                                         \
+                     std::min(block_count, resident_blocks<CC>()) :                        \
+                     block_count;                                                          \
         Spmv_rbk_sym_spmv_dot_chunked_kernel<CC>                                           \
-            <<<block_count, block_dim, 0, stream>>>(a, rows, cols, vals, xp, yp, dd, cnt); \
-        break;
+            <<<bc, block_dim, 0, stream>>>(a, rows, cols, vals, xp, yp, dd, cnt);          \
+        break;                                                                             \
+    }
         switch(C)
         {
             default:
