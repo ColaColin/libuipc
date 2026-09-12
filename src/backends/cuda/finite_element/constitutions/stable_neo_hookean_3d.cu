@@ -5,6 +5,7 @@
 #include <cuda_tool/cuda_tool.h>
 #include <Eigen/Dense>
 #include <utils/matrix_assembler.h>
+#include <cstdlib>
 
 namespace uipc::backend::cuda
 {
@@ -50,6 +51,14 @@ namespace
         energies(I) = E;
     }
 
+    // s15: HoistStretch = the three stretch-mode matrices q_m = U diag(bv_m) V^T
+    // and the twelve contractions q_m * shape_gradients.col(i) depend only on
+    // (m, i), never on the (i, j) stencil block, but the fully unrolled block
+    // loop below rebuilds them for every one of the 10 blocks. Evaluating them
+    // once, with the same expressions in the same order, is bit-identical.
+    // A template parameter so that each instantiation keeps its own register /
+    // stack profile (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form).
+    template <bool HoistStretch>
     __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(
         cuda_tool::CBufferView<Float>          mus,
         cuda_tool::CBufferView<Float>          lambdas,
@@ -144,6 +153,29 @@ namespace
         // -/+ U.col(p1)*sV.col(p2)^T), matching build_twist_flip_eigenvectors
         constexpr int TwistFlipPairs[3][2] = {{1, 2}, {0, 2}, {0, 1}};
 
+        // s15: sw[m][i] = (U diag(block_vectors.col(m)) V^T) * shape_gradients.col(i)
+        Vector3 sw[3][StencilSize];
+        if constexpr(HoistStretch)
+        {
+#pragma unroll
+            for(int m = 0; m < 3; ++m)
+            {
+                const Matrix3x3 q =
+                    U * block_vectors.col(m).asDiagonal() * V.transpose();
+#pragma unroll
+                for(int i = 0; i < StencilSize; ++i)
+#pragma unroll
+                    for(int ip = 0; ip < 3; ++ip)
+                    {
+                        Float sl = 0;
+#pragma unroll
+                        for(int k = 0; k < 3; ++k)
+                            sl += shape_gradients(k, i) * q(ip, k);
+                        sw[m][i](ip) = sl;
+                    }
+            }
+        }
+
         IndexT hessian_offset = I * HalfHessianSize;
 #pragma unroll
         for(int i = 0; i < StencilSize; ++i)
@@ -186,21 +218,29 @@ namespace
                     Float l = block_values(m) * Vdt2;
                     if(l < 0.0)
                         l = 0.0;
-                    const Matrix3x3 q =
-                        U * block_vectors.col(m).asDiagonal() * V.transpose();
                     Vector3 w_l, w_r;
-#pragma unroll
-                    for(int ip = 0; ip < 3; ++ip)
+                    if constexpr(HoistStretch)
                     {
-                        Float sl = 0, sr = 0;
+                        w_l = sw[m][left];
+                        w_r = sw[m][right];
+                    }
+                    else
+                    {
+                        const Matrix3x3 q =
+                            U * block_vectors.col(m).asDiagonal() * V.transpose();
 #pragma unroll
-                        for(int k = 0; k < 3; ++k)
+                        for(int ip = 0; ip < 3; ++ip)
                         {
-                            sl += shape_gradients(k, left) * q(ip, k);
-                            sr += shape_gradients(k, right) * q(ip, k);
+                            Float sl = 0, sr = 0;
+#pragma unroll
+                            for(int k = 0; k < 3; ++k)
+                            {
+                                sl += shape_gradients(k, left) * q(ip, k);
+                                sr += shape_gradients(k, right) * q(ip, k);
+                            }
+                            w_l(ip) = sl;
+                            w_r(ip) = sr;
                         }
-                        w_l(ip) = sl;
-                        w_r(ip) = sr;
                     }
                     H += (l * w_l) * w_r.transpose();
                 }
@@ -229,7 +269,15 @@ class StableNeoHookean3D final : public FEM3DConstitution
 
     virtual U64 get_uid() const noexcept override { return ConstitutionUID; }
 
-    virtual void do_build(BuildInfo& info) override {}
+    // s15: hoist the stretch-mode contractions out of the stencil-block loop
+    // (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form). Bit-identical.
+    bool m_hoist_stretch = true;
+
+    virtual void do_build(BuildInfo& info) override
+    {
+        const char* e   = std::getenv("UIPC_SNK1_HOIST_STRETCH");
+        m_hoist_stretch = !(e && e[0] == '0');
+    }
 
     virtual void do_report_extent(ReportExtentInfo& info) override
     {
@@ -300,9 +348,11 @@ class StableNeoHookean3D final : public FEM3DConstitution
 
     virtual void do_compute_gradient_hessian(ComputeGradientHessianInfo& info) override
     {
-        auto k = StableNeoHookean3D_do_compute_gradient_hessian_kernel;
-        int  n = (int)info.indices().size();
-        if(n > 0)
+        int n = (int)info.indices().size();
+        if(n == 0)
+            return;
+
+        auto launch = [&](auto k)
         {
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 mus.cview(),
@@ -316,7 +366,12 @@ class StableNeoHookean3D final : public FEM3DConstitution
                 info.dt(),
                 info.gradient_only(),
                 n);
-        }
+        };
+
+        if(m_hoist_stretch)
+            launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true>);
+        else
+            launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false>);
     }
 };
 
