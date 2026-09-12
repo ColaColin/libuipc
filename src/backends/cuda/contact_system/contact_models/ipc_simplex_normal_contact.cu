@@ -297,7 +297,15 @@ namespace
         perm(slot)  = i;
     }
 
-    template <bool GradientOnly, int Part, bool EEReducedRange>
+    // round-5 (s24): `SpdTql` picks the PSD projection of contact part 1
+    // (PT + EE). false = the pre-round-5 path (Eigen's SelfAdjointEigenSolver
+    // inside `make_spd`, and the dense 12x9 Helmert basis for the mollified EE
+    // Hessian); true = s19's fixed-size tridiagonal QL plus K16's blocked form
+    // of the same translation-free 9x9 projection, which drops the 12x9 basis
+    // and its two 12x9 temporaries. Same projection up to rounding; a template
+    // parameter, not a runtime flag, so one stack frame per instantiation
+    // (s14). Part 2 (PE + PP) is deliberately left on the old path.
+    template <bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql = false>
     __global__ void do_assemble_kernel(cuda_tool::CDense2D<ContactCoeff> table,
                                        cuda_tool::CBufferView<IndexT> contact_ids,
                                        cuda_tool::CBufferView<Vector3> Ps,
@@ -329,6 +337,8 @@ namespace
             return;
 
         using namespace sym::codim_ipc_simplex_contact;
+
+        constexpr int SpdSolver = SpdTql ? 1 : 0;
 
         // perf/kernels (K9): Part 1 = PT+EE (12x12 branches), Part 2 = PE+PP
         // (the bulk, small reduced projections), Part 0 = the fused kernel.
@@ -369,7 +379,7 @@ namespace
                     Matrix12x12 H;
                     PT_barrier_gradient_hessian(
                         G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
-                    PT_barrier_make_spd(H, flag, P, T0, T1, T2);
+                    PT_barrier_make_spd<SpdSolver>(H, flag, P, T0, T1, T2);
                     DoubletVectorAssembler DVA{PT_Gs};
                     DVA.segment<4>(i * 4).write(PT, G);
                     TripletMatrixAssembler TMA{PT_Hs};
@@ -439,7 +449,7 @@ namespace
                         warp_reduced = !__any_sync(__activemask(), mollified);
                     if(warp_reduced)
                     {
-                        EE_barrier_make_spd(H, flag, E0, E1, E2, E3);
+                        EE_barrier_make_spd<SpdSolver>(H, flag, E0, E1, E2, E3);
                     }
                     // perf/kernels (K10): the mollified EE barrier depends on
                     // relative positions only, so H annihilates rigid
@@ -447,9 +457,18 @@ namespace
                     // 9x9 translation-free subspace (same projection up to
                     // rounding, as K7 for the hinge)
                     else if(ee_reduced_spd)
-                        make_spd_translation_free_4x3(H);
+                    {
+                        // round-5 (s24): K16's blocked assembly of the same
+                        // translation-free 9x9 projection -- constant Helmert
+                        // weights on 3x3 blocks instead of a 12x9 basis matrix
+                        // and its Q^T H Q / Q Hr Q^T temporaries
+                        if constexpr(SpdTql)
+                            make_spd_translation_free_4x3_blocked<SpdSolver>(H);
+                        else
+                            make_spd_translation_free_4x3<SpdSolver>(H);
+                    }
                     else
-                        make_spd(H);
+                        make_spd<12, SpdSolver>(H);
                     DoubletVectorAssembler DVA{EE_Gs};
                     DVA.segment<4>(i * 4).write(EE, G);
                     TripletMatrixAssembler TMA{EE_Hs};
@@ -561,6 +580,10 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // contiguous and the per-warp choice above is uniform
     // (UIPC_EE_PARTITION=0 restores the natural order)
     bool                            m_ee_partition     = true;
+    // round-5 (s24): part 1's PSD projection on s19's tridiagonal-QL solver and
+    // K16's blocked translation-free basis (UIPC_CONTACT_SPD_TQL=0 restores the
+    // Eigen SelfAdjointEigenSolver and the dense 12x9 basis)
+    bool                            m_spd_tql          = true;
     IndexT                          m_ee_partition_min = 64;
     cuda_tool::DeviceBuffer<IndexT> m_ee_perm;
     cuda_tool::DeviceBuffer<IndexT> m_ee_counters;
@@ -580,6 +603,8 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             m_ee_reduced_range = !(e[0] == '0');
         if(const char* e = std::getenv("UIPC_EE_PARTITION"))
             m_ee_partition = !(e[0] == '0');
+        if(const char* e = std::getenv("UIPC_CONTACT_SPD_TQL"))
+            m_spd_tql = !(e[0] == '0');
         if(m_split == 2)
         {
             CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream, cudaStreamNonBlocking));
@@ -734,14 +759,14 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         // output slot. Two launches on the same stream would serialise the
         // rare, individually expensive PT/EE Hessians behind the bulk, so
         // Part 1 runs on a side stream (fork/join with events).
-        auto launch_t = [&]<bool GradientOnly, int Part, bool EEReducedRange>(
+        auto launch_t = [&]<bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql>(
                             IndexT       ee_offset,
                             IndexT       pe_offset,
                             IndexT       pp_offset,
                             IndexT       n,
                             cudaStream_t s)
         {
-            auto k = do_assemble_kernel<GradientOnly, Part, EEReducedRange>;
+            auto k = do_assemble_kernel<GradientOnly, Part, EEReducedRange, SpdTql>;
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, s>>>(
                 info.contact_tabular().viewer(),
                 info.contact_element_ids().viewer(),
@@ -781,14 +806,27 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         {
             if constexpr(!GradientOnly && Part != 2)
             {
+                // round-5 (s24): the part-1 PSD projection solver is the second
+                // template axis; gradient-only launches and part 2 never reach
+                // it, so they are only instantiated with SpdTql = false.
                 if(m_ee_reduced_range)
                 {
-                    launch_t.template operator()<GradientOnly, Part, true>(
+                    if(m_spd_tql)
+                        launch_t.template operator()<GradientOnly, Part, true, true>(
+                            ee_offset, pe_offset, pp_offset, n, s);
+                    else
+                        launch_t.template operator()<GradientOnly, Part, true, false>(
+                            ee_offset, pe_offset, pp_offset, n, s);
+                    return;
+                }
+                if(m_spd_tql)
+                {
+                    launch_t.template operator()<GradientOnly, Part, false, true>(
                         ee_offset, pe_offset, pp_offset, n, s);
                     return;
                 }
             }
-            launch_t.template operator()<GradientOnly, Part, false>(
+            launch_t.template operator()<GradientOnly, Part, false, false>(
                 ee_offset, pe_offset, pp_offset, n, s);
         };
 
