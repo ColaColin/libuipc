@@ -170,6 +170,9 @@ class MASPreconditionerEngine
                       cudaStream_t                       stream,
                       int                                mode);
     static bool local_solve_rowdot_enabled();
+    // s13: collect_final_Z zeroes the coarse multi_level_R accumulator for the
+    // next apply, removing the per-PCG-iteration fill node.
+    static bool fuse_r_tail_fill();
     bool        z_fill_needed() const;
     void schwarz_local_solve(cuda_tool::CVarView<IndexT> converged,
                              cudaStream_t                stream = nullptr);

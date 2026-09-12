@@ -1485,20 +1485,50 @@ namespace
         atomicMax(&out[1], (unsigned long long)__double_as_longlong(r));
     }
 
+    // s13 probe (UIPC_MAS_R_TAIL_VERIFY=1): assert on device that the coarse
+    // multi_level_R accumulator is exactly zero where the removed fill node
+    // used to run, i.e. right before build_multi_level_R.
+    __global__ void MASPreconditionerEngine_check_r_tail_zero_kernel(
+        cuda_tool::CBufferView<Eigen::Vector3f> r_tail, int n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        Eigen::Vector3f v = r_tail(i);
+        UIPC_KERNEL_ASSERT(v[0] == 0.0f && v[1] == 0.0f && v[2] == 0.0f,
+                           "MAS R tail not zero at apply entry: i=%d (%f %f %f)",
+                           i,
+                           v[0],
+                           v[1],
+                           v[2]);
+    }
+
     __global__ void MASPreconditionerEngine_collect_final_Z_kernel(
-        cuda_tool::DenseVectorView<Float>  Z_view,
-        cuda_tool::CBufferView<float3>     multi_lz,
-        cuda_tool::CBufferView<LevelTable> coarse_table,
-        cuda_tool::CBufferView<int>        real_to_part,
-        cuda_tool::CDense<IndexT>          converged,
-        int                                level_num,
-        int                                n)
+        cuda_tool::DenseVectorView<Float>      Z_view,
+        cuda_tool::CBufferView<float3>         multi_lz,
+        cuda_tool::CBufferView<LevelTable>     coarse_table,
+        cuda_tool::CBufferView<int>            real_to_part,
+        cuda_tool::CDense<IndexT>              converged,
+        cuda_tool::BufferView<Eigen::Vector3f> r_tail,
+        int                                    tail_n,
+        int                                    level_num,
+        int                                    n)
     {
         using namespace cuda_tool;
 
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        // s13: the coarse entries of multi_level_R are an atomic accumulator
+        // that must be zero when the *next* build_multi_level_R starts; the
+        // threads past the node range zero them here, which removes the
+        // separate 15 KB fill node from every captured PCG iteration.
+        // Unconditional (the fill node it replaces was unconditional too).
         if(idx >= n)
+        {
+            int t = idx - n;
+            if(t < tail_n)
+                r_tail(t) = Eigen::Vector3f::Zero();
             return;
+        }
 
         if(*converged != 0)
             return;
@@ -1890,6 +1920,17 @@ void MASPreconditionerEngine::set_preconditioner(cuda_tool::CBufferView<Eigen::M
         multi_level_Z.resize(m_total_num_clusters);
     }
 
+    // s13: collect_final_Z re-zeroes the coarse multi_level_R accumulator for
+    // the *next* apply, so seed it once per Newton iteration here (outside any
+    // graph capture) instead of once per PCG iteration inside the captured
+    // block.
+    if(fuse_r_tail_fill() && m_total_num_clusters > m_total_map_nodes)
+    {
+        multi_level_R
+            .view(m_total_map_nodes, m_total_num_clusters - m_total_map_nodes)
+            .fill(Eigen::Vector3f::Zero());
+    }
+
     // perf/kernels (K12): ClusterMatrixSym{} is all zero bytes, so clear the
     // assembly buffer with a memset instead of the generic fill kernel (one
     // 1.7 KB struct per thread, 0.33 ms per Newton iteration on the 2070S).
@@ -2230,8 +2271,16 @@ void MASPreconditionerEngine::schwarz_local_solve_into(cuda_tool::CVarView<Index
     if(use_rowdot && m_total_num_clusters >= BANKSIZE
        && (m_total_num_clusters % BANKSIZE) == 0)
     {
+        // s13: clusters per block was never swept (s12 fixed it at 2).
+        // UIPC_MAS_LOCAL_SOLVE_CPB = 1 / 2 / 4 / 8 / 16.
+        static const int cpb = []
+        {
+            const char* e = std::getenv("UIPC_MAS_LOCAL_SOLVE_CPB");
+            int         v = e ? std::atoi(e) : 2;
+            return (v == 1 || v == 2 || v == 4 || v == 8 || v == 16) ? v : 2;
+        }();
         int N          = m_total_num_clusters * 3;  // one thread per output scalar
-        int block_size = BANKSIZE * 3 * 2;          // two clusters per block
+        int block_size = BANKSIZE * 3 * cpb;
         int num_blocks = (N + block_size - 1) / block_size;
 
         MASPreconditionerEngine_schwarz_local_solve_rowdot_kernel<<<num_blocks, block_size, 0, stream>>>(
@@ -2284,15 +2333,35 @@ void MASPreconditionerEngine::collect_final_Z(cuda_tool::DenseVectorView<Float> 
         return (v >= 0 && v <= 1024 && (v % 32) == 0) ? v : 256;
     }();
     int bd = collect_block_dim > 0 ? collect_block_dim : cuda_tool::best_block_dim(k);
-    int gd = (N + bd - 1) / bd;
+
+    // s13: fold the coarse multi_level_R zero-fill into this kernel's tail
+    // threads (see the kernel comment). UIPC_MAS_FUSE_R_TAIL_FILL=0 = old node.
+    int tail_off = m_total_map_nodes;
+    int tail_n   = fuse_r_tail_fill() && m_total_num_clusters > m_total_map_nodes ?
+                       m_total_num_clusters - m_total_map_nodes :
+                       0;
+    int gd       = (N + tail_n + bd - 1) / bd;
     k<<<gd, bd, 0, stream>>>(
         Z,
         multi_level_Z.cview(),
         coarse_tables.cview(),
         real_to_part.cview(),
         converged.cviewer(),
+        tail_n > 0 ? multi_level_R.view(tail_off, tail_n) : multi_level_R.view(0, 0),
+        tail_n,
         level_num,
         N);
+}
+
+// s13: UIPC_MAS_FUSE_R_TAIL_FILL=0 restores the separate fill node.
+bool MASPreconditionerEngine::fuse_r_tail_fill()
+{
+    static const bool on = []
+    {
+        const char* e = std::getenv("UIPC_MAS_FUSE_R_TAIL_FILL");
+        return !(e && e[0] == '0');
+    }();
+    return on;
 }
 
 // ============================================================================
@@ -2314,7 +2383,7 @@ void MASPreconditionerEngine::apply(cuda_tool::CDenseVectorView<Float> r,
         multi_level_Z.resize(m_total_num_clusters);
     }
 
-    if(m_total_num_clusters > m_total_map_nodes)
+    if(!fuse_r_tail_fill() && m_total_num_clusters > m_total_map_nodes)
     {
         multi_level_R
             .view(m_total_map_nodes, m_total_num_clusters - m_total_map_nodes)
@@ -2325,6 +2394,19 @@ void MASPreconditionerEngine::apply(cuda_tool::CDenseVectorView<Float> r,
     // zero-fill node is only needed for the old atomic-accumulating path.
     if(z_fill_needed())
         multi_level_Z.view(0, m_total_num_clusters).fill(float3{0, 0, 0}, stream);
+
+    static const bool r_tail_verify = []
+    {
+        const char* e = std::getenv("UIPC_MAS_R_TAIL_VERIFY");
+        return e && e[0] != '0';
+    }();
+    if(r_tail_verify && m_total_num_clusters > m_total_map_nodes)
+    {
+        int  tn = m_total_num_clusters - m_total_map_nodes;
+        auto k  = MASPreconditionerEngine_check_r_tail_zero_kernel;
+        k<<<(tn + 255) / 256, 256, 0, stream>>>(
+            multi_level_R.cview(m_total_map_nodes, tn), tn);
+    }
 
     // 1. Restrict: accumulate residual down through levels
     build_multi_level_R(r, converged, stream);
