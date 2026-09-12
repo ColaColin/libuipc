@@ -74,6 +74,8 @@ class InfoStacklessBVH
             m_pairs.resize_discard(50 * 1024);
             m_broad.reserve_discard(256 * 1024);
             m_broad.resize_discard(256 * 1024);
+            m_count2.reserve_discard(2);
+            m_count2.resize_discard(2);
         }
 
         auto view() const noexcept { return m_pairs.view(0, m_size); }
@@ -104,6 +106,9 @@ class InfoStacklessBVH
         cuda_tool::DeviceBuffer<int>          m_queryId;
         cuda_tool::DeviceBuffer<int>          m_querySortedId;
         cuda_tool::DeviceVar<int>             m_cpNum;
+        // perf/round5 (w2): staging for ONE blocking readback of
+        // (m_cpNum, m_broadNum) instead of two. See read_query_counts().
+        cuda_tool::DeviceBuffer<int>          m_count2;
         // perf/kernels: the query morton sort only orders the traversal (any
         // permutation gives the same pair set); it is rebuilt on demand
         bool  m_built   = false;
@@ -174,7 +179,12 @@ class InfoStacklessBVH
 
     // Publish a device-produced count and grow the output if a retry is
     // required. The caller relaunches the same query when this returns true.
-    bool prepare_query_result(QueryBuffer& qbuffer, int count);
+    // `broad_count` >= 0 means the caller has already read m_broadNum (in a
+    // batched transfer); < 0 keeps the old behaviour of reading it here, which
+    // costs one extra blocking D2H per query.
+    bool prepare_query_result(QueryBuffer& qbuffer, int count, int broad_count = -1);
+    // One blocking D2H for both of a query's counters instead of two.
+    void read_query_counts(QueryBuffer& qbuffer, int& cp_count, int& broad_count);
 
     Config&       config() noexcept { return m_impl.config; }
     const Config& config() const noexcept { return m_impl.config; }
