@@ -478,6 +478,240 @@ namespace
     }
 }  // namespace
 
+namespace
+{
+    // ---------------------------------------------------------------------
+    // perf/round5 (s25): is the triplet zero-fill dead work?
+    //
+    // `_assemble_linear_system` used to open with
+    //
+    //     // Clear and invalidate previous values
+    //     triplet_A.values().fill(Matrix3x3::Zero());   // 134 MB on case2
+    //     triplet_A.row_indices().fill(-1);
+    //     triplet_A.col_indices().fill(-1);
+    //
+    // Re-reading the comment (PERF_METHOD section 4): the *invalidate* half was
+    // never wired to anything. The converter's only index filter is ge2sym's
+    // `row <= col`, and -1 <= -1, so an unwritten slot was **kept**, not
+    // dropped -- with a 64-bit key of 0xFFFF.. whose low bits are garbage. So
+    // an unwritten slot has never been survivable, zero-filled or not.
+    //
+    // The *clear* half is dead because `TripletMatrixViewT::Proxy::write()` is
+    // the only writer of these arrays and it writes row, col and the whole NxN
+    // block together: a slot is either fully written or untouched. There is no
+    // accumulate path and no partial-block write.
+    //
+    // s25 therefore drops the values fill, keeps the (cheap, 4-byte) index
+    // fills as the unwritten-slot marker, and adds the `row >= 0` term the
+    // comment always implied to the converter's ge2sym filters, so that an
+    // unwritten slot is *dropped* instead of corrupting the pattern. That
+    // makes removing the values fill safe by construction, not merely by
+    // observation. UIPC_SKIP_DEAD_FILL=0 restores the fill.
+    inline bool gls_skip_dead_fill()
+    {
+        static const bool skip = []
+        {
+            const char* e = std::getenv("UIPC_SKIP_DEAD_FILL");
+            return !(e && e[0] == '0');
+        }();
+        return skip;
+    }
+
+    // UIPC_FILL_PROBE=1: poison the value blocks instead of zeroing them, then
+    // count after assembly how many slots are still poisoned / still carry a
+    // negative index. Diagnostic only; it forces the fill on.
+    constexpr uint64_t GlsFillPoisonBits = 0x7FF00DEADBEEF001ull;  // a signalling NaN payload
+
+    inline double gls_fill_poison()
+    {
+        double d;
+        uint64_t b = GlsFillPoisonBits;
+        std::memcpy(&d, &b, sizeof(double));
+        return d;
+    }
+
+    __global__ void gls_fill_probe_kernel(const Matrix3x3* __restrict__ values,
+                                          const int* __restrict__ row,
+                                          const int* __restrict__ col,
+                                          unsigned long long* __restrict__ stats,
+                                          int                              n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        if(row[i] < 0 || col[i] < 0)
+            atomicAdd(stats + 0, 1ull);
+        const double* v      = values[i].data();
+        int           n_pois = 0;
+        for(int k = 0; k < 9; ++k)
+        {
+            uint64_t bits = __double_as_longlong(v[k]);
+            if(bits == GlsFillPoisonBits)
+                ++n_pois;
+        }
+        if(n_pois == 9)
+            atomicAdd(stats + 1, 1ull);  // fully unwritten block
+        else if(n_pois != 0)
+            atomicAdd(stats + 2, 1ull);  // partially written block
+    }
+
+    struct GlsFillProbe
+    {
+        bool                                        enabled = false;
+        // UIPC_FILL_PROBE=2 also checks straight after the fill, before the
+        // subsystems run: the rig validation, which must report every slot
+        // unwritten. Without it a probe that silently never fires would read
+        // exactly like a fill that is dead.
+        bool                                        pre_check = false;
+        cuda_tool::DeviceBuffer<unsigned long long> stats;
+        long long                                   calls          = 0;
+        long long                                   triplets       = 0;
+        long long                                   neg_index      = 0;
+        long long                                   unwritten      = 0;
+        long long                                   partial        = 0;
+    };
+
+    GlsFillProbe& gls_fill_probe()
+    {
+        static GlsFillProbe p = []
+        {
+            GlsFillProbe q;
+            if(const char* e = std::getenv("UIPC_FILL_PROBE"))
+            {
+                q.enabled   = !(e[0] == '0');
+                q.pre_check = (e[0] == '2');
+            }
+            return q;
+        }();
+        return p;
+    }
+
+    // UIPC_BCOO_HASH=<n>: order-independent 64-bit hash of the assembled BCOO
+    // (nnz, every row/col index and the raw bits of every value) for the first
+    // <n> conversions. The first conversion of a run depends only on the
+    // deterministic initial state, so its hash is a direct byte-level A/B of
+    // the whole assemble+convert pipeline between two runs. (Later ones are
+    // not: the gradient is accumulated with atomics, so the trajectory
+    // diverges from the first solve on.)
+    __global__ void gls_bcoo_hash_kernel(const Matrix3x3* __restrict__ values,
+                                         const int* __restrict__ row,
+                                         const int* __restrict__ col,
+                                         unsigned long long* __restrict__ out,
+                                         int                              n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        // per-element mix, then a commutative combine so the hash does not
+        // depend on the order blocks happen to land in
+        unsigned long long h = 1469598103934665603ull;
+        auto               mix = [&](unsigned long long v)
+        {
+            h ^= v;
+            h *= 1099511628211ull;
+        };
+        mix((unsigned long long)(unsigned)row[i]);
+        mix((unsigned long long)(unsigned)col[i]);
+        const double* v = values[i].data();
+        for(int k = 0; k < 9; ++k)
+            mix((unsigned long long)__double_as_longlong(v[k]));
+        atomicXor(out, h);
+        atomicAdd(out + 1, h);
+    }
+
+    struct GlsBcooHash
+    {
+        int                                         remaining = 0;
+        cuda_tool::DeviceBuffer<unsigned long long> out;
+    };
+
+    GlsBcooHash& gls_bcoo_hash()
+    {
+        static GlsBcooHash g = []
+        {
+            GlsBcooHash q;
+            if(const char* e = std::getenv("UIPC_BCOO_HASH"))
+                q.remaining = std::atoi(e);
+            return q;
+        }();
+        return g;
+    }
+
+    void gls_bcoo_hash_check(cuda_tool::DeviceBCOOMatrix<Float, 3>& bcoo_A)
+    {
+        auto& g = gls_bcoo_hash();
+        if(g.remaining <= 0)
+            return;
+        --g.remaining;
+        int n = (int)bcoo_A.non_zeros();
+        if(n <= 0)
+            return;
+        g.out.resize_discard(2);
+        std::array<unsigned long long, 2> init{0, 0};
+        cudaMemcpyAsync(g.out.data(),
+                        init.data(),
+                        init.size() * sizeof(unsigned long long),
+                        cudaMemcpyHostToDevice,
+                        cuda_tool::default_stream());
+        gls_bcoo_hash_kernel<<<(n + 255) / 256, 256, 0, cuda_tool::default_stream()>>>(
+            bcoo_A.values().data(),
+            bcoo_A.row_indices().data(),
+            bcoo_A.col_indices().data(),
+            g.out.data(),
+            n);
+        std::array<unsigned long long, 2> h{};
+        cudaMemcpyAsync(h.data(),
+                        g.out.data(),
+                        h.size() * sizeof(unsigned long long),
+                        cudaMemcpyDeviceToHost,
+                        cuda_tool::default_stream());
+        cudaStreamSynchronize(cuda_tool::default_stream());
+        logger::warn("[bcoo-hash] nnz={} xor={:#018x} sum={:#018x}", n, h[0], h[1]);
+    }
+
+    void gls_fill_probe_check(cuda_tool::DeviceTripletMatrix<Float, 3>& triplet_A)
+    {
+        auto& p = gls_fill_probe();
+        if(!p.enabled)
+            return;
+        int n = (int)triplet_A.triplet_count();
+        if(n <= 0)
+            return;
+        p.stats.resize_discard(3);
+        std::array<unsigned long long, 3> init{0, 0, 0};
+        cudaMemcpyAsync(p.stats.data(),
+                        init.data(),
+                        init.size() * sizeof(unsigned long long),
+                        cudaMemcpyHostToDevice,
+                        cuda_tool::default_stream());
+        gls_fill_probe_kernel<<<(n + 255) / 256, 256, 0, cuda_tool::default_stream()>>>(
+            triplet_A.values().data(),
+            triplet_A.row_indices().data(),
+            triplet_A.col_indices().data(),
+            p.stats.data(),
+            n);
+        std::array<unsigned long long, 3> h{};
+        cudaMemcpyAsync(h.data(),
+                        p.stats.data(),
+                        h.size() * sizeof(unsigned long long),
+                        cudaMemcpyDeviceToHost,
+                        cuda_tool::default_stream());
+        cudaStreamSynchronize(cuda_tool::default_stream());
+        ++p.calls;
+        p.triplets += n;
+        p.neg_index += (long long)h[0];
+        p.unwritten += (long long)h[1];
+        p.partial += (long long)h[2];
+        logger::warn("[fill-probe] calls={} n={} total_triplets={} neg_index={} unwritten_blocks={} partial_blocks={}",
+                     p.calls,
+                     n,
+                     p.triplets,
+                     p.neg_index,
+                     p.unwritten,
+                     p.partial);
+    }
+}  // namespace
+
 void GlobalLinearSystem::Impl::build_linear_system()
 {
     Timer timer{"Build Linear System"};
@@ -498,6 +732,8 @@ void GlobalLinearSystem::Impl::build_linear_system()
         _assemble_linear_system();
     }
 
+    gls_fill_probe_check(triplet_A);
+
     gls_pattern_probe_check(triplet_A);
 
     gls_convert_verify_snapshot(triplet_A);
@@ -515,6 +751,7 @@ void GlobalLinearSystem::Impl::build_linear_system()
             converter.convert(triplet_A, bcoo_A);
         }
         gls_convert_verify_check(bcoo_A);
+        gls_bcoo_hash_check(bcoo_A);
         // upload the nnz count for graph-stable SpMV launches (async on the
         // default stream; drained before any solve reads it)
         triplet_count_dev = (IndexT)bcoo_A.triplet_count();
@@ -620,10 +857,21 @@ void GlobalLinearSystem::Impl::_assemble_linear_system()
 {
     auto HA = triplet_A.view();
 
-    // Clear and invalidate previous values
-    triplet_A.values().fill(Matrix3x3::Zero());
+    // perf/round5 (s25): the value fill is dead work -- see the note above
+    // `build_linear_system`. The index fills stay: they are 4 bytes per triplet
+    // against 72, and they are what makes an unwritten slot detectable (by the
+    // probe) and droppable (by the converter's `row >= 0` filter).
+    if(!gls_skip_dead_fill() || gls_fill_probe().enabled)
+    {
+        triplet_A.values().fill(gls_fill_probe().enabled ?
+                                    Matrix3x3::Constant(gls_fill_poison()).eval() :
+                                    Matrix3x3::Zero().eval());
+    }
     triplet_A.row_indices().fill(-1);
     triplet_A.col_indices().fill(-1);
+
+    if(gls_fill_probe().pre_check)
+        gls_fill_probe_check(triplet_A);
 
     auto B = b.view();
     B.buffer_view().fill(0.0);

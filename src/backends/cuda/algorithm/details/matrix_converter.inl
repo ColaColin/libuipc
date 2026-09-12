@@ -26,11 +26,38 @@ namespace
     // reads the original block array. Same values in the same order.
     // ---------------------------------------------------------------
 
+    // perf/round5 (s25): drop triplet slots the assembly never wrote.
+    //
+    // A slot the subsystems did not write carries row = col = -1 (the caller
+    // fills the index arrays with -1 before assembly). `row <= col` alone
+    // *keeps* such a slot -- -1 <= -1 -- and hands it to the radix sort with a
+    // 64-bit key of 0xFFFF.., of which the sort only looks at the low
+    // bits(rows*cols-1), i.e. garbage that lands among the real entries. So an
+    // unwritten slot has never been survivable, zero-filled values or not.
+    //
+    // `row >= 0` is the drop that GlobalLinearSystem's "Clear and invalidate
+    // previous values" comment always implied, and it is what makes removing
+    // that 134 MB zero-fill safe by construction: the value of a slot that was
+    // never written is never read. Measured to never fire (0 negative indices
+    // in 449 M assembled slots across the four benchmark scenes and the whole
+    // sim_case suite), so it is a strict no-op on the observed workloads.
+    // UIPC_SKIP_DEAD_FILL=0 restores both halves: the fill and `row <= col`.
+    inline bool matrix_converter_drop_invalid()
+    {
+        static const bool drop = []
+        {
+            const char* e = std::getenv("UIPC_SKIP_DEAD_FILL");
+            return !(e && e[0] == '0');
+        }();
+        return drop;
+    }
+
     // fused #1: flag the upper-triangular entries (i <= j)
     __global__ void matrix_converter_fused_flag_upper_k1_kernel(
         cuda_tool::CBufferView<int> row_indices,
         cuda_tool::CBufferView<int> col_indices,
         cuda_tool::BufferView<int>  counts,
+        bool                        drop_invalid,
         int                         n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -39,7 +66,7 @@ namespace
         const int* __restrict__ row = row_indices.data();
         const int* __restrict__ col = col_indices.data();
         int* __restrict__ cnt       = counts.data();
-        cnt[i]                      = row[i] <= col[i] ? 1 : 0;
+        cnt[i] = ((!drop_invalid || row[i] >= 0) && row[i] <= col[i]) ? 1 : 0;
     }
 
     // fused #2: compact (key, source index) of the upper-triangular entries
@@ -353,6 +380,7 @@ namespace
         cuda_tool::CBufferView<MatrixConverterBlockT<T, N>> blocks,
         cuda_tool::BufferView<MatrixConverterBlockT<T, N>>  block_temp,
         cuda_tool::BufferView<int>                          counts,
+        bool                                                drop_invalid,
         int                                                 n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -365,7 +393,8 @@ namespace
         MatrixConverterBlockT<T, N>* __restrict__ dst       = block_temp.data();
         int* __restrict__ cnt                               = counts.data();
 
-        cnt[i]  = row[i] <= col[i] ? 1 : 0;
+        // s25: see matrix_converter_drop_invalid
+        cnt[i]  = ((!drop_invalid || row[i] >= 0) && row[i] <= col[i]) ? 1 : 0;
         ij[i].x = row[i];
         ij[i].y = col[i];
         dst[i]  = src[i];
@@ -923,6 +952,7 @@ void MatrixConverter<T, N>::ge2sym(cuda_tool::DeviceTripletMatrix<T, N>& to)
             to.values().cview(),
             block_temp.view(),
             counts.view(),
+            matrix_converter_drop_invalid(),
             n_upper);
     }
 
@@ -1072,7 +1102,7 @@ void MatrixConverter<T, N>::convert_sym(const cuda_tool::DeviceTripletMatrix<T, 
 
     // 1. flag the upper triangular part
     matrix_converter_fused_flag_upper_k1_kernel<<<(n + 256 - 1) / 256, 256, 0, nullptr>>>(
-        src_row_indices, src_col_indices, counts.view(), n);
+        src_row_indices, src_col_indices, counts.view(), matrix_converter_drop_invalid(), n);
 
     // 2. exclusive sum of the flags
     DeviceScan().ExclusiveSum(counts.data(), offsets.data(), n);
