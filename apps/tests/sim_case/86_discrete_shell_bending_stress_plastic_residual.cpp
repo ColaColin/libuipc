@@ -208,7 +208,22 @@ TEST_CASE("86_discrete_shell_bending_stress_plastic_residual", "[fem][stress_pla
     const auto elastic_angle        = residual_hinge_angle(false);
     const auto stress_plastic_angle = residual_hinge_angle(true);
 
+    // The residual thresholds are deliberately far below the observed plastic
+    // residual. The quantity is not deterministic: the FEM assembly accumulates
+    // through floating-point atomics, so the residual angle scatters run to run.
+    // Measured over 660 isolated runs (2026-09-12, RTX 2070 SUPER, five build
+    // arms including the unmodified baseline): stress_plastic_angle has mean
+    // 5.0286e-2 and standard deviation 2.00e-4, while elastic_angle is ~8.4e-6
+    // and effectively constant. The original 5.0e-2 bound sat only 1.4 standard
+    // deviations below that mean and therefore failed about 7 % of runs on every
+    // revision tested, baseline included.
+    //
+    // 4.5e-2 sits 26 standard deviations below the mean, so it does not flake
+    // even if the scatter grows several-fold on another GPU, and it still fails
+    // if the plastic residual regresses by more than ~10 % or if plasticity stops
+    // being modelled at all (the elastic strip returns ~8.4e-6, i.e. five orders
+    // of magnitude smaller). Tighten it only against a re-measured distribution.
     CHECK(elastic_angle < 1.0e-2);
-    CHECK(stress_plastic_angle > 5.0e-2);
-    CHECK(stress_plastic_angle > elastic_angle + 5.0e-2);
+    CHECK(stress_plastic_angle > 4.5e-2);
+    CHECK(stress_plastic_angle > elastic_angle + 4.5e-2);
 }
