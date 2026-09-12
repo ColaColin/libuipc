@@ -1,6 +1,7 @@
 #include <affine_body/affine_body_constitution.h>
 #include <affine_body/constitutions/ortho_potential_function.h>
 #include <utils/make_spd.h>
+#include <utils/proj_launch.h>
 #include <cstdlib>
 
 
@@ -87,11 +88,17 @@ class OrthoPotential final : public AffineBodyConstitution
     // s19: UIPC_MAKE_SPD_JACOBI=0 -> Eigen's SelfAdjointEigenSolver in the
     // 9x9 PSD projection (the pre-round-5 path); default = tridiagonal QL
     bool m_tql2 = true;
+    // s20: UIPC_PROJ_BLOCK_FIT=0 -> cudaOccupancyMaxPotentialBlockSize alone
+    // (the pre-s20 launch geometry: <<<3, 256>>> on rigid-wrecking-balls, i.e.
+    // 3 of 40 SMs); default = grid-fitted block
+    bool m_block_fit = true;
 
     virtual void do_build(AffineBodyConstitution::BuildInfo& info) override
     {
         const char* t = std::getenv("UIPC_MAKE_SPD_JACOBI");
         m_tql2        = !(t && t[0] == '0');
+        const char* f = std::getenv("UIPC_PROJ_BLOCK_FIT");
+        m_block_fit   = !(f && f[0] == '0');
     }
 
     U64 get_uid() const override { return ConstitutionUID; }
@@ -149,7 +156,12 @@ class OrthoPotential final : public AffineBodyConstitution
         int  n      = (int)N;
         auto launch = [&](auto k)
         {
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            // s20: register-bound, no shared memory -> choose the block size
+            // for grid coverage instead of per-SM occupancy alone
+            const int bd = m_block_fit ? fitted_block_dim(k, n) :
+                                         cuda_tool::best_block_dim(k);
+            const int gd = (n + bd - 1) / bd;
+            k<<<gd, bd, 0, nullptr>>>(
                 info.qs(),
                 info.volumes(),
                 info.gradients(),

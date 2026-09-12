@@ -3,6 +3,7 @@
 #include <finite_element/constitutions/discrete_shell_bending_function.h>
 #include <numbers>
 #include <utils/make_spd.h>
+#include <utils/proj_launch.h>
 #include <utils/matrix_assembler.h>
 #include <kernel_cout.h>
 #include <cstdlib>
@@ -177,6 +178,10 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
     // s19: UIPC_MAKE_SPD_JACOBI=0 -> Eigen's SelfAdjointEigenSolver in the
     // PSD projection (the pre-round-5 path); default = tridiagonal QL
     bool m_tql2 = true;
+    // s20: UIPC_PROJ_BLOCK_FIT=0 -> cudaOccupancyMaxPotentialBlockSize alone
+    // (the pre-s20 launch geometry: <<<48, 256>>>, one resident block per SM
+    // at 255 registers and therefore two waves); default = grid-fitted block
+    bool m_block_fit = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -186,6 +191,8 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         m_blocked_proj = !(b && b[0] == '0');
         const char* t  = std::getenv("UIPC_MAKE_SPD_JACOBI");
         m_tql2         = !(t && t[0] == '0');
+        const char* f  = std::getenv("UIPC_PROJ_BLOCK_FIT");
+        m_block_fit    = !(f && f[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -364,7 +371,12 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
 
         auto launch = [&](auto k)
         {
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            // s20: the projection kernel is register-bound with no shared
+            // memory, so the block size is free to be chosen for grid coverage
+            const int bd = m_block_fit ? fitted_block_dim(k, n) :
+                                         cuda_tool::best_block_dim(k);
+            const int gd = (n + bd - 1) / bd;
+            k<<<gd, bd, 0, nullptr>>>(
                 stencils.view(),
                 bending_stiffnesses.view(),
                 theta_bars.view(),
