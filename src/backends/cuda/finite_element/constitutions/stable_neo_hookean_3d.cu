@@ -68,8 +68,13 @@ namespace
     // costs 153 more FP64 instructions.
     constexpr int SnkSvdSweeps = 4;
 
+    // s27: the kernel body lives in a __device__ function so that two
+    // __global__ wrappers can compile the *same PTX* under different
+    // `__launch_bounds__`. Nothing else differs between them -- ptxas only
+    // reallocates registers, it does not touch floating-point semantics
+    // (contraction is already fixed in the PTX), so the two are bit-identical.
     template <bool HoistStretch, bool FixedSvd, bool Stencil2>
-    __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(
+    __device__ __forceinline__ void StableNeoHookean3D_gradient_hessian_body(
         cuda_tool::CBufferView<Float>          mus,
         cuda_tool::CBufferView<Float>          lambdas,
         cuda_tool::CBufferView<Vector4i>       indices,
@@ -378,6 +383,41 @@ namespace
             }
         }
     }
+
+#define UIPC_SNK1_GH_ARGS                                                      \
+    cuda_tool::CBufferView<Float> mus, cuda_tool::CBufferView<Float> lambdas,  \
+        cuda_tool::CBufferView<Vector4i> indices,                              \
+        cuda_tool::CBufferView<Vector3> xs,                                    \
+        cuda_tool::CBufferView<Matrix3x3> Dm_invs,                             \
+        cuda_tool::DoubletVectorView<Float, 3> G3s,                            \
+        cuda_tool::TripletMatrixView<Float, 3> H3x3s,                          \
+        cuda_tool::CBufferView<Float> volumes, Float dt, bool gradient_only, int n
+
+#define UIPC_SNK1_GH_CALL                                                      \
+    mus, lambdas, indices, xs, Dm_invs, G3s, H3x3s, volumes, dt, gradient_only, n
+
+    template <bool HoistStretch, bool FixedSvd, bool Stencil2>
+    __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(UIPC_SNK1_GH_ARGS)
+    {
+        StableNeoHookean3D_gradient_hessian_body<HoistStretch, FixedSvd, Stencil2>(
+            UIPC_SNK1_GH_CALL);
+    }
+
+    // s27: the same body under an occupancy bound. Without it ptxas takes 254
+    // registers and the SM holds one 256-thread block = 8 warps; the kernel is
+    // latency bound, not instruction bound, and paying 1.1 KB of frame and
+    // ~1.6 KB of genuine spill traffic to reach 12 warps is a large net win
+    // (measured: -21 % on case2, -22 % on mas-bunny). 128x4 (16 warps) is not
+    // better than 128x3, so this takes the cheaper of the two.
+    // UIPC_SNK1_OCC=0 restores the unbounded kernel.
+    template <bool HoistStretch, bool FixedSvd, bool Stencil2>
+    __global__ __launch_bounds__(128, 3) void StableNeoHookean3D_do_compute_gradient_hessian_kernel_occ(
+        UIPC_SNK1_GH_ARGS)
+    {
+        StableNeoHookean3D_gradient_hessian_body<HoistStretch, FixedSvd, Stencil2>(
+            UIPC_SNK1_GH_CALL);
+    }
+
 }  // namespace
 
 class StableNeoHookean3D final : public FEM3DConstitution
@@ -413,6 +453,10 @@ class StableNeoHookean3D final : public FEM3DConstitution
     // Rounding-level, not bit-identical.
     bool m_stencil2 = true;
 
+    // s27: occupancy bound on the G/H kernel (UIPC_SNK1_OCC=0 = unbounded).
+    // Bit-identical: same PTX body, ptxas only reallocates registers.
+    bool m_occ = true;
+
     virtual void do_build(BuildInfo& info) override
     {
         const char* e   = std::getenv("UIPC_SNK1_HOIST_STRETCH");
@@ -423,6 +467,9 @@ class StableNeoHookean3D final : public FEM3DConstitution
 
         const char* g = std::getenv("UIPC_SNK1_STENCIL2");
         m_stencil2    = !(g && g[0] == '0');
+
+        const char* h = std::getenv("UIPC_SNK1_OCC");
+        m_occ         = !(h && h[0] == '0');
     }
 
     virtual void do_report_extent(ReportExtentInfo& info) override
@@ -517,10 +564,20 @@ class StableNeoHookean3D final : public FEM3DConstitution
         auto dispatch = [&]<bool HS, bool FS>(std::integral_constant<bool, HS>,
                                               std::integral_constant<bool, FS>)
         {
-            if(m_stencil2)
-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<HS, FS, true>);
+            if(m_occ)
+            {
+                if(m_stencil2)
+                    launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel_occ<HS, FS, true>);
+                else
+                    launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel_occ<HS, FS, false>);
+            }
             else
-                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<HS, FS, false>);
+            {
+                if(m_stencil2)
+                    launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<HS, FS, true>);
+                else
+                    launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<HS, FS, false>);
+            }
         };
 
         constexpr std::true_type  T{};
