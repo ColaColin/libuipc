@@ -748,6 +748,11 @@ namespace
         bool probe            = false;
         bool skip_idle_blocks = true;
         bool pcg_fuse_scalar  = true;
+        // s13: same switch as in linear_system/linear_fused_pcg.cu -- when the
+        // Ap-zero fusion is on, fused_update_xr has already stored 0 into the
+        // whole output vector, so rbk_sym_spmv_dot must not fill it again.
+        // rbk_sym_spmv_dot is called only from LinearFusedPCG.
+        bool pcg_fuse_ap_zero = true;
     };
     const SpmvEnv& spmv_env()
     {
@@ -773,6 +778,8 @@ namespace
             // rbk_sym_spmv_dot is called only from LinearFusedPCG.
             if(const char* s = std::getenv("UIPC_PCG_FUSE_SCALAR"))
                 e.pcg_fuse_scalar = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_PCG_FUSE_AP_ZERO"))
+                e.pcg_fuse_ap_zero = !(s[0] == '0');
             return e;
         }();
         return env;
@@ -886,7 +893,7 @@ void Spmv::rbk_sym_spmv_dot(Float                                a,
                 b, y, n);
         }
     }
-    else
+    else if(!spmv_env().pcg_fuse_ap_zero)
     {
         cuda_tool::BufferLaunch(stream).fill<Float>(y.buffer_view(), 0);
     }

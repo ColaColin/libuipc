@@ -40,6 +40,12 @@ class LinearFusedPCG : public IterativeSolver
     void  check_init_rz_nan_inf(Float rz);
     void  check_iter_rz_nan_inf(Float rz, SizeT k);
 
+    // s13 (UIPC_PCG_AP_ZERO_VERIFY=1): device-side check that Ap is exactly
+    // zero where the removed fill<double>(Ap) node used to run, plus its
+    // per-solve host report.
+    void check_ap_zero(cudaStream_t stream);
+    void report_ap_zero();
+
     // One iteration of the PCG loop body on `stream` (the unit of graph
     // capture and of the uncaptured fallback path).
     void run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStream_t stream, bool timed);
@@ -69,6 +75,9 @@ class LinearFusedPCG : public IterativeSolver
     cuda_tool::DeviceVar<IndexT> d_converged;
     // rz_tol on device so a captured graph survives rz_tol changes
     cuda_tool::DeviceVar<Float> d_rz_tol;
+
+    // s13 probe accumulator: [0] = non-zero count, [1] = max |Ap| bit pattern
+    cuda_tool::DeviceVector<unsigned long long> m_ap_zero_acc;
 
     Float max_iter_ratio  = 2.0;
     Float global_tol_rate = 1e-4;

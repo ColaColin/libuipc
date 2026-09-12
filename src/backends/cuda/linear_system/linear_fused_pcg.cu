@@ -25,6 +25,17 @@ namespace
     {
         bool fuse  = true;  // UIPC_PCG_FUSE_SCALAR=0 -> old chain
         int  block = 256;   // UIPC_PCG_BLOCK_DIM=0   -> best_block_dim()
+        // s13: an existing per-iteration kernel stores 0 back into Ap, so the
+        // SpMV's `fill<double>(Ap)` graph node disappears (the vector is
+        // already zero when the next SpMV starts). Bit-identical: the SpMV
+        // sees the same zeros.  UIPC_PCG_FUSE_AP_ZERO = 0 -> keep the fill
+        // node, 1 -> zero in fused_update_xr (which already reads Ap(i)),
+        // 2 -> zero in fused_update_p (the last node before the next SpMV, so
+        // the zeroed lines are still in L2 when the SpMV reads them).
+        int ap_zero = 2;
+        // s13 probe: UIPC_PCG_AP_ZERO_VERIFY=1 checks on device, right where
+        // the fill node used to be, that every Ap(i) is exactly zero.
+        bool ap_zero_verify = false;
     };
     const PcgSmallEnv& pcg_small_env()
     {
@@ -38,6 +49,13 @@ namespace
                 int b = std::atoi(s);
                 e.block = (b >= 0 && b <= 1024 && (b % 32) == 0) ? b : 256;
             }
+            if(const char* s = std::getenv("UIPC_PCG_FUSE_AP_ZERO"))
+            {
+                int v     = std::atoi(s);
+                e.ap_zero = (v >= 0 && v <= 2) ? v : 2;
+            }
+            if(const char* s = std::getenv("UIPC_PCG_AP_ZERO_VERIFY"))
+                e.ap_zero_verify = !(s[0] == '0');
             return e;
         }();
         return env;
@@ -85,9 +103,10 @@ namespace
                                            cuda_tool::DenseVectorView<Float>  x,
                                            cuda_tool::CDenseVectorView<Float> p,
                                            cuda_tool::DenseVectorView<Float>  r,
-                                           cuda_tool::CDenseVectorView<Float> Ap,
+                                           cuda_tool::DenseVectorView<Float>  Ap,
                                            cuda_tool::Dense<Float> d_rz_new_reset,
                                            bool                    reset_rz_new,
+                                           bool                    zero_Ap,
                                            int                     n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -100,10 +119,38 @@ namespace
         if(i >= n)
             return;
         if(*d_converged != 0)
+        {
+            // s13: keep Ap zero on the early-exit path too, so the next SpMV
+            // of this block always starts from a zero vector.
+            if(zero_Ap)
+                Ap(i) = Float(0);
             return;
+        }
         Float alpha = *d_rz / *d_pAp;
         x(i) += alpha * p(i);
-        r(i) -= alpha * Ap(i);
+        Float Ap_i = Ap(i);
+        r(i) -= alpha * Ap_i;
+        // s13: the accumulator of the *next* SpMV, zeroed here from a line the
+        // thread has just read, replacing the fill<double>(Ap) graph node.
+        if(zero_Ap)
+            Ap(i) = Float(0);
+    }
+
+    // s13 probe (UIPC_PCG_AP_ZERO_VERIFY=1): counts the Ap entries that are not
+    // exactly zero where the fill node used to run. Launched before the SpMV.
+    __global__ void pcg_ap_zero_check_kernel(cuda_tool::CDenseVectorView<Float> Ap,
+                                             unsigned long long* out,
+                                             int                 n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        Float v = Ap(i);
+        if(v != Float(0))
+        {
+            atomicAdd(out, 1ull);
+            atomicMax(out + 1, (unsigned long long)__double_as_longlong(::fabs(v)));
+        }
     }
 
     __global__ void fused_update_p_kernel(cuda_tool::CDense<Float>  d_rz_new,
@@ -111,11 +158,18 @@ namespace
                                           cuda_tool::CDense<IndexT> d_converged,
                                           cuda_tool::DenseVectorView<Float>  p,
                                           cuda_tool::CDenseVectorView<Float> z,
+                                          cuda_tool::DenseVectorView<Float>  Ap,
+                                          bool                               zero_Ap,
                                           int                                n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
             return;
+        // s13 mode 2: seed the next SpMV's accumulator from the last node of
+        // the iteration (unconditional, exactly like the fill node it
+        // replaces).
+        if(zero_Ap)
+            Ap(i) = Float(0);
         if(*d_converged != 0)
             return;
         Float beta = *d_rz_new / *d_rz;
@@ -128,11 +182,16 @@ namespace
                                                cuda_tool::CDense<IndexT> d_converged,
                                                cuda_tool::DenseVectorView<Float>  p,
                                                cuda_tool::CDenseVectorView<Float> z,
+                                               cuda_tool::DenseVectorView<Float>  Ap,
+                                               bool                               zero_Ap,
                                                int                                n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
             return;
+        // s13 mode 2: see fused_update_p_kernel.
+        if(zero_Ap)
+            Ap(i) = Float(0);
         if(*d_converged != 0)
             return;
         Float beta = *d_beta;
@@ -327,7 +386,17 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
     p.resize(N);
     Ap.resize(N);
 
+    // s13 probe scratch (allocated outside any graph capture)
+    if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify && m_ap_zero_acc.size() < 2)
+    {
+        m_ap_zero_acc.resize(2);
+        CUDA_TOOL_CHECK(cudaMemset(m_ap_zero_acc.data(), 0, 2 * sizeof(unsigned long long)));
+    }
+
     auto iter = fused_pcg(x, b, max_iter_ratio * b.size());
+
+    if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify)
+        report_ap_zero();
 
     info.iter_count(iter);
 }
@@ -408,9 +477,10 @@ void fused_update_xr(cuda_tool::CVarView<Float>         d_rz,
                      cuda_tool::DenseVectorView<Float>  x,
                      cuda_tool::CDenseVectorView<Float> p,
                      cuda_tool::DenseVectorView<Float>  r,
-                     cuda_tool::CDenseVectorView<Float> Ap,
+                     cuda_tool::DenseVectorView<Float>  Ap,
                      cuda_tool::VarView<Float>          d_rz_new,
                      bool                               reset_rz_new,
+                     bool                               zero_Ap,
                      cudaStream_t                       stream = nullptr)
 {
     int n = r.size();
@@ -426,9 +496,10 @@ void fused_update_xr(cuda_tool::CVarView<Float>         d_rz,
                                                       x.viewer(),
                                                       p.cviewer(),
                                                       r.viewer(),
-                                                      Ap.cviewer(),
+                                                      Ap.viewer(),
                                                       d_rz_new.viewer(),
                                                       reset_rz_new,
+                                                      zero_Ap,
                                                       n);
     }
 }
@@ -440,6 +511,8 @@ void fused_update_p(cuda_tool::CVarView<Float>         d_rz_new,
                     cuda_tool::CVarView<IndexT>        d_converged,
                     cuda_tool::DenseVectorView<Float>  p,
                     cuda_tool::CDenseVectorView<Float> z,
+                    cuda_tool::DenseVectorView<Float>  Ap,
+                    bool                               zero_Ap,
                     cudaStream_t                       stream = nullptr)
 {
     int n = p.size();
@@ -449,8 +522,14 @@ void fused_update_p(cuda_tool::CVarView<Float>         d_rz_new,
         if(bd <= 0)
             bd = cuda_tool::best_block_dim(fused_update_p_kernel);
         int gd = (n + bd - 1) / bd;
-        fused_update_p_kernel<<<gd, bd, 0, stream>>>(
-            d_rz_new.cviewer(), d_rz.cviewer(), d_converged.cviewer(), p.viewer(), z.cviewer(), n);
+        fused_update_p_kernel<<<gd, bd, 0, stream>>>(d_rz_new.cviewer(),
+                                                     d_rz.cviewer(),
+                                                     d_converged.cviewer(),
+                                                     p.viewer(),
+                                                     z.cviewer(),
+                                                     Ap.viewer(),
+                                                     zero_Ap,
+                                                     n);
     }
 }
 
@@ -459,6 +538,8 @@ void fused_update_p_beta(cuda_tool::CVarView<Float>         d_beta,
                          cuda_tool::CVarView<IndexT>        d_converged,
                          cuda_tool::DenseVectorView<Float>  p,
                          cuda_tool::CDenseVectorView<Float> z,
+                         cuda_tool::DenseVectorView<Float>  Ap,
+                         bool                               zero_Ap,
                          cudaStream_t                       stream = nullptr)
 {
     int n = p.size();
@@ -468,8 +549,13 @@ void fused_update_p_beta(cuda_tool::CVarView<Float>         d_beta,
         if(bd <= 0)
             bd = cuda_tool::best_block_dim(fused_update_p_beta_kernel);
         int gd = (n + bd - 1) / bd;
-        fused_update_p_beta_kernel<<<gd, bd, 0, stream>>>(
-            d_beta.cviewer(), d_converged.cviewer(), p.viewer(), z.cviewer(), n);
+        fused_update_p_beta_kernel<<<gd, bd, 0, stream>>>(d_beta.cviewer(),
+                                                          d_converged.cviewer(),
+                                                          p.viewer(),
+                                                          z.cviewer(),
+                                                          Ap.viewer(),
+                                                          zero_Ap,
+                                                          n);
     }
 }
 
@@ -513,6 +599,31 @@ void fused_update_converged(cuda_tool::CVarView<Float> d_rz_new,
         d_rz_new.cviewer(), d_converged.viewer(), d_rz_tol.cviewer(), n);
 }
 
+// s13 probe: count the non-zero Ap entries where the fill node used to run.
+void LinearFusedPCG::check_ap_zero(cudaStream_t stream)
+{
+    int n = (int)Ap.size();
+    if(n <= 0 || m_ap_zero_acc.size() < 2)
+        return;
+    constexpr int bd = 256;
+    int           gd = (n + bd - 1) / bd;
+    pcg_ap_zero_check_kernel<<<gd, bd, 0, stream>>>(Ap.cview(), m_ap_zero_acc.data(), n);
+}
+
+void LinearFusedPCG::report_ap_zero()
+{
+    if(m_ap_zero_acc.size() < 2)
+        return;
+    std::array<unsigned long long, 2> h{};
+    CUDA_TOOL_CHECK(cudaMemcpy(h.data(), m_ap_zero_acc.data(), sizeof(h), cudaMemcpyDeviceToHost));
+    double worst = *reinterpret_cast<const double*>(&h[1]);
+    logger::info("[PCG Ap-zero verify] frame {} newton {}: non-zero entries seen at SpMV entry = {} (max |Ap| = {:.6e})",
+                 engine().frame(),
+                 engine().newton_iter(),
+                 h[0],
+                 worst);
+}
+
 // One PCG iteration on `stream`; the unit of both graph capture and the
 // uncaptured fallback. Kernels/arguments/order are identical either way.
 // `timed` adds the per-iteration "SpMV"/"Apply Preconditioner" Timers —
@@ -520,6 +631,12 @@ void fused_update_converged(cuda_tool::CVarView<Float> d_rz_new,
 // (empirically corrupts state in the single-process test suite binary).
 void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStream_t stream, bool timed)
 {
+    const bool fuse = pcg_small_env().fuse;
+
+    // s13 probe: the fill node used to run here; check the invariant it kept.
+    if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify)
+        check_ap_zero(stream);
+
     // Ap = A * p,  pAp = p^T * Ap
     {
         std::optional<Timer> timer;
@@ -527,8 +644,6 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
             timer.emplace("SpMV");
         spmv_dot(p.cview(), Ap.view(), d_pAp.view(), stream);
     }
-
-    const bool fuse = pcg_small_env().fuse;
 
     // alpha = rz / pAp,  x += alpha * p,  r -= alpha * Ap
     // (with the fusion on, thread 0 also zeroes the rz_new accumulator)
@@ -538,9 +653,10 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                     x,
                     p.cview(),
                     r.view(),
-                    Ap.cview(),
+                    Ap.view(),
                     d_rz_new.view(),
                     fuse,
+                    pcg_small_env().ap_zero == 1,
                     stream);
 
     // z = P^{-1} * r
@@ -564,14 +680,27 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                          d_rz_tol.view(),
                          d_pAp.view(),
                          stream);
-        fused_update_p_beta(d_beta.view(), d_converged.view(), p.view(), z.cview(), stream);
+        fused_update_p_beta(d_beta.view(),
+                            d_converged.view(),
+                            p.view(),
+                            z.cview(),
+                            Ap.view(),
+                            pcg_small_env().ap_zero == 2,
+                            stream);
     }
     else
     {
         fused_update_converged(d_rz_new.view(), d_converged.view(), d_rz_tol.view(), stream);
 
         // p = z + beta * p (skip when abs(rz_new) <= rz_tol), then rz = rz_new.
-        fused_update_p(d_rz_new.view(), d_rz.view(), d_converged.view(), p.view(), z.cview(), stream);
+        fused_update_p(d_rz_new.view(),
+                       d_rz.view(),
+                       d_converged.view(),
+                       p.view(),
+                       z.cview(),
+                       Ap.view(),
+                       pcg_small_env().ap_zero == 2,
+                       stream);
         fused_swap_rz(d_rz_new.view(), d_rz.view(), d_converged.view(), stream);
     }
 }
@@ -629,6 +758,12 @@ void LinearFusedPCG::rebuild_while(cuda_tool::DenseVectorView<Float>  x,
                                                         d_iter.viewer(),
                                                         d_pAp.viewer());
             cuda_tool::BufferLaunch(stream).copy(r.buffer_view(), b.buffer_view());
+            if(pcg_small_env().ap_zero)
+            {
+                // s13: the loop body leaves Ap zero for the next iteration's
+                // SpMV; seed it once per launch in the setup chain.
+                cuda_tool::BufferLaunch(stream).fill<Float>(Ap.buffer_view(), 0);
+            }
             apply_preconditioner(z, r, d_converged.view(), stream);
             cuda_tool::BufferLaunch(stream).copy(p.buffer_view(), z.buffer_view());
             fused_dot(r.cview(), z.cview(), d_rz.view(), stream);
@@ -809,6 +944,14 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
         // iteration, so seed it once per solve here (blocking, like the
         // tolerance upload above, to stay ordered against the graph stream).
         CUDA_TOOL_CHECK(cudaMemset(d_pAp.data(), 0, sizeof(Float)));
+    }
+    if(pcg_small_env().ap_zero)
+    {
+        // s13: fused_update_xr leaves Ap zero for the *next* SpMV, so the
+        // vector is seeded once per solve here (same blocking-memset
+        // reasoning as the d_pAp seed above) instead of by a fill node inside
+        // every captured iteration.
+        CUDA_TOOL_CHECK(cudaMemset(Ap.buffer_view().data(), 0, Ap.size() * sizeof(Float)));
     }
     SizeT effective_check_interval = check_interval > 0 ? check_interval : SizeT{1};
 
