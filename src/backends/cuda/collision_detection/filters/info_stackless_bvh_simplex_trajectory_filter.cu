@@ -1915,7 +1915,10 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
                           temp_EEs.size(),
                           InfoStacklessBVHSimplexTrajectoryFilter_filter_active_EE_pred{});
 
-        std::array<IndexT, 8> host_counts{};
+        // `selected_counts` is resize(4) (do_build), and copy_to transfers
+        // size() elements, so slots 4..7 were never written or read. s22
+        // widened this array as collateral of widening `query_counts`.
+        std::array<IndexT, 4> host_counts{};
         selected_counts.copy_to(host_counts.data());
 
         IndexT PP_count = host_counts[0];
