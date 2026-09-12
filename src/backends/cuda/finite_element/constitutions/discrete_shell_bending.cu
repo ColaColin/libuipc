@@ -5,6 +5,7 @@
 #include <utils/make_spd.h>
 #include <utils/matrix_assembler.h>
 #include <kernel_cout.h>
+#include <cstdlib>
 
 namespace std
 {
@@ -61,6 +62,12 @@ namespace
         energies(I) = E * V_bar * dt * dt;
     }
 
+    // s14: Proj = 0 dense 12x12 eigen-solve (old path), 1 = K16 block-assembled
+    // translation-free 9x9 projection, 2 = K7 dense 12x9 basis products. The
+    // projection is a template parameter so that each instantiation carries only
+    // one code path's register/stack footprint (the 12x12 eigen-solve alone costs
+    // ~7 KB of stack frame).
+    template <int Proj>
     __global__ void DiscreteShellBending_do_compute_gradient_hessian_kernel(
         cuda_tool::BufferView<Vector4i>        stencils,
         cuda_tool::BufferView<Float>           bending_stiffnesses,
@@ -105,7 +112,19 @@ namespace
 
         DSB::ddEddx(H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa);
         H12x12 *= Vdt2;
-        make_spd(H12x12);
+        // s14: the discrete-shell bending energy depends on the vertices only
+        // through the dihedral angle, which is translation invariant, so
+        // H t = 0 exactly for every rigid translation t and the K7/K16
+        // translation-free 9x9 projection applies verbatim (the same lever
+        // round 3 put on the Dahl friction hinge). UIPC_DSB_REDUCED_SPD=0
+        // restores the 12x12 eigen-solve; UIPC_DSB_BLOCKED_PROJ=0 uses the
+        // dense 12x9 basis products of K7 instead of the K16 block assembly.
+        if constexpr(Proj == 1)
+            make_spd_translation_free_4x3_blocked(H12x12);
+        else if constexpr(Proj == 2)
+            make_spd_translation_free_4x3(H12x12);
+        else
+            make_spd(H12x12);
 
         TripletMatrixAssembler TMA{H3x3s};
         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
@@ -147,7 +166,20 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
     cuda_tool::DeviceBuffer<Float> theta_bars;
     cuda_tool::DeviceBuffer<Float> V_bars;
 
-    virtual void do_build(BuildInfo& info) override {}
+    // s14: translation-free 9x9 PSD projection of the hinge Hessian
+    // (UIPC_DSB_REDUCED_SPD=0 restores the 12x12 eigen-solve), assembled from
+    // 3x3 blocks with the constant Helmert weights
+    // (UIPC_DSB_BLOCKED_PROJ=0 = the dense 12x9 basis products)
+    bool m_reduced_spd  = true;
+    bool m_blocked_proj = true;
+
+    virtual void do_build(BuildInfo& info) override
+    {
+        const char* e  = std::getenv("UIPC_DSB_REDUCED_SPD");
+        m_reduced_spd  = !(e && e[0] == '0');
+        const char* b  = std::getenv("UIPC_DSB_BLOCKED_PROJ");
+        m_blocked_proj = !(b && b[0] == '0');
+    }
 
     virtual void do_init(FilteredInfo& info) override
     {
@@ -319,9 +351,11 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
 
     virtual void do_compute_gradient_hessian(ComputeGradientHessianInfo& info) override
     {
-        auto k = DiscreteShellBending_do_compute_gradient_hessian_kernel;
-        int  n = (int)stencils.size();
-        if(n > 0)
+        int n = (int)stencils.size();
+        if(n == 0)
+            return;
+
+        auto launch = [&](auto k)
         {
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 stencils.view(),
@@ -336,7 +370,14 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
                 info.dt(),
                 info.gradient_only(),
                 n);
-        }
+        };
+
+        if(!m_reduced_spd)
+            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<0>);
+        else if(m_blocked_proj)
+            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1>);
+        else
+            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<2>);
     }
 };
 
