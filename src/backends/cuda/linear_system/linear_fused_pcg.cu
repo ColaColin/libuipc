@@ -5,6 +5,7 @@
 #include <uipc/common/timer.h>
 #include <cub/warp/warp_reduce.cuh>
 #include <cuda_tool/cub.h>
+#include <cuda_tool/spread_launch.h>
 #include <algorithm>
 #include <optional>
 namespace uipc::backend::cuda
@@ -36,6 +37,73 @@ namespace
         // s13 probe: UIPC_PCG_AP_ZERO_VERIFY=1 checks on device, right where
         // the fill node used to be, that every Ap(i) is exactly zero.
         bool ap_zero_verify = false;
+        // s27: fold the <<<1,1>>> fused_pcg_scalar node into the tail of the
+        // r^T z dot reduction. The last block to finish the reduction (a
+        // ticket atomic + __threadfence, the CUDA threadFenceReduction
+        // pattern) reads the completed accumulator and runs exactly the
+        // scalar kernel's body. One fewer node per captured PCG iteration.
+        // s27 VERDICT: **rejected, default 0** -- the node is not worth what
+        // removing it costs. The code and both fold designs stay in tree as
+        // measurement arms (and for the 5090 re-test, see below); the shipped
+        // path is byte-for-byte the pre-s27 one.
+        //
+        // UIPC_PCG_FOLD selects how:
+        //   0 = keep the separate node (SHIPPED)
+        //   1 = fold it into fused_update_p_beta. Every thread
+        //       recomputes the two scalars it needs from the same operands;
+        //       block 0 / thread 0 publishes d_converged, the guarded
+        //       d_rz <- rz_new and the d_pAp reset. Every address written
+        //       there is read by NO thread of that kernel, so this needs no
+        //       barrier, no fence and no extra atomic.
+        //
+        // The fold is GATED ON THE GRID of the kernel it is folded into. The
+        // node it removes costs a FIXED ~0.9 us of graph-node overhead per PCG
+        // iteration, whatever the problem size; the fold's cost is per block
+        // (three scalar loads and one predicated store more per block), so it
+        // multiplies by the number of waves. Measured end-to-end, 3 runs per
+        // arm, ms per Newton iteration:
+        //   rigid-wrecking-balls  grid  27  -1.41 % (3 runs) / -0.83 % (5 runs,
+        //                                   OVERLAPPING -- t=1.39, p~0.2)
+        //   cube-wall-cloth       grid 140  -0.10 %   (inside scatter)
+        //   mas-bunny             grid 225  +0.73 %   (disjoint, a regression)
+        //   stiff-gipc-case2      grid 500  +0.59 %   (disjoint, a regression)
+        // At the smallest grid in the suite the scope measurement is only
+        // -0.0146 ms per Newton iteration (-0.23 % of kernel time): the node
+        // is worth 0.0200 ms/it and the fold costs 0.0053 ms/it back. That is
+        // below wrecking-balls' own +-1.3 % per-iteration scatter, so it is
+        // not a demonstrable end-to-end gain and mode 1 is NOT enabled.
+        // UIPC_PCG_FOLD_MAXGRID gates mode 1 on the grid (default = the device
+        // SM count, 0 = never gate); it is how the crossover was bracketed.
+        //
+        // Worth re-testing on the acceptance GPU: the fold's cost is per
+        // block and is paid once per WAVE, so at ~170 SMs grid 225 is 1.3
+        // waves instead of 6.3 and the cost should fall ~5x, while the node's
+        // ~0.93 us is largely fixed. `UIPC_PCG_FOLD=1 UIPC_PCG_FOLD_MAXGRID=0`
+        // is the one-env-var arm for that.
+        //
+        //   2 = fold it into the TAIL OF THE DOT (last-block-done handshake).
+        //       Correct, and measured SLOWER than arm A on mas-bunny: the
+        //       __threadfence() every block must execute costs more than the
+        //       node it removes. Kept as a measurement arm; see the ledger.
+        int fold         = 0;
+        int fold_maxgrid = -1;  // <0 = device SM count
+        // s27 probe: UIPC_PCG_FUSE_DOT_VERIFY=1 runs BOTH paths every
+        // iteration -- the fused tail into shadow scalars, then the original
+        // <<<1,1>>> node into the live ones -- and compares them on device.
+        // The live state is the old path's, so the simulation is unchanged
+        // while it is being checked.
+        bool fuse_dot_verify = false;
+        // s27: UIPC_PCG_FOLD_VERIFY=1 runs the pre-s27 chain (scalar node +
+        // fused_update_p_beta) as the reference, snapshots every output,
+        // restores the non-idempotent ones (p and Ap are read-modify-write),
+        // then runs the folded kernel and compares on device.
+        bool fold_verify = false;
+        // s27 attribution probe: the memory ordering of the last-block
+        // handshake. 1 = __threadfence() (membar.gl, the shipped default),
+        // 2 = PTX `fence.acq_rel.gpu` (the weakest ordering that is still
+        // correct), 0 = **no fence at all** -- incorrect by the CUDA memory
+        // model, and present only to price the fence. Never ship 0.
+        int dot_fence = 1;
     };
     const PcgSmallEnv& pcg_small_env()
     {
@@ -56,6 +124,22 @@ namespace
             }
             if(const char* s = std::getenv("UIPC_PCG_AP_ZERO_VERIFY"))
                 e.ap_zero_verify = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_PCG_FOLD"))
+            {
+                int v  = std::atoi(s);
+                e.fold = (v >= 0 && v <= 2) ? v : 1;
+            }
+            if(const char* s = std::getenv("UIPC_PCG_FOLD_MAXGRID"))
+                e.fold_maxgrid = std::atoi(s);
+            if(const char* s = std::getenv("UIPC_PCG_FUSE_DOT_VERIFY"))
+                e.fuse_dot_verify = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_PCG_FOLD_VERIFY"))
+                e.fold_verify = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_PCG_DOT_FENCE"))
+            {
+                int v       = std::atoi(s);
+                e.dot_fence = (v >= 0 && v <= 2) ? v : 1;
+            }
             return e;
         }();
         return env;
@@ -97,6 +181,171 @@ namespace
         }
     }
 
+    // s27: the scalar update that used to be a <<<1, 1>>> kernel of its own,
+    // as a device function so that both paths compile from ONE source
+    // expression: converged = |rz_new| <= rz_tol, beta = rz_new / rz
+    // (pre-swap), the guarded rz <- rz_new, then the reset of the p^T A p
+    // accumulator for the next iteration's SpMV.
+    __device__ __forceinline__ void pcg_scalar_body(Float        rz_new,
+                                                    Float*       d_rz,
+                                                    Float*       d_beta,
+                                                    IndexT*      d_converged,
+                                                    const Float* d_rz_tol,
+                                                    Float*       d_pAp)
+    {
+        Float  rz   = *d_rz;
+        IndexT conv = abs(rz_new) <= *d_rz_tol ? 1 : 0;
+        *d_converged = conv;
+        *d_beta      = rz_new / rz;
+        if(conv == 0)
+            *d_rz = rz_new;
+        *d_pAp = Float(0);
+    }
+
+    // s27: fused_dot_kernel with the scalar update appended to the LAST block
+    // to finish the reduction. The reduction half is a character-for-character
+    // copy of fused_dot_kernel above (deliberately duplicated rather than
+    // templated, so the shipped dot keeps its own kernel and its own profile
+    // row). The tail is the standard CUDA threadFenceReduction handshake:
+    // every block fences after its atomic, then tickets in; the block that
+    // draws the last ticket has seen every other block's contribution, so the
+    // accumulator it reads is the same completed value the separate <<<1,1>>>
+    // node would have read. `d_ticket` is left at 0 for the next launch, which
+    // is what makes this safe under graph replay.
+    template <int FenceMode>
+    __device__ __forceinline__ void pcg_dot_fence()
+    {
+        if(FenceMode == 1)
+            __threadfence();
+        else if(FenceMode == 2)
+            asm volatile("fence.acq_rel.gpu;" ::: "memory");
+    }
+
+    template <int FenceMode>
+    __global__ void fused_dot_scalar_kernel(cuda_tool::CDenseVectorView<Float> x,
+                                            cuda_tool::CDenseVectorView<Float> y,
+                                            cuda_tool::Dense<Float> d_result,
+                                            int                     n,
+                                            unsigned int*           d_ticket,
+                                            cuda_tool::Dense<Float>  d_rz,
+                                            cuda_tool::Dense<Float>  d_beta,
+                                            cuda_tool::Dense<IndexT> d_converged,
+                                            cuda_tool::CDense<Float> d_rz_tol,
+                                            cuda_tool::Dense<Float>  d_pAp,
+                                            bool                     verify,
+                                            Float*                   v_rz,
+                                            Float*                   v_beta,
+                                            IndexT*                  v_converged,
+                                            Float*                   v_pAp)
+    {
+        constexpr int block_dim = 256;
+        constexpr int warp_size = 32;
+        constexpr int num_warps = block_dim / warp_size;
+
+        using WarpReduce = cub::WarpReduce<Float, warp_size>;
+        __shared__ typename WarpReduce::TempStorage temp_storage[num_warps];
+
+        int   i   = blockIdx.x * blockDim.x + threadIdx.x;
+        Float val = (i < n) ? x(i) * y(i) : Float(0);
+
+        int   warp_id  = threadIdx.x / warp_size;
+        int   lane_id  = threadIdx.x & (warp_size - 1);
+        Float warp_sum = WarpReduce(temp_storage[warp_id]).Sum(val);
+
+        // two-level reduction: one atomic per block instead of one per warp —
+        // ~4k same-address atomic doubles serialize badly on a single counter
+        __shared__ Float s_partials[num_warps];
+        if(lane_id == 0)
+            s_partials[warp_id] = warp_sum;
+        __syncthreads();
+        if(threadIdx.x < warp_size)
+        {
+            Float partial =
+                (threadIdx.x < num_warps) ? s_partials[threadIdx.x] : Float(0);
+            __syncwarp();
+            partial = WarpReduce(temp_storage[0]).Sum(partial);
+            if(threadIdx.x == 0)
+                cuda_tool::atomic_add(d_result.data(), partial);
+        }
+
+        // --- s27 tail: the last block runs the scalar update ---
+        if(threadIdx.x == 0)
+        {
+            pcg_dot_fence<FenceMode>();
+            unsigned int ticket = atomicAdd(d_ticket, 1u);
+            if(ticket == gridDim.x - 1)
+            {
+                *d_ticket = 0;
+                // volatile: the accumulator was written by other blocks'
+                // atomics, so it must not be served from this SM's L1
+                Float rz_new = *static_cast<volatile Float*>(d_result.data());
+                if(verify)
+                {
+                    *v_rz = *d_rz;  // the shadow starts from the live rz
+                    pcg_scalar_body(rz_new, v_rz, v_beta, v_converged, d_rz_tol.data(), v_pAp);
+                }
+                else
+                {
+                    pcg_scalar_body(rz_new,
+                                    d_rz.data(),
+                                    d_beta.data(),
+                                    d_converged.data(),
+                                    d_rz_tol.data(),
+                                    d_pAp.data());
+                }
+            }
+        }
+    }
+
+    // s27 probe: compare the fused tail's shadow scalars against the values the
+    // original <<<1, 1>>> node wrote. [0] = 32-bit words compared,
+    // [1] = mismatching words.
+    __global__ void pcg_scalar_cmp_kernel(const Float*        rz,
+                                          const Float*        beta,
+                                          const IndexT*       converged,
+                                          const Float*        pAp,
+                                          const Float*        v_rz,
+                                          const Float*        v_beta,
+                                          const IndexT*       v_converged,
+                                          const Float*        v_pAp,
+                                          unsigned long long* acc)
+    {
+        const unsigned int* a[4] = {reinterpret_cast<const unsigned int*>(rz),
+                                    reinterpret_cast<const unsigned int*>(beta),
+                                    reinterpret_cast<const unsigned int*>(pAp),
+                                    reinterpret_cast<const unsigned int*>(converged)};
+        const unsigned int* b[4] = {reinterpret_cast<const unsigned int*>(v_rz),
+                                    reinterpret_cast<const unsigned int*>(v_beta),
+                                    reinterpret_cast<const unsigned int*>(v_pAp),
+                                    reinterpret_cast<const unsigned int*>(v_converged)};
+        const int words[4] = {sizeof(Float) / 4, sizeof(Float) / 4, sizeof(Float) / 4, 1};
+        unsigned long long total = 0, bad = 0;
+        for(int k = 0; k < 4; ++k)
+            for(int w = 0; w < words[k]; ++w)
+            {
+                ++total;
+                if(a[k][w] != b[k][w])
+                    ++bad;
+            }
+        acc[0] += total;
+        acc[1] += bad;
+    }
+
+    // host-side report for UIPC_PCG_FUSE_DOT_VERIFY=1 (no CUDA call at exit)
+    struct PcgScalarVerifyReport
+    {
+        unsigned long long words = 0, mismatch = 0;
+        ~PcgScalarVerifyReport()
+        {
+            if(words)
+                std::fprintf(stderr,
+                             "[PcgScalarVerify] %llu output words (32-bit) compared, %llu mismatching\n",
+                             words,
+                             mismatch);
+        }
+    };
+    PcgScalarVerifyReport g_pcg_scalar_report;
+
     __global__ void fused_update_xr_kernel(cuda_tool::CDense<Float> d_rz,
                                            cuda_tool::CDense<Float> d_pAp,
                                            cuda_tool::CDense<IndexT> d_converged,
@@ -107,6 +356,8 @@ namespace
                                            cuda_tool::Dense<Float> d_rz_new_reset,
                                            bool                    reset_rz_new,
                                            bool                    zero_Ap,
+                                           cuda_tool::Dense<Float> d_rz_prev_out,
+                                           bool                    save_rz_prev,
                                            int                     n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -116,6 +367,12 @@ namespace
         // like the memset it replaces.
         if(i == 0 && reset_rz_new)
             *d_rz_new_reset = Float(0);
+        // s27 fold mode 1: carry this iteration's rz aside for the beta of the
+        // folded update_p kernel, which runs after d_rz has been overwritten.
+        // Thread 0 only READS d_rz here (every thread does, for alpha) and
+        // writes a location nothing in this kernel reads.
+        if(i == 0 && save_rz_prev)
+            *d_rz_prev_out = *d_rz;
         if(i >= n)
             return;
         if(*d_converged != 0)
@@ -198,6 +455,60 @@ namespace
         p(i)       = z(i) + beta * p(i);
     }
 
+    // s27 fold mode 1: fused_update_p_beta with the <<<1, 1>>> scalar node
+    // folded in. The two scalars the node computed are recomputed per thread
+    // from exactly the same operands -- conv = |rz_new| <= rz_tol and
+    // beta = rz_new / rz_prev, where rz_prev is the value of d_rz that the
+    // node would have divided by (carried aside by fused_update_xr earlier in
+    // this same iteration, before anything writes d_rz).
+    //
+    // The three scalars the node *published* are published here by thread 0 of
+    // block 0. Each of them is read by NO thread of this kernel, so this needs
+    // no barrier and no fence:
+    //   d_converged -> read by the preconditioner and fused_update_xr, next it
+    //   d_rz        -> read by fused_update_xr (alpha), next iteration
+    //   d_pAp       -> the next SpMV's accumulator
+    __global__ void fused_update_p_scalar_kernel(cuda_tool::CDense<Float> d_rz_new,
+                                                 cuda_tool::CDense<Float> d_rz_prev,
+                                                 cuda_tool::CDense<Float> d_rz_tol,
+                                                 cuda_tool::Dense<Float>  d_rz,
+                                                 cuda_tool::Dense<IndexT> d_converged,
+                                                 cuda_tool::Dense<Float>  d_pAp,
+                                                 cuda_tool::DenseVectorView<Float>  p,
+                                                 cuda_tool::CDenseVectorView<Float> z,
+                                                 cuda_tool::DenseVectorView<Float>  Ap,
+                                                 bool                               zero_Ap,
+                                                 int                                n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        // All three scalars are loaded unconditionally and up front: they are
+        // independent addresses, so the block pays ONE memory round trip for
+        // them. (Loading rz_prev only on the not-converged path -- which is
+        // what the pre-s27 kernel did with d_beta behind the d_converged
+        // test -- costs a second, dependent round trip per block: measured
+        // +2.3 us per launch at gridDim 225 on mas-bunny.)
+        Float  rz_new  = *d_rz_new;
+        Float  rz_tol  = *d_rz_tol;
+        Float  rz_prev = *d_rz_prev;
+        IndexT conv    = abs(rz_new) <= rz_tol ? 1 : 0;
+        if(i == 0)
+        {
+            *d_converged = conv;
+            if(conv == 0)
+                *d_rz = rz_new;
+            *d_pAp = Float(0);
+        }
+        if(i >= n)
+            return;
+        // s13 mode 2: see fused_update_p_kernel.
+        if(zero_Ap)
+            Ap(i) = Float(0);
+        if(conv != 0)
+            return;
+        Float beta = rz_new / rz_prev;
+        p(i)       = z(i) + beta * p(i);
+    }
+
     // s11: one single-thread node replacing fused_update_converged +
     // fused_swap_rz + the d_pAp memset. Same expressions in the same order:
     // converged = |rz_new| <= rz_tol, beta = rz_new / rz (pre-swap), then the
@@ -210,14 +521,14 @@ namespace
                                             cuda_tool::CDense<Float> d_rz_tol,
                                             cuda_tool::Dense<Float>  d_pAp)
     {
-        Float  rz_new = *d_rz_new;
-        Float  rz     = *d_rz;
-        IndexT conv   = abs(rz_new) <= *d_rz_tol ? 1 : 0;
-        *d_converged = conv;
-        *d_beta      = rz_new / rz;
-        if(conv == 0)
-            *d_rz = rz_new;
-        *d_pAp = Float(0);
+        // s27: the body now lives in pcg_scalar_body so that this node and the
+        // fused dot tail compile from one source expression.
+        pcg_scalar_body(*d_rz_new,
+                        d_rz.data(),
+                        d_beta.data(),
+                        d_converged.data(),
+                        d_rz_tol.data(),
+                        d_pAp.data());
     }
 
     __global__ void fused_swap_rz_kernel(cuda_tool::CDense<Float>  d_rz_new,
@@ -357,6 +668,16 @@ void LinearFusedPCG::do_build(BuildInfo& info)
             "fused_pcg does not support PCG vector dumps. "
             "Set linear_system/solver to \"linear_pcg\" to use this feature.");
 
+    if(pcg_small_env().fold_verify)
+    {
+        // the verifier snapshots on the default stream, which cannot happen
+        // inside a stream capture; the captured and plain paths launch the
+        // same kernels with the same arguments in the same order.
+        m_use_cuda_graph = 0;
+        m_graph_mode     = 0;
+        logger::warn("LinearFusedPCG: UIPC_PCG_FOLD_VERIFY=1 -> graph replay disabled for this run");
+    }
+
     logger::info("LinearFusedPCG: max_iter_ratio = {}, tol_rate = {}, check_interval = {}, graph_mode = {}",
                  max_iter_ratio,
                  global_tol_rate,
@@ -393,10 +714,35 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
         CUDA_TOOL_CHECK(cudaMemset(m_ap_zero_acc.data(), 0, 2 * sizeof(unsigned long long)));
     }
 
+    // s27: the dot-tail ticket. The last block of every reduction resets it to
+    // 0, so this is only ever a belt-and-braces re-seed between solves; it is
+    // blocking for the same reason the d_pAp seed below is (it must be ordered
+    // against the graph launch stream).
+    if(pcg_small_env().fuse && pcg_small_env().fold == 2)
+    {
+        CUDA_TOOL_CHECK(cudaMemset(m_dot_ticket.data(), 0, sizeof(unsigned int)));
+        if(pcg_small_env().fuse_dot_verify && m_scalar_cmp_acc.size() < 2)
+        {
+            m_scalar_cmp_acc.resize(2);
+            CUDA_TOOL_CHECK(cudaMemset(m_scalar_cmp_acc.data(), 0, 2 * sizeof(unsigned long long)));
+        }
+    }
+
     auto iter = fused_pcg(x, b, max_iter_ratio * b.size());
 
     if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify)
         report_ap_zero();
+
+    // s27 probe: drain the device comparison counters into the host report
+    if(pcg_small_env().fuse && pcg_small_env().fold == 2
+       && pcg_small_env().fuse_dot_verify && m_scalar_cmp_acc.size() >= 2)
+    {
+        std::array<unsigned long long, 2> h{};
+        CUDA_TOOL_CHECK(cudaMemcpy(h.data(), m_scalar_cmp_acc.data(), sizeof(h), cudaMemcpyDeviceToHost));
+        CUDA_TOOL_CHECK(cudaMemset(m_scalar_cmp_acc.data(), 0, sizeof(h)));
+        g_pcg_scalar_report.words += h[0];
+        g_pcg_scalar_report.mismatch += h[1];
+    }
 
     info.iter_count(iter);
 }
@@ -470,6 +816,57 @@ void fused_dot(cuda_tool::CDenseVectorView<Float> x,
     }
 }
 
+// s27: d_result = x^T * y, and the last block of the reduction also performs
+// the scalar update that used to be its own <<<1, 1>>> graph node.
+void fused_dot_scalar(cuda_tool::CDenseVectorView<Float> x,
+                      cuda_tool::CDenseVectorView<Float> y,
+                      cuda_tool::VarView<Float>          d_result,
+                      unsigned int*                      d_ticket,
+                      cuda_tool::VarView<Float>          d_rz,
+                      cuda_tool::VarView<Float>          d_beta,
+                      cuda_tool::VarView<IndexT>         d_converged,
+                      cuda_tool::CVarView<Float>         d_rz_tol,
+                      cuda_tool::VarView<Float>          d_pAp,
+                      bool                               verify,
+                      Float*                             v_rz,
+                      Float*                             v_beta,
+                      IndexT*                            v_converged,
+                      Float*                             v_pAp,
+                      cudaStream_t                       stream = nullptr)
+{
+    constexpr int block_dim   = 256;
+    int           n           = x.size();
+    int           block_count = (n + block_dim - 1) / block_dim;
+
+    if(block_count > 0)
+    {
+        switch(pcg_small_env().dot_fence)
+        {
+            case 0:
+                fused_dot_scalar_kernel<0><<<block_count, block_dim, 0, stream>>>(
+                    x.cviewer(), y.cviewer(), d_result.viewer(), n, d_ticket,
+                    d_rz.viewer(), d_beta.viewer(), d_converged.viewer(),
+                    d_rz_tol.cviewer(), d_pAp.viewer(),
+                    verify, v_rz, v_beta, v_converged, v_pAp);
+                break;
+            case 2:
+                fused_dot_scalar_kernel<2><<<block_count, block_dim, 0, stream>>>(
+                    x.cviewer(), y.cviewer(), d_result.viewer(), n, d_ticket,
+                    d_rz.viewer(), d_beta.viewer(), d_converged.viewer(),
+                    d_rz_tol.cviewer(), d_pAp.viewer(),
+                    verify, v_rz, v_beta, v_converged, v_pAp);
+                break;
+            default:
+                fused_dot_scalar_kernel<1><<<block_count, block_dim, 0, stream>>>(
+                    x.cviewer(), y.cviewer(), d_result.viewer(), n, d_ticket,
+                    d_rz.viewer(), d_beta.viewer(), d_converged.viewer(),
+                    d_rz_tol.cviewer(), d_pAp.viewer(),
+                    verify, v_rz, v_beta, v_converged, v_pAp);
+                break;
+        }
+    }
+}
+
 // Same as linear_pcg update_xr: alpha = rz/pAp, x += alpha*p, r -= alpha*Ap. Alpha computed on device from d_rz, d_pAp.
 void fused_update_xr(cuda_tool::CVarView<Float>         d_rz,
                      cuda_tool::CVarView<Float>         d_pAp,
@@ -481,6 +878,8 @@ void fused_update_xr(cuda_tool::CVarView<Float>         d_rz,
                      cuda_tool::VarView<Float>          d_rz_new,
                      bool                               reset_rz_new,
                      bool                               zero_Ap,
+                     cuda_tool::VarView<Float>          d_rz_prev,
+                     bool                               save_rz_prev,
                      cudaStream_t                       stream = nullptr)
 {
     int n = r.size();
@@ -500,6 +899,8 @@ void fused_update_xr(cuda_tool::CVarView<Float>         d_rz,
                                                       d_rz_new.viewer(),
                                                       reset_rz_new,
                                                       zero_Ap,
+                                                      d_rz_prev.viewer(),
+                                                      save_rz_prev,
                                                       n);
     }
 }
@@ -556,6 +957,40 @@ void fused_update_p_beta(cuda_tool::CVarView<Float>         d_beta,
                                                           Ap.viewer(),
                                                           zero_Ap,
                                                           n);
+    }
+}
+
+// s27 fold mode 1: p = z + beta*p with the scalar node folded in.
+void fused_update_p_scalar(cuda_tool::CVarView<Float>         d_rz_new,
+                           cuda_tool::CVarView<Float>         d_rz_prev,
+                           cuda_tool::CVarView<Float>         d_rz_tol,
+                           cuda_tool::VarView<Float>          d_rz,
+                           cuda_tool::VarView<IndexT>         d_converged,
+                           cuda_tool::VarView<Float>          d_pAp,
+                           cuda_tool::DenseVectorView<Float>  p,
+                           cuda_tool::CDenseVectorView<Float> z,
+                           cuda_tool::DenseVectorView<Float>  Ap,
+                           bool                               zero_Ap,
+                           cudaStream_t                       stream = nullptr)
+{
+    int n = p.size();
+    if(n > 0)
+    {
+        int bd = pcg_small_env().block;
+        if(bd <= 0)
+            bd = cuda_tool::best_block_dim(fused_update_p_scalar_kernel);
+        int gd = (n + bd - 1) / bd;
+        fused_update_p_scalar_kernel<<<gd, bd, 0, stream>>>(d_rz_new.cviewer(),
+                                                            d_rz_prev.cviewer(),
+                                                            d_rz_tol.cviewer(),
+                                                            d_rz.viewer(),
+                                                            d_converged.viewer(),
+                                                            d_pAp.viewer(),
+                                                            p.viewer(),
+                                                            z.cviewer(),
+                                                            Ap.viewer(),
+                                                            zero_Ap,
+                                                            n);
     }
 }
 
@@ -632,6 +1067,24 @@ void LinearFusedPCG::report_ap_zero()
 void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStream_t stream, bool timed)
 {
     const bool fuse = pcg_small_env().fuse;
+    // s27: 0 = the pre-s27 chain, 1 = folded into update_p (shipped),
+    // 2 = folded into the dot tail (measured slower, kept as an arm).
+    int fold = fuse ? pcg_small_env().fold : 0;
+    if(fold == 1)
+    {
+        // the grid gate (see PcgSmallEnv::fold). The decision depends only on
+        // n, which is part of the graph validity key, so it is stable across
+        // capture and replay.
+        int bd = pcg_small_env().block;
+        if(bd <= 0)
+            bd = 256;
+        const int gd  = ((int)p.size() + bd - 1) / bd;
+        const int cap = pcg_small_env().fold_maxgrid >= 0 ?
+                            pcg_small_env().fold_maxgrid :
+                            cuda_tool::device_sm_count();
+        if(cap > 0 && gd > cap)
+            fold = 0;
+    }
 
     // s13 probe: the fill node used to run here; check the invariant it kept.
     if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify)
@@ -657,6 +1110,8 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                     d_rz_new.view(),
                     fuse,
                     pcg_small_env().ap_zero == 1,
+                    d_rz_prev.view(),
+                    fold == 1,
                     stream);
 
     // z = P^{-1} * r
@@ -667,26 +1122,134 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
         apply_preconditioner(z, r, d_converged.view(), stream);
     }
 
-    // rz_new = r^T * z, keep convergence flag on device for preconditioner skip.
-    fused_dot(r.cview(), z.cview(), d_rz_new.view(), stream, !fuse);
+    const bool fuse_dot   = (fold == 2);
+    const bool dot_verify = fuse_dot && pcg_small_env().fuse_dot_verify;
 
-    if(fuse)
+    // rz_new = r^T * z, keep convergence flag on device for preconditioner skip.
+    if(fuse_dot)
     {
-        // converged + beta + (rz <- rz_new) + d_pAp reset in one node
-        fused_pcg_scalar(d_rz_new.view(),
+        // s27: ... and the scalar update in the tail of the same kernel, so the
+        // captured iteration has one node fewer.
+        fused_dot_scalar(r.cview(),
+                         z.cview(),
+                         d_rz_new.view(),
+                         m_dot_ticket.data(),
                          d_rz.view(),
                          d_beta.view(),
                          d_converged.view(),
                          d_rz_tol.view(),
                          d_pAp.view(),
+                         dot_verify,
+                         m_v_rz.data(),
+                         m_v_beta.data(),
+                         m_v_converged.data(),
+                         m_v_pAp.data(),
                          stream);
-        fused_update_p_beta(d_beta.view(),
-                            d_converged.view(),
-                            p.view(),
-                            z.cview(),
-                            Ap.view(),
-                            pcg_small_env().ap_zero == 2,
-                            stream);
+    }
+    else
+    {
+        fused_dot(r.cview(), z.cview(), d_rz_new.view(), stream, !fuse);
+    }
+
+    if(fuse)
+    {
+        // converged + beta + (rz <- rz_new) + d_pAp reset in one node
+        if(fold == 0 || dot_verify)
+            fused_pcg_scalar(d_rz_new.view(),
+                             d_rz.view(),
+                             d_beta.view(),
+                             d_converged.view(),
+                             d_rz_tol.view(),
+                             d_pAp.view(),
+                             stream);
+        if(dot_verify)
+            pcg_scalar_cmp_kernel<<<1, 1, 0, stream>>>(d_rz.data(),
+                                                       d_beta.data(),
+                                                       d_converged.data(),
+                                                       d_pAp.data(),
+                                                       m_v_rz.data(),
+                                                       m_v_beta.data(),
+                                                       m_v_converged.data(),
+                                                       m_v_pAp.data(),
+                                                       m_scalar_cmp_acc.data());
+        if(fold == 1)
+        {
+            const bool zero_Ap = pcg_small_env().ap_zero == 2;
+            if(!pcg_small_env().fold_verify)
+            {
+                fused_update_p_scalar(d_rz_new.view(),
+                                      d_rz_prev.view(),
+                                      d_rz_tol.view(),
+                                      d_rz.view(),
+                                      d_converged.view(),
+                                      d_pAp.view(),
+                                      p.view(),
+                                      z.cview(),
+                                      Ap.view(),
+                                      zero_Ap,
+                                      stream);
+            }
+            else
+            {
+                // reference = the pre-s27 chain, then restore the
+                // read-modify-write outputs and run the folded kernel
+                static cuda_tool::SpreadVerifier sv{"LinearFusedPCG::fold_update_p"};
+                sv.begin_inout();
+                sv.add_in_buffer(p.buffer_view());
+                sv.add_in_buffer(Ap.buffer_view());
+                sv.add_in(d_rz.data(), sizeof(Float));
+                sv.add_in(d_converged.data(), sizeof(IndexT));
+                sv.add_in(d_pAp.data(), sizeof(Float));
+                sv.save_inputs();
+
+                fused_pcg_scalar(d_rz_new.view(),
+                                 d_rz.view(),
+                                 d_beta.view(),
+                                 d_converged.view(),
+                                 d_rz_tol.view(),
+                                 d_pAp.view(),
+                                 stream);
+                fused_update_p_beta(d_beta.view(),
+                                    d_converged.view(),
+                                    p.view(),
+                                    z.cview(),
+                                    Ap.view(),
+                                    zero_Ap,
+                                    stream);
+
+                sv.begin();
+                sv.add_buffer(p.buffer_view());
+                sv.add_buffer(Ap.buffer_view());
+                sv.add(d_rz.data(), sizeof(Float));
+                sv.add(d_converged.data(), sizeof(IndexT));
+                sv.add(d_pAp.data(), sizeof(Float));
+                sv.snapshot();
+                sv.restore_inputs();
+
+                fused_update_p_scalar(d_rz_new.view(),
+                                      d_rz_prev.view(),
+                                      d_rz_tol.view(),
+                                      d_rz.view(),
+                                      d_converged.view(),
+                                      d_pAp.view(),
+                                      p.view(),
+                                      z.cview(),
+                                      Ap.view(),
+                                      zero_Ap,
+                                      stream);
+                sv.compare();
+            }
+        }
+        else
+        {
+            fused_update_p_beta(d_beta.view(),
+                                d_converged.view(),
+                                p.view(),
+                                z.cview(),
+                                Ap.view(),
+                                pcg_small_env().ap_zero == 2,
+                                stream);
+        }
     }
     else
     {

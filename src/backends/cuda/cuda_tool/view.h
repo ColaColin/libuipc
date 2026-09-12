@@ -1,6 +1,7 @@
 #pragma once
 #include <cuda_tool/stream.h>
 #include <cuda_tool/host_sync.h>
+#include <cuda_tool/spread_block.h>
 #include <type_traits>
 
 namespace uipc::backend::cuda_tool
@@ -154,10 +155,14 @@ class BufferView : public CBufferView<T>
     {
         if(this->m_size)
         {
-            int n    = static_cast<int>(this->m_size);
-            int grid = (n + default_block_dim - 1) / default_block_dim;
-            details::buffer_view_fill_kernel<T>
-                <<<grid, default_block_dim, 0, s>>>(*this, value);
+            int n = static_cast<int>(this->m_size);
+            // s28: spread a small fill over the SMs (cuda_tool/spread_block.h)
+            int        bd   = buffer_fill_block_dim(n, default_block_dim);
+            int        grid = (n + bd - 1) / bd;
+            const bool ver  = buffer_fill_verify_poison(this->data(), n, s);
+            details::buffer_view_fill_kernel<T><<<grid, bd, 0, s>>>(*this, value);
+            if(ver)
+                buffer_fill_verify_check(this->data(), value, n, s);
         }
     }
     // device-to-device copy (async on `s`); sizes must match.
