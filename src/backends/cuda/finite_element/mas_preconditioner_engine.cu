@@ -44,6 +44,11 @@ constexpr int bank_align(int n)
     return (n + BANKSIZE - 1) / BANKSIZE * BANKSIZE;
 }
 
+// s09: threads per block of the cluster-matrix inversion sweep kernel
+// (4 clusters of 48 columns; 96/144/192/240/288/384 measured 211/207/199/226/224/276 us
+// per launch on the bunny's 1 281 clusters, 2070S).
+static constexpr int MAS_INVERT_SWEEP_BLOCK = 192;
+
 // ============================================================================
 // Named kernels (replacements for the former lambda kernel launches)
 // ============================================================================
@@ -932,6 +937,15 @@ namespace
         }
     }
 
+    // Kept for A/B (UIPC_MAS_INVERT_SWEEP=0); the sweep kernel below replaces it.
+    // NOTE (s09): this kernel has a cross-warp race — after the second
+    // __syncthreads() every thread writes `s_mat(col, pivot)` (the pivot column)
+    // while thread `pivot` reads and updates that same column in its own row
+    // loop. In a standalone harness on random SPD matrices it corrupts ~0.5 % of
+    // the cluster inverses non-deterministically; in situ on the benchmark
+    // scenes it happens to be benign (UIPC_MAS_INVERT_VERIFY=2 reports
+    // bit-identical output run to run). The sweep kernel has no such hazard.
+    //
     // The inversion runs in float: the inverses are stored in float anyway
     // (ClusterMatrixSymF, matching GIPC), and float halves the shared-memory
     // footprint per cluster (9.4 KB instead of 18.8 KB), doubling resident
@@ -1019,6 +1033,173 @@ namespace
                     static_cast<float>(s_mat(row, col));
             }
         }
+    }
+
+    // s09: register-column Gauss-Jordan (symmetric sweep) inverse.
+    //
+    // The old kernel keeps the whole 48x48 working matrix in shared memory
+    // (18 816 B per 96-thread block -> 3 blocks = 9 warps per SM) and executes
+    // 48 pivots x 48 rows of `s_mat(row,col) += factor * s_mat(pivot,col)` with
+    // four shared accesses per FMA. Since every thread owns one *column*, the
+    // rank-1 update touches only that thread's own column: the only value it
+    // needs from another thread is the pivot column. The cluster matrix is
+    // symmetric, and the Gauss-Jordan *sweep* operator
+    //     a_pp <- -1/a_pp ; a_ip, a_pj <- a_ip/a_pp, a_pj/a_pp ;
+    //     a_ij <- a_ij - a_ip a_pj / a_pp
+    // preserves that symmetry (sweeping all pivots yields -A^{-1}), so the
+    // pivot column equals the pivot row and every thread can publish its single
+    // element A(p,col) instead of one thread publishing 48. That leaves one
+    // 48-float shared row per cluster (double buffered, one __syncthreads per
+    // pivot) and keeps the column in registers: one shared broadcast load and
+    // one FFMA per element.
+    //
+    // The dynamic index c[p] (read the element on the pivot row, write it back
+    // after scaling) is done with a switch over the block-uniform pivot index
+    // so that the register array stays a register array (a predicated 48-way
+    // select costs 2 extra ops per element; measured 230 vs 210 us).
+    //
+    // Rounding: the arithmetic per entry is the same (fmaf(-u_i, a_pj/a_pp, a_ij),
+    // reciprocal-multiply on the pivot column) but u_i is read from the pivot
+    // *row* instead of the pivot *column*; those two differ in the last bits
+    // because a*(b/c) != b*(a/c), so the result is rounding-level equal, not
+    // bit-identical (measured: max|diff| / max|ref| = 2.7e-7 over 1 281 random
+    // SPD clusters, and 1e-7..1e-6 in situ, see UIPC_MAS_INVERT_VERIFY).
+#define MAS_GJ_R4(M, b) M((b) + 0) M((b) + 1) M((b) + 2) M((b) + 3)
+#define MAS_GJ_R16(M, b)                                                       \
+    MAS_GJ_R4(M, (b) + 0) MAS_GJ_R4(M, (b) + 4) MAS_GJ_R4(M, (b) + 8)          \
+        MAS_GJ_R4(M, (b) + 12)
+#define MAS_GJ_R48(M) MAS_GJ_R16(M, 0) MAS_GJ_R16(M, 16) MAS_GJ_R16(M, 32)
+#define MAS_GJ_GET(k)                                                          \
+    case(k): f = c[(k)]; break;
+#define MAS_GJ_SET(k)                                                          \
+    case(k): c[(k)] = nv; break;
+
+    __global__ __launch_bounds__(MAS_INVERT_SWEEP_BLOCK, 3) void MASPreconditionerEngine_invert_cluster_matrices_sweep_kernel(
+        cuda_tool::BufferView<ClusterMatrixSymF> cluster_inv,
+        cuda_tool::CBufferView<ClusterMatrixSym> cluster_hess,
+        int                                      total_threads)
+    {
+        using namespace cuda_tool;
+
+        constexpr int MAT_DIM = BANKSIZE * 3;  // 48
+
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if(idx >= total_threads)
+            return;
+
+        const int mat_id = idx / MAT_DIM;
+        const int col    = idx % MAT_DIM;
+        const int a      = col % 3;
+        const int nc     = col / 3;
+        const int bm     = threadIdx.x / MAT_DIM;
+
+        // one double-buffered pivot row per cluster in the block
+        __shared__ float s_row_raw[MAS_INVERT_SWEEP_BLOCK / (BANKSIZE * 3)][2][BANKSIZE * 3];
+
+        float c[MAT_DIM];  // this thread's column of the working matrix
+#pragma unroll
+        for(int row = 0; row < MAT_DIM; row++)
+        {
+            const int node_row = row / 3;
+            float     v;
+            if(nc >= node_row)
+                v = static_cast<float>(
+                    cluster_hess(mat_id).M[sym_index(node_row, nc)](row % 3, a));
+            else
+                v = static_cast<float>(
+                    cluster_hess(mat_id).M[sym_index(nc, node_row)](a, row % 3));
+            if(row == col && v == 0.0f)
+                v = 1.0f;
+            c[row] = v;
+        }
+
+        for(int p = 0; p < MAT_DIM; ++p)
+        {
+            float f;
+            switch(p)
+            {
+                MAS_GJ_R48(MAS_GJ_GET)
+            }
+
+            float* sr = &s_row_raw[bm][p & 1][0];
+            sr[col]   = f;
+            __syncthreads();
+
+            const float akk = sr[p];
+            float       nv;
+            if(col == p)
+            {
+                const float inv = 1.0f / akk;
+#pragma unroll
+                for(int i = 0; i < MAT_DIM; ++i)
+                    c[i] *= inv;
+                nv = -inv;
+            }
+            else
+            {
+                const float s = f / akk;
+#pragma unroll
+                for(int i = 0; i < MAT_DIM; ++i)
+                    c[i] = fmaf(-sr[i], s, c[i]);
+                nv = s;
+            }
+
+            switch(p)
+            {
+                MAS_GJ_R48(MAS_GJ_SET)
+            }
+        }
+
+        // the sweep produced -A^{-1}; store the upper-triangle blocks, and for
+        // the diagonal block mirror the upper entries into the lower ones (the
+        // old kernel did the same fix-up through shared memory).
+#pragma unroll
+        for(int row = 0; row < MAT_DIM; row++)
+        {
+            const int   node_row = row / 3;
+            const int   b        = row % 3;
+            const float v        = -c[row];
+            if(node_row < nc)
+            {
+                cluster_inv(mat_id).M[sym_index(node_row, nc)](b, a) = v;
+            }
+            else if(node_row == nc)
+            {
+                const int si = sym_index(nc, nc);
+                if(b <= a)
+                    cluster_inv(mat_id).M[si](b, a) = v;
+                if(b < a)
+                    cluster_inv(mat_id).M[si](a, b) = v;
+            }
+        }
+    }
+
+#undef MAS_GJ_R4
+#undef MAS_GJ_R16
+#undef MAS_GJ_R48
+#undef MAS_GJ_GET
+#undef MAS_GJ_SET
+
+    // s09 verification probe: max |diff| and max |ref| over the cluster inverses.
+    __global__ void MASPreconditionerEngine_compare_cluster_inv_kernel(
+        cuda_tool::CBufferView<ClusterMatrixSymF> a,
+        cuda_tool::CBufferView<ClusterMatrixSymF> b,
+        unsigned long long*                       out,  // [0] = max diff, [1] = max ref
+        int                                       n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        int          blk = i / (SYM_BLOCK_COUNT * 9);
+        int          rem = i % (SYM_BLOCK_COUNT * 9);
+        const float* pa  = a(blk).M[rem / 9].data();
+        const float* pb  = b(blk).M[rem / 9].data();
+        double       va  = pa[rem % 9];
+        double       vb  = pb[rem % 9];
+        double       d   = fabs(va - vb);
+        double       r   = fabs(vb);
+        atomicMax(&out[0], (unsigned long long)__double_as_longlong(d));
+        atomicMax(&out[1], (unsigned long long)__double_as_longlong(r));
     }
 
     __global__ void MASPreconditionerEngine_build_multi_level_R_kernel(
@@ -1706,6 +1887,57 @@ void MASPreconditionerEngine::set_preconditioner(cuda_tool::CBufferView<Eigen::M
 
     // Invert each cluster matrix (Gauss-Jordan)
     invert_cluster_matrices();
+
+    // s09 verification probe: UIPC_MAS_INVERT_VERIFY=1 re-runs the *other*
+    // inversion path into a scratch buffer, =2 re-runs the *same* one (that is
+    // the path's own run-to-run noise), and reports max |diff| / max |ref| over
+    // all cluster inverse entries.
+    static const int invert_verify_mode = []
+    {
+        const char* e = std::getenv("UIPC_MAS_INVERT_VERIFY");
+        return e ? std::atoi(e) : 0;
+    }();
+    if(invert_verify_mode)
+    {
+        using namespace cuda_tool;
+        if(num_cluster_blocks > static_cast<int>(cluster_inverses_verify.size()))
+            cluster_inverses_verify.resize(num_cluster_blocks);
+        if(m_verify_stat.size() < 2)
+            m_verify_stat.resize(2);
+        bool other = (invert_verify_mode == 2) ? invert_sweep_enabled() :
+                                                 !invert_sweep_enabled();
+        invert_cluster_matrices_into(cluster_inverses_verify.view(0, num_cluster_blocks), other);
+        CUDA_TOOL_CHECK(cudaMemsetAsync(
+            m_verify_stat.data(), 0, sizeof(unsigned long long) * 2, nullptr));
+        int  n = num_cluster_blocks * SYM_BLOCK_COUNT * 9;
+        auto k = MASPreconditionerEngine_compare_cluster_inv_kernel;
+        k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            cluster_inverses_verify.cview(0, num_cluster_blocks),
+            cluster_inverses.cview(0, num_cluster_blocks),
+            m_verify_stat.data(),
+            n);
+        unsigned long long h[2] = {0, 0};
+        m_verify_stat.view(0, 2).copy_to(h);
+        double dmax = 0.0, rmax = 0.0;
+        std::memcpy(&dmax, &h[0], sizeof(double));
+        std::memcpy(&rmax, &h[1], sizeof(double));
+        ++m_invert_verify_count;
+        if(dmax > m_invert_worst_abs)
+            m_invert_worst_abs = dmax;
+        double rel = (rmax > 0.0) ? dmax / rmax : 0.0;
+        if(rel > m_invert_worst_rel)
+            m_invert_worst_rel = rel;
+        spdlog::info(
+            "[MAS invert verify] mode={} n={} max|diff|={:.6e} max|ref|={:.6e} rel={:.6e} "
+            "worst_abs={:.6e} worst_rel={:.6e}",
+            invert_verify_mode,
+            m_invert_verify_count,
+            dmax,
+            rmax,
+            rel,
+            m_invert_worst_abs,
+            m_invert_worst_rel);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1804,18 +2036,44 @@ void MASPreconditionerEngine::scatter_hessian_to_clusters_into(
 // ---------------------------------------------------------------------------
 // Gauss-Jordan inversion of each 48x48 cluster matrix
 // ---------------------------------------------------------------------------
+// s09: register-column symmetric-sweep inverse. UIPC_MAS_INVERT_SWEEP=0 = old.
+bool MASPreconditionerEngine::invert_sweep_enabled()
+{
+    static const bool on = []
+    {
+        const char* e = std::getenv("UIPC_MAS_INVERT_SWEEP");
+        return !(e && e[0] == '0');
+    }();
+    return on;
+}
+
 void MASPreconditionerEngine::invert_cluster_matrices()
+{
+    invert_cluster_matrices_into(cluster_inverses.view(), invert_sweep_enabled());
+}
+
+void MASPreconditionerEngine::invert_cluster_matrices_into(
+    cuda_tool::BufferView<ClusterMatrixSymF> cluster_inv, bool use_sweep)
 {
     using namespace cuda_tool;
     int total_threads = m_total_num_clusters * 3;  // 48 threads per cluster
     if(total_threads < 1)
         return;
 
-    int block_size = 32 * 3;  // 96 threads = 2 clusters per block
-    int num_blocks = (total_threads + block_size - 1) / block_size;
-
-    MASPreconditionerEngine_invert_cluster_matrices_kernel<<<num_blocks, block_size, 0, nullptr>>>(
-        cluster_inverses.view(), cluster_hessians.cview(), total_threads);
+    if(use_sweep)
+    {
+        int block_size = MAS_INVERT_SWEEP_BLOCK;  // 4 clusters per block
+        int num_blocks = (total_threads + block_size - 1) / block_size;
+        MASPreconditionerEngine_invert_cluster_matrices_sweep_kernel<<<num_blocks, block_size, 0, nullptr>>>(
+            cluster_inv, cluster_hessians.cview(), total_threads);
+    }
+    else
+    {
+        int block_size = 32 * 3;  // 96 threads = 2 clusters per block
+        int num_blocks = (total_threads + block_size - 1) / block_size;
+        MASPreconditionerEngine_invert_cluster_matrices_kernel<<<num_blocks, block_size, 0, nullptr>>>(
+            cluster_inv, cluster_hessians.cview(), total_threads);
+    }
 }
 
 // ============================================================================

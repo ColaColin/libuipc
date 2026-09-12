@@ -154,7 +154,10 @@ class MASPreconditionerEngine
                                           cuda_tool::CBufferView<int> col_ids,
                                           int dof_offset);
     static bool scatter_agg_enabled();
+    static bool invert_sweep_enabled();
     void        invert_cluster_matrices();
+    void invert_cluster_matrices_into(cuda_tool::BufferView<ClusterMatrixSymF> cluster_inv,
+                                      bool use_sweep);
 
     // Preconditioning steps
     void build_multi_level_R(cuda_tool::CDenseVectorView<Float> R,
@@ -207,6 +210,10 @@ class MASPreconditionerEngine
 
     // ---- s08 verification probe (UIPC_MAS_SCATTER_VERIFY) ----
     cuda_tool::DeviceBuffer<ClusterMatrixSym>   cluster_hessians_verify;
+    cuda_tool::DeviceBuffer<ClusterMatrixSymF>  cluster_inverses_verify;  // s09
+    int                                         m_invert_verify_count = 0;
+    double                                      m_invert_worst_abs    = 0.0;
+    double                                      m_invert_worst_rel    = 0.0;
     cuda_tool::DeviceBuffer<unsigned long long> m_verify_stat;
     int                                         m_verify_count     = 0;
     double                                      m_verify_worst_abs = 0.0;
