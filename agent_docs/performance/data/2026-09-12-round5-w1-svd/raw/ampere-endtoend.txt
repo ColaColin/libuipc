@@ -1,0 +1,93 @@
+# end-to-end A/B via UIPC_QR_SVD_FIXED, one build, default frames
+# reps 1-2 (all four scenes) then reps 3-4 (the two SNH scenes)
+### stiff-gipc-case2 new rep1  UIPC_QR_SVD_FIXED=unset  13:36:57
+TOTAL frames=250 mean=257.8ms median=262.3ms p95=335.1ms
+### stiff-gipc-case2 old rep1  UIPC_QR_SVD_FIXED=0  13:38:07
+TOTAL frames=250 mean=261.6ms median=266.6ms p95=335.8ms
+### mas-bunny new rep1  UIPC_QR_SVD_FIXED=unset  13:39:18
+TOTAL frames=100 mean=82.7ms median=91.8ms p95=131.9ms
+### mas-bunny old rep1  UIPC_QR_SVD_FIXED=0  13:39:30
+TOTAL frames=100 mean=84.6ms median=94.1ms p95=134.8ms
+### cube-wall-cloth new rep1  UIPC_QR_SVD_FIXED=unset  13:39:41
+TOTAL frames=100 mean=96.3ms median=86.6ms p95=230.5ms
+### cube-wall-cloth old rep1  UIPC_QR_SVD_FIXED=0  13:39:53
+TOTAL frames=100 mean=95.4ms median=80.8ms p95=232.0ms
+### rigid-wrecking-balls new rep1  UIPC_QR_SVD_FIXED=unset  13:40:05
+TOTAL frames=120 mean=39.0ms median=33.8ms p95=64.9ms
+### rigid-wrecking-balls old rep1  UIPC_QR_SVD_FIXED=0  13:40:11
+TOTAL frames=120 mean=39.1ms median=34.5ms p95=64.8ms
+### stiff-gipc-case2 new rep2  UIPC_QR_SVD_FIXED=unset  13:40:17
+TOTAL frames=250 mean=255.7ms median=263.5ms p95=331.8ms
+### stiff-gipc-case2 old rep2  UIPC_QR_SVD_FIXED=0  13:41:26
+TOTAL frames=250 mean=260.1ms median=265.8ms p95=343.0ms
+### mas-bunny new rep2  UIPC_QR_SVD_FIXED=unset  13:42:37
+TOTAL frames=100 mean=82.7ms median=91.9ms p95=132.3ms
+### mas-bunny old rep2  UIPC_QR_SVD_FIXED=0  13:42:48
+TOTAL frames=100 mean=84.5ms median=94.1ms p95=134.8ms
+### cube-wall-cloth new rep2  UIPC_QR_SVD_FIXED=unset  13:43:00
+TOTAL frames=100 mean=90.7ms median=80.2ms p95=225.7ms
+### cube-wall-cloth old rep2  UIPC_QR_SVD_FIXED=0  13:43:11
+TOTAL frames=100 mean=90.9ms median=81.9ms p95=226.2ms
+### rigid-wrecking-balls new rep2  UIPC_QR_SVD_FIXED=unset  13:43:22
+TOTAL frames=120 mean=40.8ms median=34.7ms p95=74.7ms
+### rigid-wrecking-balls old rep2  UIPC_QR_SVD_FIXED=0  13:43:29
+TOTAL frames=120 mean=40.7ms median=34.6ms p95=72.4ms
+
+=== SUMMARY ===
+scene                  mode rep   mean_ms    median       p95 frames  newton  lsearch      pcg  ms/newton
+---------------------------------------------------------------------------------------------------------
+cube-wall-cloth        new  1      96.251    86.614   230.489    100     525      543    20550    18.3336
+cube-wall-cloth        new  2      90.696    80.216   225.694    100     499      519    19715    18.1755
+cube-wall-cloth        old  1      95.422    80.817   232.035    100     517      540    20460    18.4568
+cube-wall-cloth        old  2      90.934    81.892   226.227    100     505      524    19565    18.0068
+mas-bunny              new  1      82.664    91.806   131.865    100     465      465    35220    17.7772
+mas-bunny              new  2      82.726    91.883   132.302    100     465      465    35195    17.7905
+mas-bunny              new  3      82.785    91.988   132.095    100     465      465    35215    17.8031
+mas-bunny              new  4      82.703    92.045   131.874    100     465      465    35180    17.7856
+mas-bunny              old  1      84.551    94.121   134.822    100     465      465    35195    18.1829
+mas-bunny              old  2      84.530    94.117   134.761    100     465      465    35215    18.1784
+mas-bunny              old  3      84.539    94.238   134.601    100     465      465    35210    18.1803
+mas-bunny              old  4      84.552    94.214   134.706    100     465      465    35170    18.1831
+rigid-wrecking-balls   new  1      38.966    33.803    64.881    120     469      479    12860     9.9700
+rigid-wrecking-balls   new  2      40.786    34.691    74.719    120     485      497    13105    10.0915
+rigid-wrecking-balls   old  1      39.084    34.491    64.821    120     467      484    12710    10.0430
+rigid-wrecking-balls   old  2      40.744    34.615    72.430    120     482      494    13020    10.1437
+stiff-gipc-case2       new  1     257.814   262.257   335.071    250    1663     1789    65050    38.7574
+stiff-gipc-case2       new  2     255.750   263.550   331.826    250    1658     1794    63890    38.5630
+stiff-gipc-case2       new  3     256.869   261.985   340.355    250    1663     1783    64550    38.6153
+stiff-gipc-case2       new  4     258.519   267.173   339.273    250    1663     1779    65320    38.8634
+stiff-gipc-case2       old  1     261.578   266.580   335.775    250    1665     1796    64180    39.2760
+stiff-gipc-case2       old  2     260.091   265.830   342.960    250    1656     1779    63845    39.2649
+stiff-gipc-case2       old  3     263.329   269.680   346.945    250    1664     1785    64845    39.5627
+stiff-gipc-case2       old  4     262.015   266.075   340.773    250    1660     1790    64890    39.4601
+
+scene                    new mean   old mean   delta%  new ms/it  old ms/it   delta%     newton n/o
+cube-wall-cloth            93.474     93.178    +0.32    18.2546    18.2318    +0.13   [525, 499]/[517, 505]
+mas-bunny                  82.719     84.543    -2.16    17.7891    18.1812    -2.16   [465, 465, 465, 465]/[465, 465, 465, 465]
+rigid-wrecking-balls       39.876     39.914    -0.09    10.0307    10.0933    -0.62   [469, 485]/[467, 482]
+stiff-gipc-case2          257.238    261.753    -1.73    38.6998    39.3909    -1.75   [1663, 1658, 1663, 1663]/[1665, 1656, 1664, 1660]
+
+cube-wall-cloth new 1 {"final_frame": 100, "cloth_min_y": 0.2839946535505359}
+cube-wall-cloth new 2 {"final_frame": 100, "cloth_min_y": 0.2890792571731231}
+cube-wall-cloth old 1 {"final_frame": 100, "cloth_min_y": 0.28099757590890784}
+cube-wall-cloth old 2 {"final_frame": 100, "cloth_min_y": 0.28826220985692147}
+mas-bunny new 1 {"final_frame": 100, "bunny_centroid": [-0.1459216978155669, -0.7863012249342455, 0.055236843581052575]}
+mas-bunny new 2 {"final_frame": 100, "bunny_centroid": [-0.1459213658446627, -0.7863011455566496, 0.05523680380760127]}
+mas-bunny new 3 {"final_frame": 100, "bunny_centroid": [-0.14592081605804952, -0.7863011583899195, 0.055236834081309145]}
+mas-bunny new 4 {"final_frame": 100, "bunny_centroid": [-0.14592213162348805, -0.786301262340624, 0.05523686987198004]}
+mas-bunny old 1 {"final_frame": 100, "bunny_centroid": [-0.14592128482523054, -0.786301195511462, 0.05523669850106974]}
+mas-bunny old 2 {"final_frame": 100, "bunny_centroid": [-0.14592129977226198, -0.7863011384164272, 0.05523673753120472]}
+mas-bunny old 3 {"final_frame": 100, "bunny_centroid": [-0.14592146198736614, -0.7863011622726552, 0.05523679826254349]}
+mas-bunny old 4 {"final_frame": 100, "bunny_centroid": [-0.1459212523354934, -0.7863011882192803, 0.05523676807383844]}
+rigid-wrecking-balls new 1 {"final_frame": 120, "ball_center": [7.998792648896767, 2.552894404033827, -0.03802483164390667]}
+rigid-wrecking-balls new 2 {"final_frame": 120, "ball_center": [8.233608020535957, 2.4745372907796206, -0.01740089249311526]}
+rigid-wrecking-balls old 1 {"final_frame": 120, "ball_center": [7.972837780576245, 2.5616279818653958, -0.05136163229987495]}
+rigid-wrecking-balls old 2 {"final_frame": 120, "ball_center": [8.222998049043655, 2.440858538171335, -0.1806607198138544]}
+stiff-gipc-case2 new 1 {"final_frame": 250, "upper_centroid": [-0.7618614868680539, -0.8546552105839286, -0.39562337064343644], "lower_centroid": [-0.00497325449445456, -0.885474070034199, 0.0629623215474545]}
+stiff-gipc-case2 new 2 {"final_frame": 250, "upper_centroid": [-0.7127197310446517, -0.8649915151554728, -0.42405712676469265], "lower_centroid": [-0.01162804206973183, -0.8857542741512433, 0.08206814332798582]}
+stiff-gipc-case2 new 3 {"final_frame": 250, "upper_centroid": [-0.7756054785418716, -0.8573813588238022, -0.4273901092238794], "lower_centroid": [0.0017010949539773255, -0.8817120443735367, 0.05161568273571926]}
+stiff-gipc-case2 new 4 {"final_frame": 250, "upper_centroid": [-0.8836719815359706, -0.855378120551094, -0.46479783358874693], "lower_centroid": [-0.011882120575607507, -0.8783200689160444, 0.04728644024923404]}
+stiff-gipc-case2 old 1 {"final_frame": 250, "upper_centroid": [-0.7256366510906715, -0.8614258916843395, -0.4403344208472676], "lower_centroid": [-0.008632231507732497, -0.8855253693684859, 0.07562077440089891]}
+stiff-gipc-case2 old 2 {"final_frame": 250, "upper_centroid": [-0.6699929203407495, -0.8664765203078457, -0.42560248425970987], "lower_centroid": [-0.009546438757525543, -0.8848319559019926, 0.08032606269050462]}
+stiff-gipc-case2 old 3 {"final_frame": 250, "upper_centroid": [-0.8444337644791773, -0.855876467182377, -0.35131406832407136], "lower_centroid": [0.005360672825877822, -0.8806763208714826, 0.05514561600677772]}
+stiff-gipc-case2 old 4 {"final_frame": 250, "upper_centroid": [-0.6613725828012429, -0.8676958248957667, -0.45654136811162066], "lower_centroid": [-0.012948543052155075, -0.885028244576075, 0.10599770048442296]}
