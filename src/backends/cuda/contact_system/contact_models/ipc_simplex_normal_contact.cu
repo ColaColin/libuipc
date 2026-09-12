@@ -1,6 +1,7 @@
 #include <contact_system/simplex_normal_contact.h>
 #include <contact_system/contact_models/codim_ipc_simplex_normal_contact_function.h>
 #include <utils/distance/distance_flagged.h>
+#include <utils/distance/edge_edge_mollifier.h>
 #include <utils/codim_thickness.h>
 #include <kernel_cout.h>
 #include <utils/matrix_assembler.h>
@@ -253,6 +254,48 @@ namespace
         Es(i) = PP_barrier_energy(flag, kt2, d_hat, thickness, Pa, Pb);
     }
 
+    // round-4 (s17): partition the EE pair list by mollifier activity.
+    // s16 picks the reduced rank-(m+1) projection per *warp* (`__any_sync`),
+    // so one nearly-parallel pair drags its whole warp onto the 9x9 path. The
+    // predicate is `|ea x eb|^2 < eps_x` on the *current* positions with
+    // `eps_x` from the rest positions -- exactly what
+    // `mollified_EE_barrier_gradient_hessian<true>` recomputes per pair -- so
+    // reordering the pair list by it makes every warp but the boundary one
+    // uniform. Non-mollified pairs fill `perm` from the front, mollified ones
+    // from the back; the order inside each part is irrelevant because every
+    // pair writes its own gradient/Hessian slot (indexed by the *original*
+    // pair index), so the output buffers are unchanged except for which
+    // projection a formerly-mixed warp takes (rounding level, see s16).
+    __global__ void ee_mollifier_partition_kernel(cuda_tool::CBufferView<Vector4i> EEs,
+                                                  cuda_tool::CBufferView<Vector3> Ps,
+                                                  cuda_tool::CBufferView<Vector3> rest_Ps,
+                                                  cuda_tool::BufferView<IndexT> perm,
+                                                  cuda_tool::BufferView<IndexT> counters,
+                                                  int                           n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+
+        Vector4i EE = EEs(i);
+
+        Float eps_x;
+        distance::edge_edge_mollifier_threshold(rest_Ps(EE[0]),
+                                                rest_Ps(EE[1]),
+                                                rest_Ps(EE[2]),
+                                                rest_Ps(EE[3]),
+                                                static_cast<Float>(1e-3),
+                                                eps_x);
+        Float cross_norm2;
+        distance::edge_edge_cross_norm2(
+            Ps(EE[0]), Ps(EE[1]), Ps(EE[2]), Ps(EE[3]), cross_norm2);
+
+        bool   mollified = cross_norm2 < eps_x;
+        IndexT slot = mollified ? n - 1 - atomicAdd(&counters(1), 1) :
+                                  atomicAdd(&counters(0), 1);
+        perm(slot)  = i;
+    }
+
     template <bool GradientOnly, int Part, bool EEReducedRange>
     __global__ void do_assemble_kernel(cuda_tool::CDense2D<ContactCoeff> table,
                                        cuda_tool::CBufferView<IndexT> contact_ids,
@@ -265,6 +308,7 @@ namespace
                                        cuda_tool::DoubletVectorView<Float, 3> PT_Gs,
                                        cuda_tool::TripletMatrixView<Float, 3> PT_Hs,
                                        cuda_tool::CBufferView<Vector4i> EEs,
+                                       cuda_tool::CBufferView<IndexT>   ee_perm,
                                        cuda_tool::DoubletVectorView<Float, 3> EE_Gs,
                                        cuda_tool::TripletMatrixView<Float, 3> EE_Hs,
                                        cuda_tool::CBufferView<Vector3i> PEs,
@@ -335,8 +379,12 @@ namespace
             }
             if(idx < pe_offset)  // EE
             {
-                int      i    = idx - ee_offset;
-                Vector4i EE   = EEs(i);
+                // round-4 (s17): with the mollifier partition on, the pair
+                // handled by this lane is `ee_perm[k]` instead of `k`; an
+                // empty view means the natural order.
+                int k = idx - ee_offset;
+                int i = ee_perm.size() ? (int)ee_perm(k) : k;
+                Vector4i EE = EEs(i);
                 Vector4i cids = {contact_ids(EE[0]),
                                  contact_ids(EE[1]),
                                  contact_ids(EE[2]),
@@ -508,6 +556,13 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // whenever the edge-edge mollifier is inactive (UIPC_EE_REDUCED_RANGE=0
     // restores the unconditional K10 9x9 projection)
     bool m_ee_reduced_range = true;
+    // round-4 (s17): reorder the EE pairs so that the mollified ones are
+    // contiguous and the per-warp choice above is uniform
+    // (UIPC_EE_PARTITION=0 restores the natural order)
+    bool                            m_ee_partition     = true;
+    IndexT                          m_ee_partition_min = 64;
+    cuda_tool::DeviceBuffer<IndexT> m_ee_perm;
+    cuda_tool::DeviceBuffer<IndexT> m_ee_counters;
     cudaStream_t m_side_stream    = nullptr;
     cudaEvent_t  m_fork           = nullptr;
     cudaEvent_t  m_join           = nullptr;
@@ -522,6 +577,8 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             m_ee_reduced_spd = !(e[0] == '0');
         if(const char* e = std::getenv("UIPC_EE_REDUCED_RANGE"))
             m_ee_reduced_range = !(e[0] == '0');
+        if(const char* e = std::getenv("UIPC_EE_PARTITION"))
+            m_ee_partition = !(e[0] == '0');
         if(m_split == 2)
         {
             CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream, cudaStreamNonBlocking));
@@ -618,6 +675,9 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         if(total == 0)
             return;
 
+        // round-4 (s17): empty = the natural pair order (no partition)
+        cuda_tool::CBufferView<IndexT> ee_perm{};
+
         IndexT ee_offset = pt_count;
         IndexT pe_offset = ee_offset + ee_count;
         IndexT pp_offset = pe_offset + pe_count;
@@ -648,6 +708,7 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 info.PT_gradients().viewer(),
                 info.PT_hessians().viewer(),
                 info.EEs().viewer(),
+                ee_perm,
                 info.EE_gradients().viewer(),
                 info.EE_hessians().viewer(),
                 info.PEs().viewer(),
@@ -685,6 +746,30 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 ee_offset, pe_offset, pp_offset, n, s);
         };
 
+        // round-4 (s17): one extra launch (plus a 2-int memset) that sorts
+        // the EE pairs into (not mollified | mollified). 8-17 us per Newton
+        // iteration on the benchmarks, against 150-290 us saved in the EE
+        // branch; see the `run` lambda for why it goes on the default stream.
+        auto partition_ee = [&](cudaStream_t s)
+        {
+            if(!m_ee_partition || !m_ee_reduced_range || ee_count < m_ee_partition_min)
+                return;
+            if(m_ee_counters.size() != 2)
+                m_ee_counters.resize(2);
+            m_ee_perm.resize_discard(ee_count);
+            CUDA_TOOL_CHECK(cudaMemsetAsync(
+                m_ee_counters.view().data(), 0, 2 * sizeof(IndexT), s));
+            auto k = ee_mollifier_partition_kernel;
+            k<<<cuda_tool::best_grid_dim((int)ee_count, k), cuda_tool::best_block_dim(k), 0, s>>>(
+                info.EEs().viewer(),
+                info.positions().viewer(),
+                info.rest_positions().viewer(),
+                m_ee_perm.view(),
+                m_ee_counters.view(),
+                (int)ee_count);
+            ee_perm = m_ee_perm.view();
+        };
+
         auto run = [&]<bool GradientOnly>()
         {
             IndexT n_ptee = pt_count + ee_count;
@@ -693,9 +778,18 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             {
                 // gradient-only is lean already (144 registers); a single
                 // non-empty part needs no split either
+                if constexpr(!GradientOnly)
+                    partition_ee(nullptr);
                 launch.operator()<GradientOnly, 0>(ee_offset, pe_offset, pp_offset, total, nullptr);
                 return;
             }
+            // the partition goes on the *default* stream, ahead of the fork:
+            // put on the side stream it delays part 1 by its own ~20 us, and
+            // part 2 (the bigger grid, 167 blocks on the wrecking balls)
+            // then wins the race for the SMs and part 1 serialises behind it
+            // (+1 ms per iteration, measured).
+            if constexpr(!GradientOnly)
+                partition_ee(nullptr);
             cudaStream_t side = nullptr;
             if(m_split == 2)
             {
