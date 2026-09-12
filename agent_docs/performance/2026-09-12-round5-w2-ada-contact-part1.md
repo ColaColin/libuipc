@@ -160,21 +160,28 @@ not something the new path introduces; they are excluded from the percentiles ab
 
 ### Targeted scope, A/B in one build via `UIPC_CONTACT_SPD_TQL` (nsys, 60 frames)
 
-ms per Newton iteration. **Part 1, part 2 and their union**, as the brief requires:
+ms per Newton iteration, **two runs each way**. **Part 1, part 2 and their union**, as the brief
+requires:
 
 | scene | | part 1 (mine) | part 2 (untouched) | **union** | whole-scene kernel |
 |---|---|---:|---:|---:|---:|
-| rigid-wrecking-balls | TQL=0 | 1.2233 | 1.0495 | 1.9659 | 7.1038 |
-| | TQL=1 | **1.0293 (−15.9 %)** | 0.9762 (−7.0 %) | **1.7848 (−9.2 %)** | 6.8002 (−4.3 %) |
-| cube-wall-cloth | TQL=0 | 0.7221 | 0.4397 | 1.0051 | 7.0980 |
-| | TQL=1 | **0.6266 (−13.2 %)** | 0.4398 (+0.0 %) | **0.9129 (−9.2 %)** | 6.9961 (−1.4 %) |
+| rigid-wrecking-balls | TQL=0 | 1.2233 / 1.2228 | 1.0495 / 1.0490 | 1.9659 / 1.9310 | 7.1038 / 7.0965 |
+| | TQL=1 | **1.0293 / 1.0302 (−15.8 %)** | 0.9762 / 0.9854 (−6.6 %) | **1.7848 / 1.8201 (−7.5 %)** | 6.8002 / 6.8341 (−3.8 %) |
+| cube-wall-cloth | TQL=0 | 0.7221 / 0.7194 | 0.4397 / 0.4252 | 1.0051 / 1.0247 | 7.0980 / 7.0724 |
+| | TQL=1 | **0.6266 / 0.6248 (−13.2 %)** | 0.4398 / 0.4188 (−2.4 %) | **0.9129 / 0.9202 (−9.7 %)** | 6.9961 / 6.9559 (−1.7 %) |
+
+Part 1 is the stable quantity: its two repeats agree to 0.1 pp on both scenes (−15.9 / −15.8 %,
+−13.2 / −13.2 %). The **union** carries more scatter (−9.2 / −5.7 % on the wrecking balls) because it
+also depends on how the two forked launches happen to overlap in a given run; the pair-averaged figure
+is the one to quote, and it is negative on both scenes in all four runs.
 
 **The union moves, and part 2 does not regress on either scene.** On the wrecking balls part 2 gets
-*faster* (−7.0 %) without being touched — part 1 releases its SMs earlier. On the cube wall, where
+*faster* (−6.6 %) without being touched — part 1 releases its SMs earlier. On the cube wall, where
 part 2 is a quarter of the grid, it is flat. This is the check round-4's s17 and w3's R3 both failed;
 it passes here in both directions.
 
-Newton counts across the four nsys windows: 189/188 (wrecking balls), 319/318 (cube wall) — matched.
+Newton counts across the eight nsys windows: 189/188 and 188/188 (wrecking balls), 319/318 and
+318/317 (cube wall) — matched within one iteration in every pair.
 
 ### End-to-end, default frame counts, 3 runs each way, one build
 
@@ -250,7 +257,7 @@ time everywhere.
    9x9, but free to try. Note w0's R1 measured Jacobi *winning* at N = 4 (1.20x), the one size where
    it does; TQL at N = 4 was never measured.
 2. **After this step the contact G+H union is limited by part 2, not part 1** (wrecking balls:
-   part 1 1.029, part 2 0.976, union 1.785). Whoever takes part 2 next should expect the union to
+   part 1 1.030, part 2 0.985, union 1.820). Whoever takes part 2 next should expect the union to
    move by roughly half of whatever part 2 moves, because part 1 then becomes binding again.
 3. **The remaining 40 % of part 1 is two 12x12 symbolic Hessians.** With the projection now at ~44 %
    of the branch, `edge_edge_distance2_hessian` + `edge_edge_mollifier_hessian` are the next target,
