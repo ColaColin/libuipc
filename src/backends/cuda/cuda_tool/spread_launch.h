@@ -1,5 +1,6 @@
 #pragma once
 #include <cuda_tool/launch.h>
+#include <cuda_tool/spread_block.h>
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
@@ -37,52 +38,8 @@ namespace uipc::backend::cuda_tool
 //   UIPC_GRID_SPREAD_BLOCK=<n>     hard override of the block size
 //   UIPC_GRID_SPREAD_ONLY=<substr> spread only at call sites whose tag matches
 //   UIPC_GRID_SPREAD_VERIFY=1      run both geometries and compare the outputs
-inline int device_sm_count()
-{
-    static const int sms = []
-    {
-        int device = 0;
-        int value  = 0;
-        cudaGetDevice(&device);
-        cudaDeviceGetAttribute(&value, cudaDevAttrMultiProcessorCount, device);
-        return value > 0 ? value : 1;
-    }();
-    return sms;
-}
-
-inline bool grid_spread_enabled()
-{
-    static const bool on = []
-    {
-        const char* e = std::getenv("UIPC_GRID_SPREAD");
-        return !(e && e[0] == '0');
-    }();
-    return on;
-}
-
-inline int grid_spread_block()
-{
-    static const int bs = []
-    {
-        const char* e = std::getenv("UIPC_GRID_SPREAD_BLOCK");
-        int         v  = e ? std::atoi(e) : 0;  // 0 = no hard override
-        return (v / 32) * 32;
-    }();
-    return bs;
-}
-
-// The ramp target: how many blocks per SM the grid should reach before the
-// block size is left alone. 8 caps the tail-wave imbalance at 1/8.
-inline int grid_spread_blocks_per_sm()
-{
-    static const int b = []
-    {
-        const char* e = std::getenv("UIPC_GRID_SPREAD_BPSM");
-        int         v = e ? std::atoi(e) : 8;
-        return v < 1 ? 1 : v;
-    }();
-    return b;
-}
+// device_sm_count / grid_spread_* / spread_block_dim_from now live in
+// cuda_tool/spread_block.h so that view.h and buffer.h can use them too (s28).
 
 // Block dim for launching `kernel` over n items.
 //
@@ -112,16 +69,7 @@ inline int grid_spread_blocks_per_sm()
 template <typename Kernel>
 int spread_block_dim(int n, Kernel kernel, size_t shared_mem_size = 0)
 {
-    int bd = best_block_dim(kernel, shared_mem_size);
-    if(!grid_spread_enabled() || n <= 0 || bd <= 32 || (bd % 32) != 0)
-        return bd;
-    if(int forced = grid_spread_block())
-        return forced < bd ? forced : bd;
-    int       warps = bd / 32;
-    const int want  = grid_spread_blocks_per_sm() * device_sm_count();
-    while(warps > 1 && (n + warps * 32 - 1) / (warps * 32) < want)
-        warps >>= 1;
-    return warps * 32;
+    return spread_block_dim_from(n, best_block_dim(kernel, shared_mem_size));
 }
 
 template <typename Kernel>

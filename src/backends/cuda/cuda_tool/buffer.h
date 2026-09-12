@@ -4,6 +4,7 @@
 #include <cuda_tool/view.h>
 #include <cuda_tool/view_nd.h>
 #include <cuda_tool/launch.h>
+#include <cuda_tool/spread_block.h>
 #include <uipc/common/demangle.h>
 #include <cstdio>
 #include <cstdlib>
@@ -294,8 +295,12 @@ class DeviceVector
         if(v.size() == 0)
             return;
         int n = (int)v.size();
-        details::buffer_fill_kernel<<<(n + default_block_dim - 1) / default_block_dim, default_block_dim, 0, s>>>(
-            v, value);
+        // s28: spread a small fill over the SMs (see cuda_tool/spread_block.h)
+        int        bd  = buffer_fill_block_dim(n, default_block_dim);
+        const bool ver = buffer_fill_verify_poison(v.data(), n, s);
+        details::buffer_fill_kernel<<<(n + bd - 1) / bd, bd, 0, s>>>(v, value);
+        if(ver)
+            buffer_fill_verify_check(v.data(), value, n, s);
     }
 
     // copies
@@ -494,8 +499,15 @@ class BufferLaunch
     BufferLaunch& fill(BufferView<T> dst, const T& value)
     {
         if(dst.size())
-            details::buffer_fill_kernel<<<grid_dim_for((int)dst.size()), default_block_dim, 0, m_stream>>>(
-                dst, value);
+        {
+            // s28: spread a small fill over the SMs (cuda_tool/spread_block.h)
+            int        n   = (int)dst.size();
+            int        bd  = buffer_fill_block_dim(n, default_block_dim);
+            const bool ver = buffer_fill_verify_poison(dst.data(), n, m_stream);
+            details::buffer_fill_kernel<<<(n + bd - 1) / bd, bd, 0, m_stream>>>(dst, value);
+            if(ver)
+                buffer_fill_verify_check(dst.data(), value, n, m_stream);
+        }
         return *this;
     }
     template <typename T>
