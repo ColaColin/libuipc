@@ -10,6 +10,9 @@
 #include <backends/common/backend_path_tool.h>
 #include <Eigen/Sparse>
 #include <utils/matrix_market.h>
+#include <array>
+#include <cstring>
+#include <cstdlib>
 
 namespace uipc::backend::cuda
 {
@@ -212,6 +215,269 @@ void GlobalLinearSystem::Impl::init()
     initialized = true;
 }
 
+namespace
+{
+    // perf/round4 (s10) probe: measure how often the triplet sparsity pattern
+    // (row/col index arrays of triplet_A after assembly) repeats between
+    // consecutive Newton iterations. UIPC_TRIPLET_PATTERN_PROBE=1 enables it.
+    __global__ void gls_pattern_probe_compare_kernel(const int* __restrict__ row,
+                                                     const int* __restrict__ col,
+                                                     const int* __restrict__ cached_row,
+                                                     const int* __restrict__ cached_col,
+                                                     int* __restrict__ mismatch,
+                                                     int n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        if(row[i] != cached_row[i] || col[i] != cached_col[i])
+        {
+            atomicMin(mismatch, i);
+            atomicMax(mismatch + 1, i);
+            atomicAdd(mismatch + 2, 1);
+        }
+    }
+
+    struct GlsPatternProbe
+    {
+        bool                         enabled = false;
+        cuda_tool::DeviceBuffer<int> cached_row;
+        cuda_tool::DeviceBuffer<int> cached_col;
+        cuda_tool::DeviceBuffer<int> mismatch;
+        long long                    n_calls        = 0;
+        long long                    n_same_count   = 0;
+        long long                    n_same_pattern = 0;
+        long long                    prev_n         = -1;
+    };
+
+    GlsPatternProbe& gls_pattern_probe()
+    {
+        static GlsPatternProbe probe = []
+        {
+            GlsPatternProbe p;
+            if(const char* e = std::getenv("UIPC_TRIPLET_PATTERN_PROBE"))
+                p.enabled = !(e[0] == '0');
+            return p;
+        }();
+        return probe;
+    }
+
+    void gls_pattern_probe_check(cuda_tool::DeviceTripletMatrix<Float, 3>& triplet_A)
+    {
+        auto& p = gls_pattern_probe();
+        if(!p.enabled)
+            return;
+        int n = (int)triplet_A.triplet_count();
+        ++p.n_calls;
+        bool same = false;
+        int  m    = (int)std::min<long long>(n, p.prev_n);
+        if(m > 0)
+        {
+            if(n == p.prev_n)
+                ++p.n_same_count;
+            p.mismatch.resize_discard(3);
+            std::array<int, 3> init{m, -1, 0};
+            cudaMemcpyAsync(p.mismatch.data(),
+                            init.data(),
+                            3 * sizeof(int),
+                            cudaMemcpyHostToDevice,
+                            cuda_tool::default_stream());
+            gls_pattern_probe_compare_kernel<<<(m + 255) / 256, 256>>>(
+                triplet_A.row_indices().data(),
+                triplet_A.col_indices().data(),
+                p.cached_row.data(),
+                p.cached_col.data(),
+                p.mismatch.data(),
+                m);
+            std::array<int, 3> h{};
+            cudaMemcpyAsync(h.data(),
+                            p.mismatch.data(),
+                            3 * sizeof(int),
+                            cudaMemcpyDeviceToHost,
+                            cuda_tool::default_stream());
+            cudaStreamSynchronize(cuda_tool::default_stream());
+            same = (h[2] == 0) && (n == p.prev_n);
+            if(same)
+                ++p.n_same_pattern;
+            else if(p.n_calls % 10 == 0)
+                logger::warn("[pattern-probe] n={} prev={} common={} first_diff={} last_diff={} ndiff={}",
+                             n,
+                             p.prev_n,
+                             m,
+                             h[0],
+                             h[1],
+                             h[2]);
+        }
+        p.cached_row.resize_discard(n);
+        p.cached_col.resize_discard(n);
+        if(n > 0)
+        {
+            cudaMemcpyAsync(p.cached_row.data(),
+                            triplet_A.row_indices().data(),
+                            n * sizeof(int),
+                            cudaMemcpyDeviceToDevice,
+                            cuda_tool::default_stream());
+            cudaMemcpyAsync(p.cached_col.data(),
+                            triplet_A.col_indices().data(),
+                            n * sizeof(int),
+                            cudaMemcpyDeviceToDevice,
+                            cuda_tool::default_stream());
+        }
+        p.prev_n = n;
+        if(p.n_calls % 50 == 0)
+            logger::warn("[pattern-probe] calls={} same_count={} same_pattern={} ({:.1f} %) n={}",
+                         p.n_calls,
+                         p.n_same_count,
+                         p.n_same_pattern,
+                         100.0 * p.n_same_pattern / p.n_calls,
+                         n);
+    }
+}  // namespace
+
+namespace
+{
+    // perf/round4 (s10) verifier: re-runs the old ge2sym + convert chain on a copy
+    // of the assembled triplets and compares the BCOO output of the primary path
+    // bit by bit. UIPC_CONVERT_VERIFY=1; the primary path is selected by
+    // UIPC_CONVERT_FUSED (so =0 gives the old path's own atomic-order noise).
+    __global__ void gls_convert_verify_kernel(cuda_tool::CBCOOMatrixView<Float, 3> a,
+                                              cuda_tool::CBCOOMatrixView<Float, 3> b,
+                                              unsigned long long* __restrict__ stats,
+                                              int n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        auto ta = a(i);
+        auto tb = b(i);
+        if(ta.row_index != tb.row_index || ta.col_index != tb.col_index)
+            atomicAdd(stats + 0, 1ull);
+        for(int r = 0; r < 3; ++r)
+            for(int c = 0; c < 3; ++c)
+            {
+                double             va = ta.value(r, c);
+                double             vb = tb.value(r, c);
+                unsigned long long ba = __double_as_longlong(va);
+                unsigned long long bb = __double_as_longlong(vb);
+                if(ba != bb)
+                    atomicAdd(stats + 1, 1ull);
+                double d = fabs(va - vb);
+                atomicMax(stats + 2, __double_as_longlong(d));
+                atomicMax(stats + 3, __double_as_longlong(fabs(vb)));
+            }
+    }
+
+    struct GlsConvertVerify
+    {
+        bool                                        enabled = false;
+        MatrixConverter<Float, 3>                   converter;
+        cuda_tool::DeviceTripletMatrix<Float, 3>    scratch_triplet;
+        cuda_tool::DeviceBCOOMatrix<Float, 3>       scratch_bcoo;
+        cuda_tool::DeviceBuffer<unsigned long long> stats;
+        long long                                   calls          = 0;
+        long long                                   shape_mismatch = 0;
+        long long                                   index_mismatch = 0;
+        long long                                   bit_mismatch   = 0;
+        double                                      max_diff       = 0.0;
+        double                                      max_ref        = 0.0;
+    };
+
+    GlsConvertVerify& gls_convert_verify()
+    {
+        static GlsConvertVerify v = []
+        {
+            GlsConvertVerify t;
+            if(const char* e = std::getenv("UIPC_CONVERT_VERIFY"))
+                t.enabled = !(e[0] == '0');
+            return t;
+        }();
+        return v;
+    }
+
+    // snapshot of the assembled triplets, taken *before* the primary conversion
+    // (the old ge2sym compacts triplet_A in place)
+    void gls_convert_verify_snapshot(cuda_tool::DeviceTripletMatrix<Float, 3>& triplet_A)
+    {
+        auto& v = gls_convert_verify();
+        if(!v.enabled)
+            return;
+
+        int n = (int)triplet_A.triplet_count();
+        v.scratch_triplet.reshape(triplet_A.rows(), triplet_A.cols());
+        v.scratch_triplet.resize_triplets_discard(n);
+        if(n > 0)
+        {
+            cudaMemcpyAsync(v.scratch_triplet.values().data(),
+                            triplet_A.values().data(),
+                            n * sizeof(Matrix3x3),
+                            cudaMemcpyDeviceToDevice,
+                            cuda_tool::default_stream());
+            cudaMemcpyAsync(v.scratch_triplet.row_indices().data(),
+                            triplet_A.row_indices().data(),
+                            n * sizeof(int),
+                            cudaMemcpyDeviceToDevice,
+                            cuda_tool::default_stream());
+            cudaMemcpyAsync(v.scratch_triplet.col_indices().data(),
+                            triplet_A.col_indices().data(),
+                            n * sizeof(int),
+                            cudaMemcpyDeviceToDevice,
+                            cuda_tool::default_stream());
+        }
+    }
+
+    void gls_convert_verify_check(cuda_tool::DeviceBCOOMatrix<Float, 3>& bcoo_A)
+    {
+        auto& v = gls_convert_verify();
+        if(!v.enabled)
+            return;
+        ++v.calls;
+
+        v.converter.ge2sym(v.scratch_triplet);
+        v.converter.convert(v.scratch_triplet, v.scratch_bcoo);
+
+        if(v.scratch_bcoo.non_zeros() != bcoo_A.non_zeros())
+        {
+            ++v.shape_mismatch;
+            logger::warn("[convert-verify] triplet count {} != reference {}",
+                         bcoo_A.non_zeros(),
+                         v.scratch_bcoo.non_zeros());
+            return;
+        }
+
+        int u = bcoo_A.non_zeros();
+        v.stats.resize_discard(4);
+        cudaMemsetAsync(v.stats.data(), 0, 4 * sizeof(unsigned long long), cuda_tool::default_stream());
+        if(u > 0)
+            gls_convert_verify_kernel<<<(u + 255) / 256, 256>>>(
+                bcoo_A.cview(), v.scratch_bcoo.cview(), v.stats.data(), u);
+        std::array<unsigned long long, 4> h{};
+        cudaMemcpyAsync(h.data(),
+                        v.stats.data(),
+                        4 * sizeof(unsigned long long),
+                        cudaMemcpyDeviceToHost,
+                        cuda_tool::default_stream());
+        cudaStreamSynchronize(cuda_tool::default_stream());
+
+        v.index_mismatch += (long long)h[0];
+        v.bit_mismatch += (long long)h[1];
+        double d = 0.0, r = 0.0;
+        std::memcpy(&d, &h[2], sizeof(double));
+        std::memcpy(&r, &h[3], sizeof(double));
+        v.max_diff = std::max(v.max_diff, d);
+        v.max_ref  = std::max(v.max_ref, r);
+
+        logger::warn("[convert-verify] calls={} nnz={} shape_mismatch={} index_mismatch={} bit_mismatch={} max|diff|={:.3e} max|ref|={:.3e} rel={:.3e}",
+                     v.calls,
+                     u,
+                     v.shape_mismatch,
+                     v.index_mismatch,
+                     v.bit_mismatch,
+                     v.max_diff,
+                     v.max_ref,
+                     v.max_ref > 0 ? v.max_diff / v.max_ref : 0.0);
+    }
+}  // namespace
+
 void GlobalLinearSystem::Impl::build_linear_system()
 {
     Timer timer{"Build Linear System"};
@@ -232,10 +498,23 @@ void GlobalLinearSystem::Impl::build_linear_system()
         _assemble_linear_system();
     }
 
+    gls_pattern_probe_check(triplet_A);
+
+    gls_convert_verify_snapshot(triplet_A);
+
     {
         Timer t{"Convert To BCOO"};
-        converter.ge2sym(triplet_A);
-        converter.convert(triplet_A, bcoo_A);
+        if(MatrixConverter<Float, 3>::fused_enabled())
+        {
+            // perf/round4 (s10): fused ge2sym + triplet->BCOO
+            converter.convert_sym(triplet_A, bcoo_A);
+        }
+        else
+        {
+            converter.ge2sym(triplet_A);
+            converter.convert(triplet_A, bcoo_A);
+        }
+        gls_convert_verify_check(bcoo_A);
         // upload the nnz count for graph-stable SpMV launches (async on the
         // default stream; drained before any solve reads it)
         triplet_count_dev = (IndexT)bcoo_A.triplet_count();

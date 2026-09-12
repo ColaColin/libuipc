@@ -59,6 +59,17 @@ class MatrixConverter
     void convert(const cuda_tool::DeviceTripletMatrix<T, N>& from,
                  cuda_tool::DeviceBCOOMatrix<T, N>&          to);
 
+    // perf/round4 (s10): fused ge2sym + Triplet -> BCOO. Equivalent to
+    // ge2sym(from) followed by convert(from, to), but without the two full
+    // block copies of ge2sym and (in mode 2) without the staged gather:
+    // the 3x3 blocks stay in `from` and only indices are permuted.
+    // `from` is left untouched (the old ge2sym compacted it in place).
+    void convert_sym(const cuda_tool::DeviceTripletMatrix<T, N>& from,
+                     cuda_tool::DeviceBCOOMatrix<T, N>&          to);
+
+    // UIPC_CONVERT_FUSED != 0
+    static bool fused_enabled();
+
     void _radix_sort_indices_and_blocks(const cuda_tool::DeviceTripletMatrix<T, N>& from,
                                         cuda_tool::DeviceBCOOMatrix<T, N>& to);
 

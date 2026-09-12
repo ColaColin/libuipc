@@ -3,6 +3,8 @@
 #include <cub/warp/warp_reduce.cuh>
 #include <uipc/common/timer.h>
 #include <algorithm/fast_segmental_reduce.h>
+#include <cstdlib>
+#include <utility>
 
 namespace uipc::backend::cuda
 {
@@ -11,6 +13,96 @@ namespace
     // block value type of DeviceTripletMatrix<T, N> (plain T when N == 1)
     template <typename T, int N>
     using MatrixConverterBlockT = typename cuda_tool::DeviceTripletMatrix<T, N>::ValueT;
+
+    // ---------------------------------------------------------------
+    // perf/round4 (s10): fused ge2sym + triplet->BCOO conversion.
+    //
+    // The old chain moved every 3x3 block three times: ge2sym k1 copied all
+    // blocks into a temporary, ge2sym k2 compacted the upper-triangular ones
+    // back, and the sort k3 gathered them into sorted order. The fused path
+    // keeps the blocks where the assembly left them and carries *indices* only:
+    // the ge2sym compaction produces (key, source index) pairs, the radix sort
+    // permutes those, and a single gather (or the segmental reduce itself)
+    // reads the original block array. Same values in the same order.
+    // ---------------------------------------------------------------
+
+    // fused #1: flag the upper-triangular entries (i <= j)
+    __global__ void matrix_converter_fused_flag_upper_k1_kernel(
+        cuda_tool::CBufferView<int> row_indices,
+        cuda_tool::CBufferView<int> col_indices,
+        cuda_tool::BufferView<int>  counts,
+        int                         n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        const int* __restrict__ row = row_indices.data();
+        const int* __restrict__ col = col_indices.data();
+        int* __restrict__ cnt       = counts.data();
+        cnt[i]                      = row[i] <= col[i] ? 1 : 0;
+    }
+
+    // fused #2: compact (key, source index) of the upper-triangular entries
+    __global__ void matrix_converter_fused_compact_keys_k2_kernel(
+        cuda_tool::CBufferView<int>     row_indices,
+        cuda_tool::CBufferView<int>     col_indices,
+        cuda_tool::CBufferView<int>     counts,
+        cuda_tool::CBufferView<int>     offsets,
+        cuda_tool::BufferView<uint64_t> keys,
+        cuda_tool::BufferView<int>      src_index,
+        cuda_tool::Dense<int>           total_count,
+        uint64_t                        cols,
+        int                             n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        const int* __restrict__ row = row_indices.data();
+        const int* __restrict__ col = col_indices.data();
+        const int* __restrict__ cnt = counts.data();
+        const int* __restrict__ off = offsets.data();
+        uint64_t* __restrict__ key  = keys.data();
+        int* __restrict__ src       = src_index.data();
+
+        int c = cnt[i];
+        int o = off[i];
+        if(c != 0)
+        {
+            key[o] = static_cast<uint64_t>(row[i]) * cols + static_cast<uint64_t>(col[i]);
+            src[o] = i;
+        }
+        if(i == n - 1)
+            total_count = o + c;
+    }
+
+    // fused #3: gather the blocks into sorted order straight from the source
+    template <typename T, int N>
+    __global__ void matrix_converter_fused_gather_k3_kernel(
+        cuda_tool::CBufferView<MatrixConverterBlockT<T, N>> src_blocks,
+        cuda_tool::CBufferView<int>                         sort_index,
+        cuda_tool::BufferView<MatrixConverterBlockT<T, N>>  dst_blocks,
+        int                                                 n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        const MatrixConverterBlockT<T, N>* __restrict__ src = src_blocks.data();
+        const int* __restrict__ perm                        = sort_index.data();
+        MatrixConverterBlockT<T, N>* __restrict__ dst       = dst_blocks.data();
+        dst[i]                                              = src[perm[i]];
+    }
+
+    // value functor for the fused segmental reduce (gather without staging)
+    template <typename T, int N>
+    struct matrix_converter_permuted_value_op
+    {
+        const MatrixConverterBlockT<T, N>* src;
+        const int*                         perm;
+        __device__ MatrixConverterBlockT<T, N> operator()(int i) const
+        {
+            return src[perm[i]];
+        }
+    };
 
     // MatrixConverter::_radix_sort_indices_and_blocks(from, to) #1: hash ij
     __global__ void matrix_converter_radix_sort_indices_and_blocks_k1_kernel(
@@ -920,4 +1012,171 @@ void MatrixConverter<T, N>::sym2ge(const cuda_tool::DeviceBCOOMatrix<T, N>& from
 
     _radix_sort_indices_and_blocks(to);
 }
+
+namespace
+{
+    // perf/round4 (s10) env switch: 0 = old ge2sym + convert chain,
+    // 1 = fused ge2sym/sort with a separate gather, 2 = fused + the gather
+    // folded into the segmental reduce (default).
+    inline int matrix_converter_fused_mode()
+    {
+        static const int mode = []
+        {
+            int m = 2;
+            if(const char* e = std::getenv("UIPC_CONVERT_FUSED"))
+            {
+                int v = std::atoi(e);
+                if(v >= 0 && v <= 2)
+                    m = v;
+            }
+            return m;
+        }();
+        return mode;
+    }
+}  // namespace
+
+template <typename T, int N>
+bool MatrixConverter<T, N>::fused_enabled()
+{
+    return matrix_converter_fused_mode() != 0;
+}
+
+template <typename T, int N>
+void MatrixConverter<T, N>::convert_sym(const cuda_tool::DeviceTripletMatrix<T, N>& from,
+                                        cuda_tool::DeviceBCOOMatrix<T, N>& to)
+{
+    using namespace cuda_tool;
+
+    to.reshape(from.rows(), from.cols());
+
+    const int n = (int)from.triplet_count();
+    if(n == 0)
+    {
+        to.resize_triplets_discard(0);
+        return;
+    }
+
+    const uint64_t key_rows = static_cast<uint64_t>(from.rows() > 0 ? from.rows() : 1);
+    const uint64_t key_cols = static_cast<uint64_t>(from.cols() > 0 ? from.cols() : 1);
+
+    auto src_row_indices = from.row_indices();
+    auto src_col_indices = from.col_indices();
+    auto src_blocks      = from.values();
+
+    // alias: the upper-triangular flags live in unique_counts until the RLE
+    auto& counts = unique_counts;
+    loose_resize(counts, n);
+    loose_resize(offsets, n);
+    loose_resize(ij_hash_input, n);
+    loose_resize(sort_index_input, n);
+
+    // 1. flag the upper triangular part
+    matrix_converter_fused_flag_upper_k1_kernel<<<(n + 256 - 1) / 256, 256, 0, nullptr>>>(
+        src_row_indices, src_col_indices, counts.view(), n);
+
+    // 2. exclusive sum of the flags
+    DeviceScan().ExclusiveSum(counts.data(), offsets.data(), n);
+
+    // 3. compact (key, source index)
+    matrix_converter_fused_compact_keys_k2_kernel<<<(n + 256 - 1) / 256, 256, 0, nullptr>>>(
+        src_row_indices,
+        src_col_indices,
+        counts.cview(),
+        offsets.cview(),
+        ij_hash_input.view(),
+        sort_index_input.view(),
+        count.viewer(),
+        key_cols,
+        n);
+
+    const int m = count;  // upper-triangular triplet count (host read-back)
+
+    if(m == 0)
+    {
+        to.resize_triplets_discard(0);
+        return;
+    }
+
+    // 4. sort (key, source index) by key
+    loose_resize(ij_hash, m);
+    loose_resize(sort_index, m);
+    loose_resize(ij_pairs, m);
+
+    DeviceRadixSort().SortPairs(ij_hash_input.data(),
+                                ij_hash.data(),
+                                sort_index_input.data(),
+                                sort_index.data(),
+                                m,
+                                0,
+                                matrix_converter_key_bits(key_rows * key_cols - 1));
+
+    // 5. unpack the sorted keys back to (row, col) pairs
+    to.resize_triplets_discard(m);
+    matrix_converter_radix_sort_indices_and_blocks_k2_kernel<<<(m + 256 - 1) / 256, 256, 0, nullptr>>>(
+        ij_hash.view(), ij_pairs.view(), key_cols, m);
+
+    // 6. run-length encode the sorted (row, col) pairs
+    loose_resize(unique_ij_pairs, m);
+    loose_resize(unique_counts, m);
+
+    DeviceRunLengthEncode().Encode(
+        ij_pairs.data(), unique_ij_pairs.data(), unique_counts.data(), count.data(), m);
+
+    const int h_count = count;
+
+    unique_ij_pairs.resize_discard(h_count);
+    unique_counts.resize_discard(h_count);
+
+    loose_resize(offsets, h_count);
+    DeviceScan().ExclusiveSum(unique_counts.data(), offsets.data(), h_count);
+
+    matrix_converter_make_unique_indices_k1_kernel<<<(h_count + 256 - 1) / 256, 256, 0, nullptr>>>(
+        unique_ij_pairs.view(), to.row_indices(), to.col_indices(), h_count);
+
+    to.resize_triplets_discard(h_count);
+
+    // 7. segment head flags -> segment ids
+    loose_resize(sorted_partition_input, m);
+    loose_resize(sorted_partition_output, m);
+
+    BufferLaunch().fill<int>(sorted_partition_input.view(), 0);
+
+    if(h_count > 0)
+    {
+        auto k = matrix_converter_make_unique_block_warp_reduction_k1_kernel;
+        k<<<cuda_tool::best_grid_dim(h_count, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            sorted_partition_input.view(), unique_counts.view(), offsets.view(), h_count);
+    }
+
+    DeviceScan().ExclusiveSum(
+        sorted_partition_input.data(), sorted_partition_output.data(), m);
+
+    // 8. reduce the blocks of each segment
+    auto blocks = to.values();
+
+    if(matrix_converter_fused_mode() == 2)
+    {
+        // gather folded into the reduce: no staged copy of the sorted blocks
+        matrix_converter_permuted_value_op<T, N> value_op{src_blocks.data(),
+                                                          sort_index.data()};
+        FastSegmentalReduce<>().reduce(
+            (size_t)m,
+            blocks,
+            fast_segmental_reduce_get_offset_key_op{
+                std::as_const(sorted_partition_output).view()},
+            value_op);
+    }
+    else
+    {
+        loose_resize(blocks_sorted, m);
+        matrix_converter_fused_gather_k3_kernel<T, N>
+            <<<(m + 256 - 1) / 256, 256, 0, nullptr>>>(
+                src_blocks, sort_index.cview(), blocks_sorted.view(), m);
+
+        FastSegmentalReduce<>().reduce(std::as_const(sorted_partition_output).view(),
+                                       std::as_const(blocks_sorted).view(),
+                                       blocks);
+    }
+}
+
 }  // namespace uipc::backend::cuda
