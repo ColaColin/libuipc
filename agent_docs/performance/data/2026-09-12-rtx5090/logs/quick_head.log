@@ -1,0 +1,10 @@
+benchmark: mas-bunny
+frames:    3
+cwd:       /root/work/head/libuipc-samples/examples/89_mas_bunny
+command:   /root/work/venv_head/bin/python /root/work/head/libuipc-samples/examples/89_mas_bunny/main.py --headless 3
+CUDA Backend Kernel Console Init Success!
+TOTAL frames=3 mean=8.5ms median=6.2ms p95=12.4ms
+BENCHMARK_RESULT {"frame_ms":[13.039815006777644,6.206108984770253,6.216626992681995],"frame_stats":[{"backend":"cuda","completed":true,"converged":true,"frame":1,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":2,"linear_solver_iterations":50,"newton_iterations":2,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":2,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":2,"linear_solver_iterations":50,"newton_iterations":2,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":3,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":2,"linear_solver_iterations":50,"newton_iterations":2,"pipeline":"ipc","schema_version":1}],"observables":{"final_frame":3,"bunny_centroid":[-0.11664319695701231,-0.4970460594368335,0.0406578687755311]}}
+metadata:  /root/work/head/output/benchmark-runs/mas-bunny-20260912T100426Z.json
+log:       /root/work/head/output/benchmark-runs/mas-bunny-20260912T100426Z.log
+latest:    /root/work/head/output/benchmark-runs/mas-bunny.json
