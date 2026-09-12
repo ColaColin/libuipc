@@ -604,13 +604,119 @@ namespace sym::codim_ipc_simplex_contact
     // Householder + implicit-QL of `cuda_tool::eigen::evd_tridiag_ql`. It is a
     // template parameter so each instantiation carries one code path's stack
     // frame (the s14 lesson); M + 1 <= 3 takes Eigen's closed form either way.
-    template <int N, int M, int Solver = 0>
+    // round-5 (s26): `Basis` selects how that same subspace is carried.
+    // 0 = the explicit 3M x (M+1) matrix Q of `barrier_range_basis` and its
+    // Q^T Hs Q / Q Hred Q^T products (every round up to 5). 1 = the
+    // basis-free form below, for M <= 3.
+    //
+    // Q's columns are (s^ (x) t1, s^ (x) t2, u_1 (x) n^, ..., u_{M-1} (x) n^).
+    // The u_j span the mean-free weights of R^M and s^ is itself mean-free, so
+    // span{u_j} = span{s^, v_1, ..., v_{M-2}} with v_i perp s^, and
+    //
+    //   range(Q) = s^ (x) span{t1, t2, n^}  (+)  v_1 (x) n^  (+) ...
+    //            = s^ (x) R^3               (+)  v_1 (x) n^  (+) ...
+    //
+    // because (t1, t2, n^) is an orthonormal basis of R^3. The tangent frame
+    // therefore drops out of the *subspace* entirely, and so does Q: for any
+    // two orthonormal bases Q' = Q R of the same subspace (R orthogonal),
+    // Q' make_spd(Q'^T H Q') Q'^T = Q make_spd(Q^T H Q) Q^T, since make_spd
+    // clamps eigenvalues and therefore commutes with orthogonal conjugation.
+    // Same projection up to rounding, with no Q, no Hs and no Hspd temporary,
+    // and no tangent frame / Gram-Schmidt.
+    //   M = 2: range(Q) = s^ (x) R^3, a plain 3x3 eigen-solve on
+    //          Hss = sum_ab s^_a s^_b H_ab, mapped back as H_ab = s^_a s^_b Hss.
+    //   M = 3: one extra direction v = ((1,1,1) x s^)/|.| (the mean-free unit
+    //          orthogonal to s^), giving the bordered 4x4
+    //          [[Hss, m], [m^T, c]] with m = (sum_ab s^_a v_b H_ab) n^ and
+    //          c = n^^T (sum_ab v_a v_b H_ab) n^.
+    //   M = 4: not implemented; falls through to the dense-Q path.
+    template <int N, int M, int Solver = 0, int Basis = 0>
     inline __device__ void make_spd_contact(Matrix<Float, N, N>&     H,
                                             const Vector<IndexT, M>& act,
                                             const Vector<Float, M>&  s,
                                             const Vector3&           gap)
     {
         constexpr int NM = 3 * M;
+
+        if constexpr(Basis == 1 && M <= 3)
+        {
+            const Vector<Float, M> sh = s.normalized();
+
+            if constexpr(M == 2)
+            {
+                Matrix3x3 Hss = Matrix3x3::Zero();
+#pragma unroll
+                for(int a = 0; a < M; ++a)
+#pragma unroll
+                    for(int b = 0; b < M; ++b)
+                        Hss += (sh[a] * sh[b])
+                               * H.template block<3, 3>(3 * act[a], 3 * act[b]);
+
+                make_spd<3, Solver>(Hss);
+
+#pragma unroll
+                for(int a = 0; a < M; ++a)
+#pragma unroll
+                    for(int b = 0; b < M; ++b)
+                        H.template block<3, 3>(3 * act[a], 3 * act[b]) =
+                            (sh[a] * sh[b]) * Hss;
+            }
+            else  // M == 3
+            {
+                const Vector3 nh = gap.normalized();
+
+                //tex: $$ v = \frac{(1,1,1) \times \hat s}{\|\cdot\|} \perp \hat s, \; \sum_j v_j = 0$$
+                Vector3 v{sh[2] - sh[1], sh[0] - sh[2], sh[1] - sh[0]};
+                v.normalize();
+
+                Matrix3x3 Hss = Matrix3x3::Zero();
+                Vector3   m   = Vector3::Zero();
+                Float     c   = 0.0;
+#pragma unroll
+                for(int b = 0; b < 3; ++b)
+                {
+                    Matrix3x3 Tb = Matrix3x3::Zero();
+                    Vector3   tb = Vector3::Zero();
+                    Vector3   qb = Vector3::Zero();
+#pragma unroll
+                    for(int a = 0; a < 3; ++a)
+                    {
+                        auto          Aab = H.template block<3, 3>(3 * act[a], 3 * act[b]);
+                        const Vector3 w   = Aab * nh;
+                        Tb += sh[a] * Aab;
+                        tb += sh[a] * w;
+                        qb += v[a] * w;
+                    }
+                    Hss += sh[b] * Tb;
+                    m += v[b] * tb;
+                    c += v[b] * nh.dot(qb);
+                }
+
+                Matrix<Float, 4, 4> Hred;
+                Hred.template block<3, 3>(0, 0) = Hss;
+                Hred.template block<3, 1>(0, 3) = m;
+                Hred.template block<1, 3>(3, 0) = m.transpose();
+                Hred(3, 3)                      = c;
+
+                make_spd<4, Solver>(Hred);
+
+                const Matrix3x3 A  = Hred.template block<3, 3>(0, 0);
+                const Vector3   mr = Hred.template block<3, 1>(0, 3);
+                const Matrix3x3 B  = mr * nh.transpose();
+                const Matrix3x3 C  = (Hred(3, 3) * nh) * nh.transpose();
+#pragma unroll
+                for(int b = 0; b < 3; ++b)
+                {
+                    const Matrix3x3 Pb = sh[b] * A + v[b] * B;
+                    const Matrix3x3 Rb = sh[b] * B.transpose() + v[b] * C;
+#pragma unroll
+                    for(int a = 0; a < 3; ++a)
+                        H.template block<3, 3>(3 * act[a], 3 * act[b]) =
+                            sh[a] * Pb + v[a] * Rb;
+                }
+            }
+            return;
+        }
 
         Matrix<Float, NM, NM> Hs;
         for(int a = 0; a < M; ++a)
@@ -634,7 +740,7 @@ namespace sym::codim_ipc_simplex_contact
     //tex: $$ \text{reduced } make\_spd \text{ of the PT barrier Hessian (12x12)}$$
     // round-5 (s24): `Solver` is forwarded to `make_spd_contact`; the PT
     // branch lives in contact part 1, whose projection this step measures.
-    template <int Solver = 0>
+    template <int Solver = 0, int Basis = 0>
     inline __device__ void PT_barrier_make_spd(Matrix12x12&    H,
                                                const Vector4i& flag,
                                                const Vector3&  P,
@@ -651,7 +757,7 @@ namespace sym::codim_ipc_simplex_contact
         {
             Vector2i act = detail::pp_from_pt(flag);
             Vector2  s   = {1.0, -1.0};
-            make_spd_contact<12, 2, Solver>(H, act, s, X[act[0]] - X[act[1]]);
+            make_spd_contact<12, 2, Solver, Basis>(H, act, s, X[act[0]] - X[act[1]]);
         }
         else if(dim == 3)
         {
@@ -661,7 +767,7 @@ namespace sym::codim_ipc_simplex_contact
             Float    t   = (X[act[0]] - X[act[1]]).dot(e) / e.squaredNorm();
             Vector3  s   = {1.0, t - 1.0, -t};
             Vector3  gap = X[act[0]] - (X[act[1]] + t * e);
-            make_spd_contact<12, 3, Solver>(H, act, s, gap);
+            make_spd_contact<12, 3, Solver, Basis>(H, act, s, gap);
         }
         else
         {
@@ -676,11 +782,15 @@ namespace sym::codim_ipc_simplex_contact
             Float    v   = (a * e2.dot(w) - b * e1.dot(w)) / (a * c - b * b);
             Vector4  s   = {1.0, u + v - 1.0, -u, -v};
             Vector4i act = {0, 1, 2, 3};
-            make_spd_contact<12, 4, Solver>(H, act, s, w - u * e1 - v * e2);
+            make_spd_contact<12, 4, Solver, Basis>(H, act, s, w - u * e1 - v * e2);
         }
     }
 
     //tex: $$ \text{reduced } make\_spd \text{ of the PE barrier Hessian (9x9)}$$
+    // round-5 (s26): `Solver` and `Basis` are forwarded to `make_spd_contact`;
+    // the PE branch lives in contact part 2, whose projection this step
+    // measures (dim 3 alone is 40 % of that kernel).
+    template <int Solver = 0, int Basis = 0>
     inline __device__ void PE_barrier_make_spd(Matrix9x9&      H,
                                                const Vector3i& flag,
                                                const Vector3&  P,
@@ -696,7 +806,7 @@ namespace sym::codim_ipc_simplex_contact
         {
             Vector2i act = detail::pp_from_pe(flag);
             Vector2  s   = {1.0, -1.0};
-            make_spd_contact<9, 2>(H, act, s, X[act[0]] - X[act[1]]);
+            make_spd_contact<9, 2, Solver, Basis>(H, act, s, X[act[0]] - X[act[1]]);
         }
         else
         {
@@ -705,7 +815,7 @@ namespace sym::codim_ipc_simplex_contact
             Float    t   = (P - E0).dot(e) / e.squaredNorm();
             Vector3  s   = {1.0, t - 1.0, -t};
             Vector3i act = {0, 1, 2};
-            make_spd_contact<9, 3>(H, act, s, P - (E0 + t * e));
+            make_spd_contact<9, 3, Solver, Basis>(H, act, s, P - (E0 + t * e));
         }
     }
 
@@ -720,7 +830,7 @@ namespace sym::codim_ipc_simplex_contact
     // a vanishing determinant.
     // round-5 (s24): `Solver` is forwarded to `make_spd_contact`; the EE
     // branch lives in contact part 1, whose projection this step measures.
-    template <int Solver = 0>
+    template <int Solver = 0, int Basis = 0>
     inline __device__ void EE_barrier_make_spd(Matrix12x12&    H,
                                                const Vector4i& flag,
                                                const Vector3&  Ea0,
@@ -737,7 +847,7 @@ namespace sym::codim_ipc_simplex_contact
         {
             Vector2i act = detail::pp_from_ee(flag);
             Vector2  s   = {1.0, -1.0};
-            make_spd_contact<12, 2, Solver>(H, act, s, X[act[0]] - X[act[1]]);
+            make_spd_contact<12, 2, Solver, Basis>(H, act, s, X[act[0]] - X[act[1]]);
         }
         else if(dim == 3)
         {
@@ -747,7 +857,7 @@ namespace sym::codim_ipc_simplex_contact
             Float    t   = (X[act[0]] - X[act[1]]).dot(e) / e.squaredNorm();
             Vector3  s   = {1.0, t - 1.0, -t};
             Vector3  gap = X[act[0]] - (X[act[1]] + t * e);
-            make_spd_contact<12, 3, Solver>(H, act, s, gap);
+            make_spd_contact<12, 3, Solver, Basis>(H, act, s, gap);
         }
         else
         {
@@ -771,11 +881,13 @@ namespace sym::codim_ipc_simplex_contact
             // (the basis only uses the direction, so the sign and scale of the
             // cross product are irrelevant), and `den = |ea x eb|^2` is
             // exactly the quantity the mollifier guard bounds away from 0
-            make_spd_contact<12, 4, Solver>(H, act, s, ea.cross(eb));
+            make_spd_contact<12, 4, Solver, Basis>(H, act, s, ea.cross(eb));
         }
     }
 
     //tex: $$ \text{reduced } make\_spd \text{ of the PP barrier Hessian (6x6)}$$
+    // round-5 (s26): see `PE_barrier_make_spd`.
+    template <int Solver = 0, int Basis = 0>
     inline __device__ void PP_barrier_make_spd(Matrix6x6&      H,
                                                const Vector2i& flag,
                                                const Vector3&  P0,
@@ -783,7 +895,7 @@ namespace sym::codim_ipc_simplex_contact
     {
         Vector2  s   = {1.0, -1.0};
         Vector2i act = {0, 1};
-        make_spd_contact<6, 2>(H, act, s, P0 - P1);
+        make_spd_contact<6, 2, Solver, Basis>(H, act, s, P0 - P1);
     }
 }  // namespace sym::codim_ipc_simplex_contact
 }  // namespace uipc::backend::cuda
