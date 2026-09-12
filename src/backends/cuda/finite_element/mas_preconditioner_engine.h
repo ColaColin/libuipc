@@ -163,8 +163,19 @@ class MASPreconditionerEngine
     void build_multi_level_R(cuda_tool::CDenseVectorView<Float> R,
                              cuda_tool::CVarView<IndexT>        converged,
                              cudaStream_t stream = nullptr);
+    // s12 probe (UIPC_MAS_APPLY_VERIFY): re-runs restrict + local solve with the
+    // other (mode 1) or the same (mode 2) code path and compares R / Z.
+    void verify_apply(cuda_tool::CDenseVectorView<Float> r,
+                      cuda_tool::CVarView<IndexT>        converged,
+                      cudaStream_t                       stream,
+                      int                                mode);
+    static bool local_solve_rowdot_enabled();
+    bool        z_fill_needed() const;
     void schwarz_local_solve(cuda_tool::CVarView<IndexT> converged,
                              cudaStream_t                stream = nullptr);
+    void schwarz_local_solve_into(cuda_tool::CVarView<IndexT> converged,
+                                  cudaStream_t                stream,
+                                  bool                        use_rowdot);
     void collect_final_Z(cuda_tool::DenseVectorView<Float> Z,
                          cuda_tool::CVarView<IndexT>       converged,
                          cudaStream_t                      stream = nullptr);
@@ -222,5 +233,12 @@ class MASPreconditionerEngine
     // ---- GPU buffers: multi-level residual / solution (float, matches GIPC) ----
     cuda_tool::DeviceBuffer<Eigen::Vector3f> multi_level_R;
     cuda_tool::DeviceBuffer<float3>          multi_level_Z;
+
+    // ---- s12 verification probe (UIPC_MAS_APPLY_VERIFY) ----
+    cuda_tool::DeviceBuffer<Eigen::Vector3f> m_apply_R_verify;
+    cuda_tool::DeviceBuffer<float3>          m_apply_Z_verify;
+    int                                      m_apply_verify_count = 0;
+    double                                   m_apply_worst_abs[2] = {0.0, 0.0};
+    double                                   m_apply_worst_rel[2] = {0.0, 0.0};
 };
 }  // namespace uipc::backend::cuda

@@ -1403,6 +1403,88 @@ namespace
         atomicMax(&out[1], (unsigned long long)__double_as_longlong(r));
     }
 
+    // ---- s12: atomic-free row-dot local solve --------------------------------
+    // The reference kernel above gives one thread to each (row, col) node pair
+    // of a cluster (BANKSIZE^2 = 256 threads), forms one 3x3 * vec3 product,
+    // reduces 16 of them with a cub::WarpReduce and then issues three float
+    // atomicAdds per row.  Here one thread owns one *output scalar* (48 per
+    // cluster): it walks the 16 columns of its row, accumulating 16 three-term
+    // products in a register, and does one plain store.  No warp reduction, no
+    // atomics -- and because every output element is now written exactly once,
+    // the separate `multi_level_Z` zero-fill node of the apply disappears too.
+    // Different summation order than the cub tree reduce -> rounding-level.
+    __global__ void MASPreconditionerEngine_schwarz_local_solve_rowdot_kernel(
+        cuda_tool::CBufferView<ClusterMatrixSymF> cluster_inv,
+        cuda_tool::CBufferView<Eigen::Vector3f>   multi_lr,
+        cuda_tool::BufferView<float3>             multi_lz,
+        cuda_tool::CDense<IndexT>                 converged,
+        int                                       N)  // 3 * node count
+    {
+        using namespace cuda_tool;
+
+        if(*converged != 0)
+            return;
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if(idx >= N)
+            return;
+
+        constexpr int cluster_scalars = BANKSIZE * 3;
+
+        int cluster_id = idx / cluster_scalars;
+        int rem        = idx - cluster_id * cluster_scalars;
+        int local_row  = rem / 3;
+        int comp       = rem - local_row * 3;
+
+        int vert_row = cluster_id * BANKSIZE + local_row;
+        int col_base = cluster_id * BANKSIZE;
+
+        const ClusterMatrixSymF& C = cluster_inv(cluster_id);
+
+        float acc = 0.0f;
+        // All lanes of a cluster walk `c` in lockstep, so the residual load is
+        // one broadcast per column.
+        for(int c = 0; c < BANKSIZE; ++c)
+        {
+            const Eigen::Vector3f& rv = multi_lr(col_base + c);
+            if(c >= local_row)
+            {
+                const Eigen::Matrix3f& M = C.M[sym_index(local_row, c)];
+                acc += M(comp, 0) * rv[0] + M(comp, 1) * rv[1] + M(comp, 2) * rv[2];
+            }
+            else
+            {
+                const Eigen::Matrix3f& M = C.M[sym_index(c, local_row)];
+                acc += M(0, comp) * rv[0] + M(1, comp) * rv[1] + M(2, comp) * rv[2];
+            }
+        }
+
+        float3& z = multi_lz(vert_row);
+        if(comp == 0)
+            z.x = acc;
+        else if(comp == 1)
+            z.y = acc;
+        else
+            z.z = acc;
+    }
+
+    // s12 verification probe: max |a - b| and max |b| over two float arrays
+    // (the multi-level R / Z scratch buffers of the preconditioner apply).
+    __global__ void MASPreconditionerEngine_compare_float_kernel(const float* a,
+                                                                 const float* b,
+                                                                 unsigned long long* out,
+                                                                 int                 n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        double va = a[i];
+        double vb = b[i];
+        double d  = fabs(va - vb);
+        double r  = fabs(vb);
+        atomicMax(&out[0], (unsigned long long)__double_as_longlong(d));
+        atomicMax(&out[1], (unsigned long long)__double_as_longlong(r));
+    }
+
     __global__ void MASPreconditionerEngine_collect_final_Z_kernel(
         cuda_tool::DenseVectorView<Float>  Z_view,
         cuda_tool::CBufferView<float3>     multi_lz,
@@ -2111,10 +2193,56 @@ void MASPreconditionerEngine::build_multi_level_R(cuda_tool::CDenseVectorView<Fl
 // ---------------------------------------------------------------------------
 // Local solve: Z = cluster_inverse * R at each level
 // ---------------------------------------------------------------------------
+// s12: atomic-free row-dot local solve (one thread per output scalar); it also
+// makes the multi_level_Z zero-fill node of apply() unnecessary.
+// UIPC_MAS_LOCAL_SOLVE_ROWDOT=0 = old (256 threads per cluster, warp reduce + atomics).
+bool MASPreconditionerEngine::local_solve_rowdot_enabled()
+{
+    static const bool on = []
+    {
+        const char* e = std::getenv("UIPC_MAS_LOCAL_SOLVE_ROWDOT");
+        return !(e && e[0] == '0');
+    }();
+    return on;
+}
+
+// True when the row-dot solve writes every multi_level_Z entry exactly once, so
+// the zero-fill can be skipped. Requires the node count to be a whole number of
+// BANKSIZE clusters (it always is: every level region is bank-aligned).
+bool MASPreconditionerEngine::z_fill_needed() const
+{
+    return !(local_solve_rowdot_enabled() && m_total_num_clusters > 0
+             && (m_total_num_clusters % BANKSIZE) == 0);
+}
+
 void MASPreconditionerEngine::schwarz_local_solve(cuda_tool::CVarView<IndexT> converged,
                                                   cudaStream_t stream)
 {
+    schwarz_local_solve_into(converged, stream, local_solve_rowdot_enabled());
+}
+
+void MASPreconditionerEngine::schwarz_local_solve_into(cuda_tool::CVarView<IndexT> converged,
+                                                       cudaStream_t stream,
+                                                       bool         use_rowdot)
+{
     using namespace cuda_tool;
+
+    if(use_rowdot && m_total_num_clusters >= BANKSIZE
+       && (m_total_num_clusters % BANKSIZE) == 0)
+    {
+        int N          = m_total_num_clusters * 3;  // one thread per output scalar
+        int block_size = BANKSIZE * 3 * 2;          // two clusters per block
+        int num_blocks = (N + block_size - 1) / block_size;
+
+        MASPreconditionerEngine_schwarz_local_solve_rowdot_kernel<<<num_blocks, block_size, 0, stream>>>(
+            cluster_inverses.cview(),
+            multi_level_R.cview(),
+            multi_level_Z.view(),
+            converged.cviewer(),
+            N);
+        return;
+    }
+
     int N = m_total_num_clusters * BANKSIZE;  // one thread per (cluster, node-pair)
     if(N < 1)
         return;
@@ -2193,7 +2321,10 @@ void MASPreconditionerEngine::apply(cuda_tool::CDenseVectorView<Float> r,
             .fill(Eigen::Vector3f::Zero(), stream);
     }
 
-    multi_level_Z.view(0, m_total_num_clusters).fill(float3{0, 0, 0}, stream);
+    // s12: the row-dot local solve writes every Z entry exactly once, so the
+    // zero-fill node is only needed for the old atomic-accumulating path.
+    if(z_fill_needed())
+        multi_level_Z.view(0, m_total_num_clusters).fill(float3{0, 0, 0}, stream);
 
     // 1. Restrict: accumulate residual down through levels
     build_multi_level_R(r, converged, stream);
@@ -2203,6 +2334,106 @@ void MASPreconditionerEngine::apply(cuda_tool::CDenseVectorView<Float> r,
 
     // 3. Prolongate: sum Z from all levels back to fine nodes
     collect_final_Z(z, converged, stream);
+
+    // s12 verification probe: UIPC_MAS_APPLY_VERIFY=1 re-runs the restrict +
+    // local-solve phases with the *other* code path into the same scratch
+    // buffers (the output z has already been written above), =2 re-runs the
+    // *same* one -- that is the path's own atomic-order noise -- and reports
+    // max |diff| / max |ref| over the multi-level R and Z arrays.
+    static const int apply_verify_mode = []
+    {
+        const char* e = std::getenv("UIPC_MAS_APPLY_VERIFY");
+        return e ? std::atoi(e) : 0;
+    }();
+    if(apply_verify_mode)
+        verify_apply(r, converged, stream, apply_verify_mode);
+}
+
+void MASPreconditionerEngine::verify_apply(cuda_tool::CDenseVectorView<Float> r,
+                                           cuda_tool::CVarView<IndexT> converged,
+                                           cudaStream_t                stream,
+                                           int                         mode)
+{
+    using namespace cuda_tool;
+
+    // Never inside a captured graph (the probe reads results back to the host).
+    cudaStreamCaptureStatus status = cudaStreamCaptureStatusNone;
+    if(cudaStreamIsCapturing(stream, &status) != cudaSuccess
+       || status != cudaStreamCaptureStatusNone)
+        return;
+
+    int n = m_total_num_clusters;
+    if(n < 1)
+        return;
+
+    // A converged solve leaves every apply kernel a no-op, so the scratch
+    // buffers still hold the previous iteration's values (the row-dot path has
+    // no zero-fill) -- nothing to compare there.
+    IndexT h_converged = 0;
+    converged.copy_to(&h_converged, stream);
+    if(h_converged != 0)
+        return;
+
+    if(static_cast<int>(m_apply_R_verify.size()) < n)
+    {
+        m_apply_R_verify.resize(n);
+        m_apply_Z_verify.resize(n);
+    }
+    if(m_verify_stat.size() < 2)
+        m_verify_stat.resize(2);
+
+    m_apply_R_verify.view(0, n).copy_from(multi_level_R.view(0, n));
+    m_apply_Z_verify.view(0, n).copy_from(multi_level_Z.view(0, n));
+
+    if(m_total_num_clusters > m_total_map_nodes)
+    {
+        multi_level_R.view(m_total_map_nodes, m_total_num_clusters - m_total_map_nodes)
+            .fill(Eigen::Vector3f::Zero(), stream);
+    }
+    multi_level_Z.view(0, n).fill(float3{0, 0, 0}, stream);
+
+    bool rowdot = (mode == 2) ? local_solve_rowdot_enabled() : !local_solve_rowdot_enabled();
+
+    build_multi_level_R(r, converged, stream);
+    schwarz_local_solve_into(converged, stream, rowdot);
+
+    const char* names[2] = {"R", "Z"};
+    const float* newp[2] = {reinterpret_cast<const float*>(multi_level_R.data()),
+                            reinterpret_cast<const float*>(multi_level_Z.data())};
+    const float* refp[2] = {reinterpret_cast<const float*>(m_apply_R_verify.data()),
+                            reinterpret_cast<const float*>(m_apply_Z_verify.data())};
+
+    ++m_apply_verify_count;
+    for(int a = 0; a < 2; ++a)
+    {
+        CUDA_TOOL_CHECK(cudaMemsetAsync(
+            m_verify_stat.data(), 0, sizeof(unsigned long long) * 2, stream));
+        int  cnt = n * 3;
+        auto k   = MASPreconditionerEngine_compare_float_kernel;
+        k<<<cuda_tool::best_grid_dim(cnt, k), cuda_tool::best_block_dim(k), 0, stream>>>(
+            newp[a], refp[a], m_verify_stat.data(), cnt);
+        unsigned long long h[2] = {0, 0};
+        m_verify_stat.view(0, 2).copy_to(h);
+        double dmax = 0.0, rmax = 0.0;
+        std::memcpy(&dmax, &h[0], sizeof(double));
+        std::memcpy(&rmax, &h[1], sizeof(double));
+        double rel = (rmax > 0.0) ? dmax / rmax : 0.0;
+        if(rel > m_apply_worst_rel[a])
+            m_apply_worst_rel[a] = rel;
+        if(dmax > m_apply_worst_abs[a])
+            m_apply_worst_abs[a] = dmax;
+        spdlog::info(
+            "[MAS apply verify] mode={} arr={} n={} max|diff|={:.6e} max|ref|={:.6e} "
+            "rel={:.6e} worst_abs={:.6e} worst_rel={:.6e}",
+            mode,
+            names[a],
+            m_apply_verify_count,
+            dmax,
+            rmax,
+            rel,
+            m_apply_worst_abs[a],
+            m_apply_worst_rel[a]);
+    }
 }
 
 void MASPreconditionerEngine::dump_cluster_matrices_debug(std::string_view output_dir,
