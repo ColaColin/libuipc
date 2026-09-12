@@ -1067,8 +1067,12 @@ void LinearFusedPCG::report_ap_zero()
 void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStream_t stream, bool timed)
 {
     const bool fuse = pcg_small_env().fuse;
-    // s27: 0 = the pre-s27 chain, 1 = folded into update_p (shipped),
-    // 2 = folded into the dot tail (measured slower, kept as an arm).
+    // R7 (round 5): 0 = the pre-R7 chain and THE SHIPPED DEFAULT; 1 = folded into
+    // update_p; 2 = folded into the dot tail. The fold was REJECTED -- 3 runs read
+    // -1.41 % disjoint, 5 runs read -0.83 % overlapping (t = 1.39), the scope gate put
+    // the truth at -0.23 %, and mas-bunny/case2 showed disjoint regressions. The code is
+    // kept only so the RTX 5090 acceptance run can test it as a one-variable arm, where
+    // the fold's per-wave cost is ~5x cheaper while the scalar node's ~0.93 us is fixed.
     int fold = fuse ? pcg_small_env().fold : 0;
     if(fold == 1)
     {
