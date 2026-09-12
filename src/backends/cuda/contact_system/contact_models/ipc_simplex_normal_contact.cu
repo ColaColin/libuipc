@@ -253,7 +253,7 @@ namespace
         Es(i) = PP_barrier_energy(flag, kt2, d_hat, thickness, Pa, Pb);
     }
 
-    template <bool GradientOnly, int Part>
+    template <bool GradientOnly, int Part, bool EEReducedRange>
     __global__ void do_assemble_kernel(cuda_tool::CDense2D<ContactCoeff> table,
                                        cuda_tool::CBufferView<IndexT> contact_ids,
                                        cuda_tool::CBufferView<Vector3> Ps,
@@ -371,14 +371,33 @@ namespace
                 else
                 {
                     Matrix12x12 H;
-                    mollified_EE_barrier_gradient_hessian(
-                        G, H, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
+                    bool        mollified = true;
+                    mollified_EE_barrier_gradient_hessian<EEReducedRange>(
+                        G, H, mollified, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
+                    // round-4 (s16): when the mollifier is inactive the EE
+                    // Hessian is a plain flagged-distance barrier Hessian, so
+                    // the exact rank-(m+1) reduced projection of 1da12a82
+                    // applies (5x5 / 4x4 / 3x3 eigen-solve instead of 9x9).
+                    // The choice is made per *warp*, not per thread: the K10
+                    // 9x9 projection is valid for every EE pair, so a warp
+                    // that holds even one mollified pair runs the 9x9 path for
+                    // all of its lanes. Both branches are expensive, and a
+                    // divergent warp would execute both of them in full --
+                    // measured at +20 to +25 % on the wrecking balls and
+                    // cube-wall against a warp-uniform -20 %.
+                    bool warp_reduced = false;
+                    if constexpr(EEReducedRange)
+                        warp_reduced = !__any_sync(__activemask(), mollified);
+                    if(warp_reduced)
+                    {
+                        EE_barrier_make_spd(H, flag, E0, E1, E2, E3);
+                    }
                     // perf/kernels (K10): the mollified EE barrier depends on
                     // relative positions only, so H annihilates rigid
                     // translations and the PSD projection reduces to the
                     // 9x9 translation-free subspace (same projection up to
                     // rounding, as K7 for the hinge)
-                    if(ee_reduced_spd)
+                    else if(ee_reduced_spd)
                         make_spd_translation_free_4x3(H);
                     else
                         make_spd(H);
@@ -485,6 +504,10 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // perf/kernels (K10): EE Hessian PSD projection on the translation-free
     // 9x9 subspace (UIPC_EE_REDUCED_SPD=0 restores the 12x12 eigen-solve)
     bool         m_ee_reduced_spd = true;
+    // round-4 (s16): exact rank-(m+1) reduced PSD projection for the EE branch
+    // whenever the edge-edge mollifier is inactive (UIPC_EE_REDUCED_RANGE=0
+    // restores the unconditional K10 9x9 projection)
+    bool m_ee_reduced_range = true;
     cudaStream_t m_side_stream    = nullptr;
     cudaEvent_t  m_fork           = nullptr;
     cudaEvent_t  m_join           = nullptr;
@@ -497,6 +520,8 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             m_split = std::atoi(e);
         if(const char* e = std::getenv("UIPC_EE_REDUCED_SPD"))
             m_ee_reduced_spd = !(e[0] == '0');
+        if(const char* e = std::getenv("UIPC_EE_REDUCED_RANGE"))
+            m_ee_reduced_range = !(e[0] == '0');
         if(m_split == 2)
         {
             CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream, cudaStreamNonBlocking));
@@ -603,13 +628,14 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         // output slot. Two launches on the same stream would serialise the
         // rare, individually expensive PT/EE Hessians behind the bulk, so
         // Part 1 runs on a side stream (fork/join with events).
-        auto launch = [&]<bool GradientOnly, int Part>(IndexT       ee_offset,
-                                                       IndexT       pe_offset,
-                                                       IndexT       pp_offset,
-                                                       IndexT       n,
-                                                       cudaStream_t s)
+        auto launch_t = [&]<bool GradientOnly, int Part, bool EEReducedRange>(
+                            IndexT       ee_offset,
+                            IndexT       pe_offset,
+                            IndexT       pp_offset,
+                            IndexT       n,
+                            cudaStream_t s)
         {
-            auto k = do_assemble_kernel<GradientOnly, Part>;
+            auto k = do_assemble_kernel<GradientOnly, Part, EEReducedRange>;
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, s>>>(
                 info.contact_tabular().viewer(),
                 info.contact_element_ids().viewer(),
@@ -635,6 +661,28 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 pp_offset,
                 m_ee_reduced_spd,
                 n);
+        };
+
+        // round-4 (s16): the reduced-range EE projection is a template
+        // parameter, not a runtime flag, so the instantiation that takes it
+        // does not carry the 9x9 path's stack frame (cf. s14).
+        auto launch = [&]<bool GradientOnly, int Part>(IndexT       ee_offset,
+                                                      IndexT       pe_offset,
+                                                      IndexT       pp_offset,
+                                                      IndexT       n,
+                                                      cudaStream_t s)
+        {
+            if constexpr(!GradientOnly && Part != 2)
+            {
+                if(m_ee_reduced_range)
+                {
+                    launch_t.template operator()<GradientOnly, Part, true>(
+                        ee_offset, pe_offset, pp_offset, n, s);
+                    return;
+                }
+            }
+            launch_t.template operator()<GradientOnly, Part, false>(
+                ee_offset, pe_offset, pp_offset, n, s);
         };
 
         auto run = [&]<bool GradientOnly>()

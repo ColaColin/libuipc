@@ -230,8 +230,23 @@ namespace sym::codim_ipc_simplex_contact
         return ek * B;
     }
 
+    // round-4 (s16): with `Reduced`, the (dominant) branch in which the
+    // edge-edge mollifier is inactive -- the two edges are far from parallel,
+    // |ea x eb|^2 >= eps_x -- is taken separately. There ek == 1,
+    // grad(ek) == 0 and hess(ek) == 0 exactly, so
+    // `G = grad(ek) B + ek grad(B)` and
+    // `H = hess(ek) B + grad(ek) grad(B)^T + grad(B) grad(ek)^T + ek hess(B)`
+    // collapse to `G = grad(B)`, `H = hess(B)`: the Hessian is then a *plain*
+    // barrier Hessian of a flagged simplex distance, exactly like PT/PE/PP, so
+    // `EE_barrier_make_spd` (the rank-(m+1) reduced projection of 1da12a82)
+    // applies to it and replaces the 9x9 eigen-solve of K10 by a 5x5 / 4x4 /
+    // 3x3 one. `mollified` reports which branch was taken so the caller can
+    // pick the projection. Identical arithmetic on the taken values (only a
+    // -0.0 can turn into +0.0 where the old expression added 0.0 * B).
+    template <bool Reduced = false>
     inline __device__ void mollified_EE_barrier_gradient_hessian(Vector12&    G,
                                                                  Matrix12x12& H,
+                                                                 bool&        mollified,
                                                                  const Vector4i& flag,
                                                                  Float kappa,
                                                                  Float d_hat,
@@ -259,9 +274,6 @@ namespace sym::codim_ipc_simplex_contact
         Matrix12x12 HessD;
         edge_edge_distance2_hessian(flag, Ea0, Ea1, Eb0, Eb1, HessD);
 
-        Float B;
-        KappaBarrier(B, kappa, D, d_hat, thickness);
-
         //tex: $$ \frac{\partial B}{\partial D} $$
         Float dBdD;
         dKappaBarrierdD(dBdD, kappa, D, d_hat, thickness);
@@ -269,6 +281,28 @@ namespace sym::codim_ipc_simplex_contact
         //tex: $$ \frac{\partial^2 B}{\partial D^2} $$
         Float ddBddD;
         ddKappaBarrierddD(ddBddD, kappa, D, d_hat, thickness);
+
+        //tex: $$ \epsilon_x $$
+        Float eps_x;
+        edge_edge_mollifier_threshold(
+            t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, static_cast<Float>(1e-3), eps_x);
+
+        mollified = true;
+        if constexpr(Reduced)
+        {
+            Float cross_norm2;
+            edge_edge_cross_norm2(Ea0, Ea1, Eb0, Eb1, cross_norm2);
+            if(!(cross_norm2 < eps_x))  // mollifier inactive: ek == 1, its derivatives == 0
+            {
+                mollified = false;
+                G         = dBdD * GradD;
+                H = ddBddD * GradD * GradD.transpose() + dBdD * HessD;
+                return;
+            }
+        }
+
+        Float B;
+        KappaBarrier(B, kappa, D, d_hat, thickness);
 
         //tex: $$ \nabla B = \frac{\partial B}{\partial D} \nabla D$$
         Vector12 GradB = dBdD * GradD;
@@ -278,11 +312,6 @@ namespace sym::codim_ipc_simplex_contact
         // \nabla^2 B = \frac{\partial^2 B}{\partial D^2} \nabla D \nabla D^T + \frac{\partial B}{\partial D} \nabla^2 D
         //$$
         Matrix12x12 HessB = ddBddD * GradD * GradD.transpose() + dBdD * HessD;
-
-        //tex: $$ \epsilon_x $$
-        Float eps_x;
-        edge_edge_mollifier_threshold(
-            t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, static_cast<Float>(1e-3), eps_x);
 
         //tex: $$ e_k $$
         Float ek;
@@ -668,6 +697,69 @@ namespace sym::codim_ipc_simplex_contact
             Vector3  s   = {1.0, t - 1.0, -t};
             Vector3i act = {0, 1, 2};
             make_spd_contact<9, 3>(H, act, s, P - (E0 + t * e));
+        }
+    }
+
+    //tex: $$ \text{reduced } make\_spd \text{ of the un-mollified EE barrier Hessian (12x12)}$$
+    // round-4 (s16): only valid when the edge-edge mollifier is inactive, i.e.
+    // when `mollified_EE_barrier_gradient_hessian` took its un-mollified
+    // branch. H is then B''(D) grad(D) grad(D)^T + B'(D) hess(D) of the
+    // flagged edge-edge distance, whose range is the same rank-(m+1) space as
+    // for PT/PE/PP. The guard |ea x eb|^2 >= eps_x = 1e-3 |ea|^2 |eb|^2 is
+    // exactly `den > 0` of the two-line closest-point solve below, with a
+    // condition number bounded by 1e3, so the dim == 4 branch cannot divide by
+    // a vanishing determinant.
+    inline __device__ void EE_barrier_make_spd(Matrix12x12&    H,
+                                               const Vector4i& flag,
+                                               const Vector3&  Ea0,
+                                               const Vector3&  Ea1,
+                                               const Vector3&  Eb0,
+                                               const Vector3&  Eb1)
+    {
+        using namespace distance;
+
+        const Vector3 X[4] = {Ea0, Ea1, Eb0, Eb1};
+
+        IndexT dim = detail::active_count(flag);
+        if(dim == 2)
+        {
+            Vector2i act = detail::pp_from_ee(flag);
+            Vector2  s   = {1.0, -1.0};
+            make_spd_contact<12, 2>(H, act, s, X[act[0]] - X[act[1]]);
+        }
+        else if(dim == 3)
+        {
+            //tex: $$ \text{closest point } E_0 + t (E_1 - E_0) \text{ on the active edge}$$
+            Vector3i act = detail::pe_from_ee(flag);  // [P, E0, E1]
+            Vector3  e   = X[act[2]] - X[act[1]];
+            Float    t   = (X[act[0]] - X[act[1]]).dot(e) / e.squaredNorm();
+            Vector3  s   = {1.0, t - 1.0, -t};
+            Vector3  gap = X[act[0]] - (X[act[1]] + t * e);
+            make_spd_contact<12, 3>(H, act, s, gap);
+        }
+        else
+        {
+            //tex: $$ \text{closest points } E_{a0} + a\,e_a \text{ and } E_{b0} + b\,e_b$$
+            Vector3  ea  = Ea1 - Ea0;
+            Vector3  eb  = Eb1 - Eb0;
+            Vector3  w   = Ea0 - Eb0;
+            Float    aa  = ea.dot(ea);
+            Float    ab  = ea.dot(eb);
+            Float    bb  = eb.dot(eb);
+            Float    aw  = ea.dot(w);
+            Float    bw  = eb.dot(w);
+            Float    den = aa * bb - ab * ab;
+            Float    a   = (ab * bw - bb * aw) / den;
+            Float    b   = (aa * bw - ab * aw) / den;
+            Vector4  s   = {1.0 - a, a, b - 1.0, -b};
+            Vector4i act = {0, 1, 2, 3};
+            // the gap of two non-parallel segments is along ea x eb; taking it
+            // there instead of reconstructing `w + a ea - b eb` avoids the
+            // cancellation of a gap that is orders smaller than the vertices
+            // (the basis only uses the direction, so the sign and scale of the
+            // cross product are irrelevant), and `den = |ea x eb|^2` is
+            // exactly the quantity the mollifier guard bounds away from 0
+            make_spd_contact<12, 4>(H, act, s, ea.cross(eb));
         }
     }
 
