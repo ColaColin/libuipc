@@ -64,6 +64,8 @@ class LinearFusedPCG : public IterativeSolver
     cuda_tool::DeviceVar<Float>  d_rz;
     cuda_tool::DeviceVar<Float>  d_pAp;
     cuda_tool::DeviceVar<Float>  d_rz_new;
+    // s11: beta = rz_new / rz, precomputed by the fused scalar kernel
+    cuda_tool::DeviceVar<Float>  d_beta;
     cuda_tool::DeviceVar<IndexT> d_converged;
     // rz_tol on device so a captured graph survives rz_tol changes
     cuda_tool::DeviceVar<Float> d_rz_tol;

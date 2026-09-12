@@ -747,6 +747,7 @@ namespace
         bool verify           = false;
         bool probe            = false;
         bool skip_idle_blocks = true;
+        bool pcg_fuse_scalar  = true;
     };
     const SpmvEnv& spmv_env()
     {
@@ -765,6 +766,13 @@ namespace
                 e.probe = !(s[0] == '0');
             if(const char* s = std::getenv("UIPC_SPMV_SKIP_IDLE_BLOCKS"))
                 e.skip_idle_blocks = !(s[0] == '0');
+            // s11: same switch as in linear_system/linear_fused_pcg.cu — when
+            // the PCG scalar fusion is on, the p^T A p accumulator is zeroed
+            // by the previous iteration's scalar kernel (and once per solve on
+            // the host), so rbk_sym_spmv_dot must not memset it again.
+            // rbk_sym_spmv_dot is called only from LinearFusedPCG.
+            if(const char* s = std::getenv("UIPC_PCG_FUSE_SCALAR"))
+                e.pcg_fuse_scalar = !(s[0] == '0');
             return e;
         }();
         return env;
@@ -883,9 +891,10 @@ void Spmv::rbk_sym_spmv_dot(Float                                a,
         cuda_tool::BufferLaunch(stream).fill<Float>(y.buffer_view(), 0);
     }
 
-    cudaMemsetAsync(d_dot.data(), 0, sizeof(Float), stream);
-
     const SpmvEnv& env = spmv_env();
+
+    if(!env.pcg_fuse_scalar)
+        cudaMemsetAsync(d_dot.data(), 0, sizeof(Float), stream);
 
     // grid covers the reserved capacity: blocks beyond the current
     // (device-side) count exit with zero work, so the launch shape need not

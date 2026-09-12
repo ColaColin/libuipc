@@ -2144,7 +2144,20 @@ void MASPreconditionerEngine::collect_final_Z(cuda_tool::DenseVectorView<Float> 
 
     int level_num = (m_active_level_num > 0) ? m_active_level_num : m_level_num;
     auto k        = MASPreconditionerEngine_collect_final_Z_kernel;
-    k<<<cuda_tool::best_grid_dim(N, k), cuda_tool::best_block_dim(k), 0, stream>>>(
+    // s11: cudaOccupancyMaxPotentialBlockSize picks 1024 threads per block for
+    // this kernel, which on the bunny gives a 19-block grid — half the SMs of a
+    // 40-SM part stay idle for a purely gather-bound kernel. 256 spreads the
+    // same (per-thread independent, bit-identical) work over all SMs.
+    // UIPC_MAS_COLLECT_BLOCK_DIM=0 restores the occupancy heuristic.
+    static const int collect_block_dim = []
+    {
+        const char* e = std::getenv("UIPC_MAS_COLLECT_BLOCK_DIM");
+        int         v = e ? std::atoi(e) : 256;
+        return (v >= 0 && v <= 1024 && (v % 32) == 0) ? v : 256;
+    }();
+    int bd = collect_block_dim > 0 ? collect_block_dim : cuda_tool::best_block_dim(k);
+    int gd = (N + bd - 1) / bd;
+    k<<<gd, bd, 0, stream>>>(
         Z,
         multi_level_Z.cview(),
         coarse_tables.cview(),

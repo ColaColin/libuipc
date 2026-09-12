@@ -11,6 +11,38 @@ namespace uipc::backend::cuda
 {
 namespace
 {
+    // s11 env switches for the small per-iteration kernels of the captured PCG
+    // block. `fuse` folds fused_update_converged + fused_swap_rz + the two
+    // 8-byte accumulator memsets (d_rz_new, d_pAp) into one single-thread
+    // scalar kernel plus one store in fused_update_xr; `block` overrides the
+    // occupancy-maximising block size of the element-wise vector kernels
+    // (cudaOccupancyMaxPotentialBlockSize picks 1024, which leaves half the
+    // SMs idle at these vector lengths).
+    // NOTE: `fuse` is also read, independently and by the same name, in
+    // linear_system/spmv.cu (Spmv::rbk_sym_spmv_dot skips its d_dot memset
+    // when it is on). rbk_sym_spmv_dot is called only from this solver.
+    struct PcgSmallEnv
+    {
+        bool fuse  = true;  // UIPC_PCG_FUSE_SCALAR=0 -> old chain
+        int  block = 256;   // UIPC_PCG_BLOCK_DIM=0   -> best_block_dim()
+    };
+    const PcgSmallEnv& pcg_small_env()
+    {
+        static const PcgSmallEnv env = []
+        {
+            PcgSmallEnv e;
+            if(const char* s = std::getenv("UIPC_PCG_FUSE_SCALAR"))
+                e.fuse = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_PCG_BLOCK_DIM"))
+            {
+                int b = std::atoi(s);
+                e.block = (b >= 0 && b <= 1024 && (b % 32) == 0) ? b : 256;
+            }
+            return e;
+        }();
+        return env;
+    }
+
     __global__ void fused_dot_kernel(cuda_tool::CDenseVectorView<Float> x,
                                      cuda_tool::CDenseVectorView<Float> y,
                                      cuda_tool::Dense<Float> d_result,
@@ -54,9 +86,17 @@ namespace
                                            cuda_tool::CDenseVectorView<Float> p,
                                            cuda_tool::DenseVectorView<Float>  r,
                                            cuda_tool::CDenseVectorView<Float> Ap,
-                                           int n)
+                                           cuda_tool::Dense<Float> d_rz_new_reset,
+                                           bool                    reset_rz_new,
+                                           int                     n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
+        // s11: zero the r^T z accumulator for this iteration's fused_dot here
+        // (nothing reads it between the host check of the previous block and
+        // that dot), replacing a graph memset node. Unconditional, exactly
+        // like the memset it replaces.
+        if(i == 0 && reset_rz_new)
+            *d_rz_new_reset = Float(0);
         if(i >= n)
             return;
         if(*d_converged != 0)
@@ -80,6 +120,45 @@ namespace
             return;
         Float beta = *d_rz_new / *d_rz;
         p(i)       = z(i) + beta * p(i);
+    }
+
+    // s11: p = z + beta * p with beta precomputed by fused_pcg_scalar_kernel.
+    // Same value, same expression order as the kernel above.
+    __global__ void fused_update_p_beta_kernel(cuda_tool::CDense<Float>  d_beta,
+                                               cuda_tool::CDense<IndexT> d_converged,
+                                               cuda_tool::DenseVectorView<Float>  p,
+                                               cuda_tool::CDenseVectorView<Float> z,
+                                               int                                n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        if(*d_converged != 0)
+            return;
+        Float beta = *d_beta;
+        p(i)       = z(i) + beta * p(i);
+    }
+
+    // s11: one single-thread node replacing fused_update_converged +
+    // fused_swap_rz + the d_pAp memset. Same expressions in the same order:
+    // converged = |rz_new| <= rz_tol, beta = rz_new / rz (pre-swap), then the
+    // guarded rz <- rz_new, then the reset of the p^T A p accumulator for the
+    // next iteration's SpMV (nothing reads it in between).
+    __global__ void fused_pcg_scalar_kernel(cuda_tool::CDense<Float> d_rz_new,
+                                            cuda_tool::Dense<Float>  d_rz,
+                                            cuda_tool::Dense<Float>  d_beta,
+                                            cuda_tool::Dense<IndexT> d_converged,
+                                            cuda_tool::CDense<Float> d_rz_tol,
+                                            cuda_tool::Dense<Float>  d_pAp)
+    {
+        Float  rz_new = *d_rz_new;
+        Float  rz     = *d_rz;
+        IndexT conv   = abs(rz_new) <= *d_rz_tol ? 1 : 0;
+        *d_converged = conv;
+        *d_beta      = rz_new / rz;
+        if(conv == 0)
+            *d_rz = rz_new;
+        *d_pAp = Float(0);
     }
 
     __global__ void fused_swap_rz_kernel(cuda_tool::CDense<Float>  d_rz_new,
@@ -109,10 +188,14 @@ namespace
 
     // per-launch reset, first node of the setup chain
     __global__ void pcg_while_reset_kernel(cuda_tool::Dense<IndexT> d_converged,
-                                           cuda_tool::Dense<IndexT> d_iter)
+                                           cuda_tool::Dense<IndexT> d_iter,
+                                           cuda_tool::Dense<Float>  d_pAp)
     {
         *d_converged = 0;
         *d_iter      = 0;
+        // s11: the p^T A p accumulator is reset by the loop body's scalar
+        // kernel; seed it here for the first iteration.
+        *d_pAp = Float(0);
     }
 
     // last node of the setup chain: rz_tol = tol_rate * |rz0| on device,
@@ -298,9 +381,14 @@ void LinearFusedPCG::check_iter_rz_nan_inf(Float rz, SizeT k)
 void fused_dot(cuda_tool::CDenseVectorView<Float> x,
                cuda_tool::CDenseVectorView<Float> y,
                cuda_tool::VarView<Float>          d_result,
-               cudaStream_t                       stream = nullptr)
+               cudaStream_t                       stream = nullptr,
+               bool                               zero_result = true)
 {
-    cudaMemsetAsync(d_result.data(), 0, sizeof(Float), stream);
+    // s11: with the scalar fusion on, the accumulator is already zeroed by the
+    // preceding fused_update_xr (d_rz_new) / fused_pcg_scalar_kernel (d_pAp),
+    // so this memset node disappears from the captured block.
+    if(zero_result)
+        cudaMemsetAsync(d_result.data(), 0, sizeof(Float), stream);
 
     constexpr int block_dim   = 256;
     int           n           = x.size();
@@ -321,20 +409,27 @@ void fused_update_xr(cuda_tool::CVarView<Float>         d_rz,
                      cuda_tool::CDenseVectorView<Float> p,
                      cuda_tool::DenseVectorView<Float>  r,
                      cuda_tool::CDenseVectorView<Float> Ap,
+                     cuda_tool::VarView<Float>          d_rz_new,
+                     bool                               reset_rz_new,
                      cudaStream_t                       stream = nullptr)
 {
     int n = r.size();
     if(n > 0)
     {
-        fused_update_xr_kernel<<<cuda_tool::best_grid_dim(n, fused_update_xr_kernel), cuda_tool::best_block_dim(fused_update_xr_kernel), 0, stream>>>(
-            d_rz.cviewer(),
-            d_pAp.cviewer(),
-            d_converged.cviewer(),
-            x.viewer(),
-            p.cviewer(),
-            r.viewer(),
-            Ap.cviewer(),
-            n);
+        int bd = pcg_small_env().block;
+        if(bd <= 0)
+            bd = cuda_tool::best_block_dim(fused_update_xr_kernel);
+        int gd = (n + bd - 1) / bd;
+        fused_update_xr_kernel<<<gd, bd, 0, stream>>>(d_rz.cviewer(),
+                                                      d_pAp.cviewer(),
+                                                      d_converged.cviewer(),
+                                                      x.viewer(),
+                                                      p.cviewer(),
+                                                      r.viewer(),
+                                                      Ap.cviewer(),
+                                                      d_rz_new.viewer(),
+                                                      reset_rz_new,
+                                                      n);
     }
 }
 
@@ -350,9 +445,49 @@ void fused_update_p(cuda_tool::CVarView<Float>         d_rz_new,
     int n = p.size();
     if(n > 0)
     {
-        fused_update_p_kernel<<<cuda_tool::best_grid_dim(n, fused_update_p_kernel), cuda_tool::best_block_dim(fused_update_p_kernel), 0, stream>>>(
+        int bd = pcg_small_env().block;
+        if(bd <= 0)
+            bd = cuda_tool::best_block_dim(fused_update_p_kernel);
+        int gd = (n + bd - 1) / bd;
+        fused_update_p_kernel<<<gd, bd, 0, stream>>>(
             d_rz_new.cviewer(), d_rz.cviewer(), d_converged.cviewer(), p.viewer(), z.cviewer(), n);
     }
+}
+
+// s11: p = z + beta * p with beta from the fused scalar kernel.
+void fused_update_p_beta(cuda_tool::CVarView<Float>         d_beta,
+                         cuda_tool::CVarView<IndexT>        d_converged,
+                         cuda_tool::DenseVectorView<Float>  p,
+                         cuda_tool::CDenseVectorView<Float> z,
+                         cudaStream_t                       stream = nullptr)
+{
+    int n = p.size();
+    if(n > 0)
+    {
+        int bd = pcg_small_env().block;
+        if(bd <= 0)
+            bd = cuda_tool::best_block_dim(fused_update_p_beta_kernel);
+        int gd = (n + bd - 1) / bd;
+        fused_update_p_beta_kernel<<<gd, bd, 0, stream>>>(
+            d_beta.cviewer(), d_converged.cviewer(), p.viewer(), z.cviewer(), n);
+    }
+}
+
+// s11: converged + beta + rz swap + d_pAp reset in one single-thread node.
+void fused_pcg_scalar(cuda_tool::CVarView<Float> d_rz_new,
+                      cuda_tool::VarView<Float>   d_rz,
+                      cuda_tool::VarView<Float>   d_beta,
+                      cuda_tool::VarView<IndexT>  d_converged,
+                      cuda_tool::CVarView<Float>  d_rz_tol,
+                      cuda_tool::VarView<Float>   d_pAp,
+                      cudaStream_t                stream = nullptr)
+{
+    fused_pcg_scalar_kernel<<<1, 1, 0, stream>>>(d_rz_new.cviewer(),
+                                                 d_rz.viewer(),
+                                                 d_beta.viewer(),
+                                                 d_converged.viewer(),
+                                                 d_rz_tol.cviewer(),
+                                                 d_pAp.viewer());
 }
 
 // d_rz = d_rz_new when not converged (single-thread write).
@@ -393,9 +528,20 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
         spmv_dot(p.cview(), Ap.view(), d_pAp.view(), stream);
     }
 
+    const bool fuse = pcg_small_env().fuse;
+
     // alpha = rz / pAp,  x += alpha * p,  r -= alpha * Ap
-    fused_update_xr(
-        d_rz.view(), d_pAp.view(), d_converged.view(), x, p.cview(), r.view(), Ap.cview(), stream);
+    // (with the fusion on, thread 0 also zeroes the rz_new accumulator)
+    fused_update_xr(d_rz.view(),
+                    d_pAp.view(),
+                    d_converged.view(),
+                    x,
+                    p.cview(),
+                    r.view(),
+                    Ap.cview(),
+                    d_rz_new.view(),
+                    fuse,
+                    stream);
 
     // z = P^{-1} * r
     {
@@ -406,12 +552,28 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
     }
 
     // rz_new = r^T * z, keep convergence flag on device for preconditioner skip.
-    fused_dot(r.cview(), z.cview(), d_rz_new.view(), stream);
-    fused_update_converged(d_rz_new.view(), d_converged.view(), d_rz_tol.view(), stream);
+    fused_dot(r.cview(), z.cview(), d_rz_new.view(), stream, !fuse);
 
-    // p = z + beta * p (skip when abs(rz_new) <= rz_tol), then rz = rz_new.
-    fused_update_p(d_rz_new.view(), d_rz.view(), d_converged.view(), p.view(), z.cview(), stream);
-    fused_swap_rz(d_rz_new.view(), d_rz.view(), d_converged.view(), stream);
+    if(fuse)
+    {
+        // converged + beta + (rz <- rz_new) + d_pAp reset in one node
+        fused_pcg_scalar(d_rz_new.view(),
+                         d_rz.view(),
+                         d_beta.view(),
+                         d_converged.view(),
+                         d_rz_tol.view(),
+                         d_pAp.view(),
+                         stream);
+        fused_update_p_beta(d_beta.view(), d_converged.view(), p.view(), z.cview(), stream);
+    }
+    else
+    {
+        fused_update_converged(d_rz_new.view(), d_converged.view(), d_rz_tol.view(), stream);
+
+        // p = z + beta * p (skip when abs(rz_new) <= rz_tol), then rz = rz_new.
+        fused_update_p(d_rz_new.view(), d_rz.view(), d_converged.view(), p.view(), z.cview(), stream);
+        fused_swap_rz(d_rz_new.view(), d_rz.view(), d_converged.view(), stream);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -464,7 +626,8 @@ void LinearFusedPCG::rebuild_while(cuda_tool::DenseVectorView<Float>  x,
         [&](cudaStream_t stream, cudaGraphConditionalHandle handle)
         {
             pcg_while_reset_kernel<<<1, 1, 0, stream>>>(d_converged.viewer(),
-                                                        d_iter.viewer());
+                                                        d_iter.viewer(),
+                                                        d_pAp.viewer());
             cuda_tool::BufferLaunch(stream).copy(r.buffer_view(), b.buffer_view());
             apply_preconditioner(z, r, d_converged.view(), stream);
             cuda_tool::BufferLaunch(stream).copy(p.buffer_view(), z.buffer_view());
@@ -640,6 +803,13 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
     // legacy-stream work), letting the converged kernel read a stale/uninit
     // tolerance. (Symptom was dx=0 -> flat line-search energy.)
     CUDA_TOOL_CHECK(cudaMemcpy(d_rz_tol.data(), &rz_tol, sizeof(Float), cudaMemcpyHostToDevice));
+    if(pcg_small_env().fuse)
+    {
+        // s11: the loop body's scalar kernel resets d_pAp for the *next*
+        // iteration, so seed it once per solve here (blocking, like the
+        // tolerance upload above, to stay ordered against the graph stream).
+        CUDA_TOOL_CHECK(cudaMemset(d_pAp.data(), 0, sizeof(Float)));
+    }
     SizeT effective_check_interval = check_interval > 0 ? check_interval : SizeT{1};
 
     SizeT total_iters = max_iter > 0 ? max_iter - 1 : 0;
