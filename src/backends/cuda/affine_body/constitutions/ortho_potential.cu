@@ -1,6 +1,7 @@
 #include <affine_body/affine_body_constitution.h>
 #include <affine_body/constitutions/ortho_potential_function.h>
 #include <utils/make_spd.h>
+#include <cstdlib>
 
 
 namespace uipc::backend::cuda
@@ -31,6 +32,7 @@ namespace
         shape_energies(i) = E * Vdt2;
     }
 
+    template <int Solver>
     __global__ void ortho_potential_compute_gradient_hessian_kernel(
         cuda_tool::CBufferView<Vector12>   qs,
         cuda_tool::CBufferView<Float>      volumes,
@@ -63,7 +65,8 @@ namespace
 
         Matrix9x9 H9x9;
         AOP::ddEddq(H9x9, kappa, q);
-        make_spd(H9x9);
+        // s19: Solver = 0 restores Eigen's SelfAdjointEigenSolver
+        make_spd<9, Solver>(H9x9);
 
         H.block<9, 9>(3, 3) = H9x9 * Vdt2;
         body_hessian(i)     = H;
@@ -81,7 +84,15 @@ class OrthoPotential final : public AffineBodyConstitution
 
     cuda_tool::DeviceBuffer<Float> kappas;
 
-    virtual void do_build(AffineBodyConstitution::BuildInfo& info) override {}
+    // s19: UIPC_MAKE_SPD_JACOBI=0 -> Eigen's SelfAdjointEigenSolver in the
+    // 9x9 PSD projection (the pre-round-5 path); default = tridiagonal QL
+    bool m_tql2 = true;
+
+    virtual void do_build(AffineBodyConstitution::BuildInfo& info) override
+    {
+        const char* t = std::getenv("UIPC_MAKE_SPD_JACOBI");
+        m_tql2        = !(t && t[0] == '0');
+    }
 
     U64 get_uid() const override { return ConstitutionUID; }
 
@@ -135,9 +146,9 @@ class OrthoPotential final : public AffineBodyConstitution
 
         namespace AOP = sym::abd_ortho_potential;
 
-        auto k = ortho_potential_compute_gradient_hessian_kernel;
-        int  n = (int)N;
-        if(n > 0)
+        int  n      = (int)N;
+        auto launch = [&](auto k)
+        {
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 info.qs(),
                 info.volumes(),
@@ -147,6 +158,14 @@ class OrthoPotential final : public AffineBodyConstitution
                 info.dt(),
                 gradient_only,
                 n);
+        };
+        if(n > 0)
+        {
+            if(m_tql2)
+                launch(ortho_potential_compute_gradient_hessian_kernel<1>);
+            else
+                launch(ortho_potential_compute_gradient_hessian_kernel<0>);
+        }
     }
 };
 
