@@ -37,6 +37,11 @@ SimEngine::SimEngine(EngineCreateInfo* info)
 
         logger::info("Initializing Cuda Backend...");
 
+        // Blocking D2H readbacks are pure GPU idle; ask the driver to spin in
+        // the sync when UIPC_HOST_SYNC_SPIN=1. Must run before the context
+        // exists, i.e. before the first kernel launch below.
+        cuda_tool::host_sync_apply_device_flags();
+
         auto device_id = info->config["gpu"]["device"].get<IndexT>();
 
         // get gpu device count

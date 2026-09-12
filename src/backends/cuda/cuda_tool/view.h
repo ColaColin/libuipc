@@ -1,5 +1,6 @@
 #pragma once
 #include <cuda_tool/stream.h>
+#include <cuda_tool/host_sync.h>
 #include <type_traits>
 
 namespace uipc::backend::cuda_tool
@@ -95,11 +96,7 @@ class CBufferView
     void copy_to(T* host, cudaStream_t s = default_stream()) const
     {
         if(m_size)
-        {
-            CUDA_TOOL_CHECK(cudaMemcpyAsync(
-                host, data(), m_size * sizeof(T), cudaMemcpyDeviceToHost, s));
-            CUDA_TOOL_CHECK(cudaStreamSynchronize(s));
-        }
+            host_read(host, data(), m_size * sizeof(T), s);
     }
     // read-only iteration
     __host__ __device__ auto cbegin() const { return data(); }
@@ -249,8 +246,7 @@ class CVarView
     // download to host (D2H + sync), muda parity
     void copy_to(T* host, cudaStream_t s = default_stream()) const
     {
-        CUDA_TOOL_CHECK(cudaMemcpyAsync(host, m_data, sizeof(T), cudaMemcpyDeviceToHost, s));
-        CUDA_TOOL_CHECK(cudaStreamSynchronize(s));
+        host_read(host, m_data, sizeof(T), s);
     }
 
   protected:

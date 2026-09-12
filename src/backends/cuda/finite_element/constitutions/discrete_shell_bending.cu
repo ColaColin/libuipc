@@ -3,7 +3,7 @@
 #include <finite_element/constitutions/discrete_shell_bending_function.h>
 #include <numbers>
 #include <utils/make_spd.h>
-#include <utils/proj_launch.h>
+#include <cuda_tool/spread_launch.h>
 #include <utils/matrix_assembler.h>
 #include <kernel_cout.h>
 #include <cstdlib>
@@ -178,10 +178,6 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
     // s19: UIPC_MAKE_SPD_JACOBI=0 -> Eigen's SelfAdjointEigenSolver in the
     // PSD projection (the pre-round-5 path); default = tridiagonal QL
     bool m_tql2 = true;
-    // s20: UIPC_PROJ_BLOCK_FIT=0 -> cudaOccupancyMaxPotentialBlockSize alone
-    // (the pre-s20 launch geometry: <<<48, 256>>>, one resident block per SM
-    // at 255 registers and therefore two waves); default = grid-fitted block
-    bool m_block_fit = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -191,8 +187,6 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         m_blocked_proj = !(b && b[0] == '0');
         const char* t  = std::getenv("UIPC_MAKE_SPD_JACOBI");
         m_tql2         = !(t && t[0] == '0');
-        const char* f  = std::getenv("UIPC_PROJ_BLOCK_FIT");
-        m_block_fit    = !(f && f[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -345,21 +339,34 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
 
     virtual void do_compute_energy(ComputeEnergyInfo& info) override
     {
+        static cuda_tool::SpreadVerifier sv_hinge_e{"DiscreteShellBending::energy"};
         auto k = DiscreteShellBending_do_compute_energy_kernel;
         int  n = (int)info.energies().size();
         if(n > 0)
         {
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                stencils.view(),
-                bending_stiffnesses.view(),
-                theta_bars.view(),
-                h_bars.view(),
-                V_bars.view(),
-                rest_lengths.view(),
-                info.xs(),
-                info.energies(),
-                info.dt(),
-                n);
+            cuda_tool::launch_spread(
+                sv_hinge_e,
+                (int)(n),
+                k,
+                [&](int grid, int block)
+                {
+                    k<<<grid, block, 0, nullptr>>>(
+                    stencils.view(),
+                    bending_stiffnesses.view(),
+                    theta_bars.view(),
+                    h_bars.view(),
+                    V_bars.view(),
+                    rest_lengths.view(),
+                    info.xs(),
+                    info.energies(),
+                    info.dt(),
+                    n);
+                },
+                [&](cuda_tool::SpreadVerifier& v)
+                {
+                    v.add_buffer(info.energies());
+                });
+
         }
     }
 
@@ -369,26 +376,37 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         if(n == 0)
             return;
 
+        // s21 (w3): grid-fitted launch geometry, see cuda_tool/spread_launch.h.
+        // The hinge is the wave-quantisation case w0 found: <<<48, 256>>> at
+        // 255 registers is one resident block per SM and therefore two waves
+        // for 1.2 waves of work.
+        static cuda_tool::SpreadVerifier sv_hinge_gh{"DiscreteShellBending::gradient_hessian"};
         auto launch = [&](auto k)
         {
-            // s20: the projection kernel is register-bound with no shared
-            // memory, so the block size is free to be chosen for grid coverage
-            const int bd = m_block_fit ? fitted_block_dim(k, n) :
-                                         cuda_tool::best_block_dim(k);
-            const int gd = (n + bd - 1) / bd;
-            k<<<gd, bd, 0, nullptr>>>(
-                stencils.view(),
-                bending_stiffnesses.view(),
-                theta_bars.view(),
-                h_bars.view(),
-                V_bars.view(),
-                rest_lengths.view(),
-                info.xs(),
-                info.gradients(),
-                info.hessians(),
-                info.dt(),
-                info.gradient_only(),
-                n);
+            cuda_tool::launch_spread(
+                sv_hinge_gh,
+                n,
+                k,
+                [&](int grid, int block)
+                {
+                    k<<<grid, block, 0, nullptr>>>(stencils.view(),
+                                                   bending_stiffnesses.view(),
+                                                   theta_bars.view(),
+                                                   h_bars.view(),
+                                                   V_bars.view(),
+                                                   rest_lengths.view(),
+                                                   info.xs(),
+                                                   info.gradients(),
+                                                   info.hessians(),
+                                                   info.dt(),
+                                                   info.gradient_only(),
+                                                   n);
+                },
+                [&](cuda_tool::SpreadVerifier& v)
+                {
+                    v.add_doublet(info.gradients());
+                    v.add_triplet(info.hessians());
+                });
         };
 
         if(m_tql2)

@@ -58,7 +58,16 @@ namespace
     // once, with the same expressions in the same order, is bit-identical.
     // A template parameter so that each instantiation keeps its own register /
     // stack profile (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form).
-    template <bool HoistStretch>
+    // r5-s01: number of cyclic Jacobi sweeps in the fixed-iteration SVD.
+    // 4 is the smallest count that reaches full double precision: over 65 536
+    // samples of every deformation regime probed, the worst case needs 4
+    // (mean 3.2, median 3, p95 4) - the same shape as the iterative path's
+    // trip-count histogram in probe p01, and the same reason a fixed count is
+    // affordable here. 3 sweeps leaves 3.5e-6 residual; 5 buys nothing and
+    // costs 153 more FP64 instructions.
+    constexpr int SnkSvdSweeps = 4;
+
+    template <bool HoistStretch, bool FixedSvd>
     __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(
         cuda_tool::CBufferView<Float>          mus,
         cuda_tool::CBufferView<Float>          lambdas,
@@ -119,7 +128,10 @@ namespace
         const Float J = F.determinant();
         Matrix3x3   U, V;
         Vector3     S;
-        math::qr_svd(F, S, U, V);
+        if constexpr(FixedSvd)
+            math::qr_svd_fixed<SnkSvdSweeps>(F, S, U, V);
+        else
+            math::qr_svd(F, S, U, V);
 
         const Float     evScale = lambda * (J - 1.0) - mu;
         const Matrix3x3 sV      = V * Float(0.70710678118654752440);
@@ -273,10 +285,18 @@ class StableNeoHookean3D final : public FEM3DConstitution
     // (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form). Bit-identical.
     bool m_hoist_stretch = true;
 
+    // r5-s01: fixed-sweep branch-free Jacobi SVD instead of the iterative
+    // Wilkinson-shift bidiagonal QR (UIPC_QR_SVD_FIXED=0 restores the old
+    // path). Rounding-level change, not bit-identical.
+    bool m_fixed_svd = true;
+
     virtual void do_build(BuildInfo& info) override
     {
         const char* e   = std::getenv("UIPC_SNK1_HOIST_STRETCH");
         m_hoist_stretch = !(e && e[0] == '0');
+
+        const char* f = std::getenv("UIPC_QR_SVD_FIXED");
+        m_fixed_svd   = !(f && f[0] == '0');
     }
 
     virtual void do_report_extent(ReportExtentInfo& info) override
@@ -369,9 +389,19 @@ class StableNeoHookean3D final : public FEM3DConstitution
         };
 
         if(m_hoist_stretch)
-            launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true>);
+        {
+            if(m_fixed_svd)
+                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true, true>);
+            else
+                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true, false>);
+        }
         else
-            launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false>);
+        {
+            if(m_fixed_svd)
+                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false, true>);
+            else
+                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false, false>);
+        }
     }
 };
 

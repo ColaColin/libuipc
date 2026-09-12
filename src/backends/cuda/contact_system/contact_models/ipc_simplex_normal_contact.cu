@@ -1,3 +1,4 @@
+#include <cuda_tool/spread_launch.h>
 #include <contact_system/simplex_normal_contact.h>
 #include <contact_system/contact_models/codim_ipc_simplex_normal_contact_function.h>
 #include <utils/distance/distance_flagged.h>
@@ -601,64 +602,109 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     virtual void do_compute_energy(EnergyInfo& info) override
     {
         using namespace cuda_tool;
+        static cuda_tool::SpreadVerifier sv_energy{"IPCSimplexNormalContact::energy"};
         using namespace sym::codim_ipc_simplex_contact;
 
         // Compute Point-Triangle energy
         auto PT_count = info.PTs().size();
-        if(PT_count > 0)
-            do_compute_energy_k1_kernel<<<cuda_tool::best_grid_dim((int)PT_count, do_compute_energy_k1_kernel), cuda_tool::best_block_dim(do_compute_energy_k1_kernel), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.PTs().viewer(),
-                info.PT_energies().viewer(),
-                info.positions().viewer(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.dt(),
-                (int)PT_count);
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(PT_count),
+            do_compute_energy_k1_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_k1_kernel<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.PTs().viewer(),
+                    info.PT_energies().viewer(),
+                    info.positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.dt(),
+                    (int)PT_count);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.PT_energies());
+            });
+
 
         // Compute Edge-Edge energy
         auto EE_count = info.EEs().size();
-        if(EE_count > 0)
-            do_compute_energy_k2_kernel<<<cuda_tool::best_grid_dim((int)EE_count, do_compute_energy_k2_kernel), cuda_tool::best_block_dim(do_compute_energy_k2_kernel), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.EEs().viewer(),
-                info.EE_energies().viewer(),
-                info.positions().viewer(),
-                info.thicknesses().viewer(),
-                info.rest_positions().viewer(),
-                info.d_hats().viewer(),
-                info.dt(),
-                (int)EE_count);
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(EE_count),
+            do_compute_energy_k2_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_k2_kernel<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.EEs().viewer(),
+                    info.EE_energies().viewer(),
+                    info.positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.rest_positions().viewer(),
+                    info.d_hats().viewer(),
+                    info.dt(),
+                    (int)EE_count);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.EE_energies());
+            });
+
 
         // Compute Point-Edge energy
         auto PE_count = info.PEs().size();
-        if(PE_count > 0)
-            do_compute_energy_k3_kernel<<<cuda_tool::best_grid_dim((int)PE_count, do_compute_energy_k3_kernel), cuda_tool::best_block_dim(do_compute_energy_k3_kernel), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.PEs().viewer(),
-                info.PE_energies().viewer(),
-                info.positions().viewer(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.dt(),
-                (int)PE_count);
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(PE_count),
+            do_compute_energy_k3_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_k3_kernel<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.PEs().viewer(),
+                    info.PE_energies().viewer(),
+                    info.positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.dt(),
+                    (int)PE_count);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.PE_energies());
+            });
+
 
         // Compute Point-Point energy
         auto PP_count = info.PPs().size();
-        if(PP_count > 0)
-            do_compute_energy_k4_kernel<<<cuda_tool::best_grid_dim((int)PP_count, do_compute_energy_k4_kernel), cuda_tool::best_block_dim(do_compute_energy_k4_kernel), 0, nullptr>>>(
-                info.contact_tabular().viewer(),
-                info.contact_element_ids().viewer(),
-                info.PPs().viewer(),
-                info.PP_energies().viewer(),
-                info.positions().viewer(),
-                info.thicknesses().viewer(),
-                info.d_hats().viewer(),
-                info.dt(),
-                (int)PP_count);
+        cuda_tool::launch_spread(
+            sv_energy,
+            (int)(PP_count),
+            do_compute_energy_k4_kernel,
+            [&](int grid, int block)
+            {
+                do_compute_energy_k4_kernel<<<grid, block, 0, nullptr>>>(
+                    info.contact_tabular().viewer(),
+                    info.contact_element_ids().viewer(),
+                    info.PPs().viewer(),
+                    info.PP_energies().viewer(),
+                    info.positions().viewer(),
+                    info.thicknesses().viewer(),
+                    info.d_hats().viewer(),
+                    info.dt(),
+                    (int)PP_count);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.PP_energies());
+            });
+
     }
 
     virtual void do_assemble(ContactInfo& info) override

@@ -1,3 +1,4 @@
+#include <cuda_tool/spread_launch.h>
 #include <affine_body/abd_linear_subsystem.h>
 #include <sim_engine.h>
 #include <kernel_cout.h>
@@ -909,6 +910,8 @@ void ABDLinearSubsystem::Impl::_assemble_kinetic_shape(IndexT& hess_offset,
 {
     using namespace cuda_tool;
 
+    static cuda_tool::SpreadVerifier sv_kin_k1{"ABDLinearSubsystem::kinetic_shape_k1"};
+    static cuda_tool::SpreadVerifier sv_kin_k2{"ABDLinearSubsystem::kinetic_shape_k2"};
     Float dt = dt_attr->view()[0];
 
     // Collect Kinetic
@@ -931,14 +934,25 @@ void ABDLinearSubsystem::Impl::_assemble_kinetic_shape(IndexT& hess_offset,
     {
         auto k = abd_linear_subsystem_assemble_kinetic_shape_k1_kernel;
         int  n = (int)abd().body_count();
-        if(n > 0)
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                abd().body_id_to_is_fixed.cview(),
-                abd().body_id_to_external_kinetic.cview(),
-                body_id_to_shape_gradient.cview(),
-                body_id_to_kinetic_gradient.cview(),
-                info.gradients(),
-                n);
+        cuda_tool::launch_spread(
+            sv_kin_k1,
+            (int)(n),
+            k,
+            [&](int grid, int block)
+            {
+                k<<<grid, block, 0, nullptr>>>(
+                    abd().body_id_to_is_fixed.cview(),
+                    abd().body_id_to_external_kinetic.cview(),
+                    body_id_to_shape_gradient.cview(),
+                    body_id_to_kinetic_gradient.cview(),
+                    info.gradients(),
+                    n);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(info.gradients());
+            });
+
     }
 
     if(info.gradient_only())
@@ -951,15 +965,27 @@ void ABDLinearSubsystem::Impl::_assemble_kinetic_shape(IndexT& hess_offset,
     {
         auto k = abd_linear_subsystem_assemble_kinetic_shape_k2_kernel;
         int  n = (int)body_count;
-        if(n > 0)
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                body_H3x3,
-                abd().body_id_to_is_fixed.cview(),
-                abd().body_id_to_external_kinetic.cview(),
-                body_id_to_shape_hessian.cview(),
-                body_id_to_kinetic_hessian.cview(),
-                diag_hessian.view(),
-                n);
+        cuda_tool::launch_spread(
+            sv_kin_k2,
+            (int)(n),
+            k,
+            [&](int grid, int block)
+            {
+                k<<<grid, block, 0, nullptr>>>(
+                    body_H3x3,
+                    abd().body_id_to_is_fixed.cview(),
+                    abd().body_id_to_external_kinetic.cview(),
+                    body_id_to_shape_hessian.cview(),
+                    body_id_to_kinetic_hessian.cview(),
+                    diag_hessian.view(),
+                    n);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_triplet(body_H3x3);
+                v.add_buffer(diag_hessian.view());
+            });
+
     }
 
     hess_offset += H3x3_count;
@@ -1060,10 +1086,7 @@ SizeT ABDLinearSubsystem::Impl::_prepare_dytopo_pairs()
     // the pair count is needed on the host (it sizes this subsystem's triplet
     // range): one D2H sync per Newton iteration, like the converter's counts
     int P = 0;
-    CUDA_TOOL_CHECK(cudaMemcpy(&P,
-                               dytopo_pair_seg.data() + (C - 1),
-                               sizeof(int),
-                               cudaMemcpyDeviceToHost));
+    cuda_tool::host_read(&P, dytopo_pair_seg.data() + (C - 1), sizeof(int), cuda_tool::default_stream());
     UIPC_ASSERT(P > 0 && P <= C,
                 "invalid dytopo pair count {} for {} contacts",
                 P,
@@ -1091,6 +1114,7 @@ void ABDLinearSubsystem::Impl::_assemble_dytopo_effect(IndexT& offset,
                                                        GlobalLinearSystem::DiagInfo& info)
 {
     using namespace cuda_tool;
+    static cuda_tool::SpreadVerifier sv_pair_k3{"ABDLinearSubsystem::dytopo_pair_k3"};
 
     auto  vertex_offset = affine_body_vertex_reporter->vertex_offset();
     SizeT dytopo_effect_gradient_count = 0;
@@ -1170,13 +1194,28 @@ void ABDLinearSubsystem::Impl::_assemble_dytopo_effect(IndexT& offset,
             {
                 auto k = abd_linear_subsystem_assemble_dytopo_effect_pair_k3_kernel;
                 int  n = (int)P;
-                k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                    pair_H3x3,
-                    dytopo_pair_hessian.cview(),
-                    dytopo_pair_key.cview(),
-                    diag_hessian.view(),
-                    (uint64_t)abd().body_count(),
-                    n);
+                // k3 *accumulates* into diag_hessian, so the verification's
+                // reference launch has to be undone before the live one runs.
+                cuda_tool::launch_spread_io(
+                    sv_pair_k3,
+                    n,
+                    k,
+                    [&](int grid, int block)
+                    {
+                        k<<<grid, block, 0, nullptr>>>(pair_H3x3,
+                                                       dytopo_pair_hessian.cview(),
+                                                       dytopo_pair_key.cview(),
+                                                       diag_hessian.view(),
+                                                       (uint64_t)abd().body_count(),
+                                                       n);
+                    },
+                    [&](cuda_tool::SpreadVerifier& v)
+                    {
+                        v.add_triplet(pair_H3x3);
+                        v.add_buffer(diag_hessian.view());
+                    },
+                    [&](cuda_tool::SpreadVerifier& v)
+                    { v.add_in_buffer(diag_hessian.view()); });
             }
         }
 
