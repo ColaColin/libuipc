@@ -1,3 +1,4 @@
+#include <cuda_tool/spread_launch.h>
 #include <contact_system/global_contact_manager.h>
 #include <sim_engine.h>
 #include <contact_system/contact_reporter.h>
@@ -557,6 +558,10 @@ Float GlobalContactManager::Impl::compute_feasible_step()
     auto displacements = global_vertex_manager->displacements();
     auto thicknesses   = global_vertex_manager->thicknesses();
 
+    static cuda_tool::SpreadVerifier sv_ccd_PT{"GlobalContactManager::ccd_PT"};
+    static cuda_tool::SpreadVerifier sv_ccd_EE{"GlobalContactManager::ccd_EE"};
+    static cuda_tool::SpreadVerifier sv_ccd_PE{"GlobalContactManager::ccd_PE"};
+    static cuda_tool::SpreadVerifier sv_ccd_PP{"GlobalContactManager::ccd_PP"};
     auto PTs = simplex->PTs();
     auto EEs = simplex->EEs();
     auto PEs = simplex->PEs();
@@ -574,8 +579,20 @@ Float GlobalContactManager::Impl::compute_feasible_step()
     {
         auto k = compute_feasible_step_PT_kernel;
         int  n = (int)n_pt;
-        k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-            PTs, positions, displacements, thicknesses, feasible_tois.view(off, n_pt), eta, n);
+        cuda_tool::launch_spread(
+            sv_ccd_PT,
+            (int)(n),
+            k,
+            [&](int grid, int block)
+            {
+                k<<<grid, block, 0, nullptr>>>(
+                PTs, positions, displacements, thicknesses, feasible_tois.view(off, n_pt), eta, n);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(feasible_tois.view(off, n_pt));
+            });
+
     }
     off += n_pt;
     // EE
@@ -583,8 +600,20 @@ Float GlobalContactManager::Impl::compute_feasible_step()
     {
         auto k = compute_feasible_step_EE_kernel;
         int  n = (int)n_ee;
-        k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-            EEs, positions, displacements, thicknesses, feasible_tois.view(off, n_ee), eta, n);
+        cuda_tool::launch_spread(
+            sv_ccd_EE,
+            (int)(n),
+            k,
+            [&](int grid, int block)
+            {
+                k<<<grid, block, 0, nullptr>>>(
+                EEs, positions, displacements, thicknesses, feasible_tois.view(off, n_ee), eta, n);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(feasible_tois.view(off, n_ee));
+            });
+
     }
     off += n_ee;
     // PE
@@ -592,8 +621,20 @@ Float GlobalContactManager::Impl::compute_feasible_step()
     {
         auto k = compute_feasible_step_PE_kernel;
         int  n = (int)n_pe;
-        k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-            PEs, positions, displacements, thicknesses, feasible_tois.view(off, n_pe), eta, n);
+        cuda_tool::launch_spread(
+            sv_ccd_PE,
+            (int)(n),
+            k,
+            [&](int grid, int block)
+            {
+                k<<<grid, block, 0, nullptr>>>(
+                PEs, positions, displacements, thicknesses, feasible_tois.view(off, n_pe), eta, n);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(feasible_tois.view(off, n_pe));
+            });
+
     }
     off += n_pe;
     // PP
@@ -601,8 +642,20 @@ Float GlobalContactManager::Impl::compute_feasible_step()
     {
         auto k = compute_feasible_step_PP_kernel;
         int  n = (int)n_pp;
-        k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-            PPs, positions, displacements, thicknesses, feasible_tois.view(off, n_pp), eta, n);
+        cuda_tool::launch_spread(
+            sv_ccd_PP,
+            (int)(n),
+            k,
+            [&](int grid, int block)
+            {
+                k<<<grid, block, 0, nullptr>>>(
+                PPs, positions, displacements, thicknesses, feasible_tois.view(off, n_pp), eta, n);
+            },
+            [&](cuda_tool::SpreadVerifier& v)
+            {
+                v.add_buffer(feasible_tois.view(off, n_pp));
+            });
+
     }
 
     cuda_tool::DeviceReduce().Min(feasible_tois.data(), min_feasible_toi.data(), total);

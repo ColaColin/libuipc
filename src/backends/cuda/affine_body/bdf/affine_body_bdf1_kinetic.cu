@@ -1,3 +1,4 @@
+#include <cuda_tool/spread_launch.h>
 #include <affine_body/affine_body_kinetic.h>
 #include <time_integrator/bdf1_flag.h>
 #include <cuda_tool/cuda_tool.h>
@@ -84,37 +85,64 @@ class AffineBodyBDF1Kinetic final : public AffineBodyKinetic
 
     virtual void do_compute_energy(ComputeEnergyInfo& info) override
     {
+        static cuda_tool::SpreadVerifier sv_energy{"AffineBodyBDF1Kinetic::energy"};
         int n = (int)info.qs().size();
         if(n > 0)
         {
             auto k = affine_body_bdf1_kinetic_compute_energy_kernel;
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                info.is_fixed().cview(),
-                info.external_kinetic().cview(),
-                info.qs().cview(),
-                info.q_tildes().cview(),
-                info.masses().cview(),
-                info.energies(),
-                n);
+            cuda_tool::launch_spread(
+                sv_energy,
+                (int)(n),
+                k,
+                [&](int grid, int block)
+                {
+                    k<<<grid, block, 0, nullptr>>>(
+                    info.is_fixed().cview(),
+                    info.external_kinetic().cview(),
+                    info.qs().cview(),
+                    info.q_tildes().cview(),
+                    info.masses().cview(),
+                    info.energies(),
+                    n);
+                },
+                [&](cuda_tool::SpreadVerifier& v)
+                {
+                    v.add_buffer(info.energies());
+                });
+
         }
     }
 
     virtual void do_compute_gradient_hessian(ComputeGradientHessianInfo& info) override
     {
+        static cuda_tool::SpreadVerifier sv_gh{"AffineBodyBDF1Kinetic::gradient_hessian"};
         int n = (int)info.qs().size();
         if(n > 0)
         {
             auto k = affine_body_bdf1_kinetic_compute_gradient_hessian_kernel;
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                info.is_fixed().cview(),
-                info.qs().cview(),
-                info.q_prevs().cview(),
-                info.q_tildes().cview(),
-                info.masses().cview(),
-                info.hessians(),
-                info.gradients(),
-                info.gradient_only(),
-                n);
+            cuda_tool::launch_spread(
+                sv_gh,
+                (int)(n),
+                k,
+                [&](int grid, int block)
+                {
+                    k<<<grid, block, 0, nullptr>>>(
+                    info.is_fixed().cview(),
+                    info.qs().cview(),
+                    info.q_prevs().cview(),
+                    info.q_tildes().cview(),
+                    info.masses().cview(),
+                    info.hessians(),
+                    info.gradients(),
+                    info.gradient_only(),
+                    n);
+                },
+                [&](cuda_tool::SpreadVerifier& v)
+                {
+                    v.add_buffer(info.hessians());
+                    v.add_buffer(info.gradients());
+                });
+
         }
     }
 };

@@ -3,6 +3,7 @@
 #include <finite_element/constitutions/discrete_shell_bending_function.h>
 #include <numbers>
 #include <utils/make_spd.h>
+#include <cuda_tool/spread_launch.h>
 #include <utils/matrix_assembler.h>
 #include <kernel_cout.h>
 #include <cstdlib>
@@ -338,21 +339,34 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
 
     virtual void do_compute_energy(ComputeEnergyInfo& info) override
     {
+        static cuda_tool::SpreadVerifier sv_hinge_e{"DiscreteShellBending::energy"};
         auto k = DiscreteShellBending_do_compute_energy_kernel;
         int  n = (int)info.energies().size();
         if(n > 0)
         {
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                stencils.view(),
-                bending_stiffnesses.view(),
-                theta_bars.view(),
-                h_bars.view(),
-                V_bars.view(),
-                rest_lengths.view(),
-                info.xs(),
-                info.energies(),
-                info.dt(),
-                n);
+            cuda_tool::launch_spread(
+                sv_hinge_e,
+                (int)(n),
+                k,
+                [&](int grid, int block)
+                {
+                    k<<<grid, block, 0, nullptr>>>(
+                    stencils.view(),
+                    bending_stiffnesses.view(),
+                    theta_bars.view(),
+                    h_bars.view(),
+                    V_bars.view(),
+                    rest_lengths.view(),
+                    info.xs(),
+                    info.energies(),
+                    info.dt(),
+                    n);
+                },
+                [&](cuda_tool::SpreadVerifier& v)
+                {
+                    v.add_buffer(info.energies());
+                });
+
         }
     }
 
@@ -362,21 +376,37 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         if(n == 0)
             return;
 
+        // s21 (w3): grid-fitted launch geometry, see cuda_tool/spread_launch.h.
+        // The hinge is the wave-quantisation case w0 found: <<<48, 256>>> at
+        // 255 registers is one resident block per SM and therefore two waves
+        // for 1.2 waves of work.
+        static cuda_tool::SpreadVerifier sv_hinge_gh{"DiscreteShellBending::gradient_hessian"};
         auto launch = [&](auto k)
         {
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
-                stencils.view(),
-                bending_stiffnesses.view(),
-                theta_bars.view(),
-                h_bars.view(),
-                V_bars.view(),
-                rest_lengths.view(),
-                info.xs(),
-                info.gradients(),
-                info.hessians(),
-                info.dt(),
-                info.gradient_only(),
-                n);
+            cuda_tool::launch_spread(
+                sv_hinge_gh,
+                n,
+                k,
+                [&](int grid, int block)
+                {
+                    k<<<grid, block, 0, nullptr>>>(stencils.view(),
+                                                   bending_stiffnesses.view(),
+                                                   theta_bars.view(),
+                                                   h_bars.view(),
+                                                   V_bars.view(),
+                                                   rest_lengths.view(),
+                                                   info.xs(),
+                                                   info.gradients(),
+                                                   info.hessians(),
+                                                   info.dt(),
+                                                   info.gradient_only(),
+                                                   n);
+                },
+                [&](cuda_tool::SpreadVerifier& v)
+                {
+                    v.add_doublet(info.gradients());
+                    v.add_triplet(info.hessians());
+                });
         };
 
         if(m_tql2)
