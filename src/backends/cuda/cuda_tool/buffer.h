@@ -1,5 +1,6 @@
 #pragma once
 #include <cuda_tool/stream.h>
+#include <cuda_tool/host_sync.h>
 #include <cuda_tool/view.h>
 #include <cuda_tool/view_nd.h>
 #include <cuda_tool/launch.h>
@@ -117,8 +118,7 @@ class DeviceVar
     operator T() const
     {
         T v{};
-        copy_to(v);
-        CUDA_TOOL_CHECK(cudaStreamSynchronize(default_stream()));
+        host_read(&v, m_data, sizeof(T), default_stream());
         return v;
     }
 
@@ -331,11 +331,7 @@ class DeviceVector
     void copy_to(T* host, cudaStream_t s = default_stream()) const
     {
         if(m_size)
-        {
-            CUDA_TOOL_CHECK(cudaMemcpyAsync(
-                host, m_data, m_size * sizeof(T), cudaMemcpyDeviceToHost, s));
-            CUDA_TOOL_CHECK(cudaStreamSynchronize(s));
-        }
+            host_read(host, m_data, m_size * sizeof(T), s);
     }
     template <typename Alloc>
     void copy_to(std::vector<T, Alloc>& host, cudaStream_t s = default_stream()) const

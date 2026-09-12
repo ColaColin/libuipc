@@ -1060,10 +1060,7 @@ SizeT ABDLinearSubsystem::Impl::_prepare_dytopo_pairs()
     // the pair count is needed on the host (it sizes this subsystem's triplet
     // range): one D2H sync per Newton iteration, like the converter's counts
     int P = 0;
-    CUDA_TOOL_CHECK(cudaMemcpy(&P,
-                               dytopo_pair_seg.data() + (C - 1),
-                               sizeof(int),
-                               cudaMemcpyDeviceToHost));
+    cuda_tool::host_read(&P, dytopo_pair_seg.data() + (C - 1), sizeof(int), cuda_tool::default_stream());
     UIPC_ASSERT(P > 0 && P <= C,
                 "invalid dytopo pair count {} for {} contacts",
                 P,
