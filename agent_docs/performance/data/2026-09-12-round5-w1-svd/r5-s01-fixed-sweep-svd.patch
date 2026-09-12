@@ -1,0 +1,555 @@
+diff --git a/apps/tests/backends/cuda/qr_svd.cu b/apps/tests/backends/cuda/qr_svd.cu
+index 6316d489..db0dfe76 100644
+--- a/apps/tests/backends/cuda/qr_svd.cu
++++ b/apps/tests/backends/cuda/qr_svd.cu
+@@ -1,8 +1,11 @@
+ #include <app/app.h>
+ #include <cuda_tool/cuda_tool.h>
+ #include <algorithm/qr_svd.hpp>
++#include <Eigen/Dense>
+ #include <cmath>
+ #include <vector>
++#include <random>
++#include <algorithm>
+ 
+ namespace
+ {
+@@ -33,3 +36,169 @@ TEST_CASE("float Wilkinson shift is stable on GPU", "[cuda][qr_svd]")
+     CHECK(uipc::backend::cuda::math::wilkinson_shift(-0.0f, 1.0f, 0.0f)
+           == Catch::Approx(-1.0f));
+ }
++
++// r5-s01: randomised device-side verifier for the fixed-sweep Jacobi SVD
++// (math::qr_svd_fixed) against the shipped iterative QR-SVD (math::qr_svd).
++// Runs the *real device* functions - the fixed-sweep path calls ::rsqrt on
++// device and 1/sqrt on host, so a host-only check would not cover it.
++namespace
++{
++using uipc::Float;
++using M3 = Eigen::Matrix<Float, 3, 3>;
++using V3 = Eigen::Matrix<Float, 3, 1>;
++
++// per-sample metrics: 0 new recon, 1 old recon, 2 |V^T V - I|_new,
++// 3 |U^T U - I|_new, 4 |det V - 1|_new, 5 ordering violation,
++// 6 sign-of-S2 error, 7 |S_new - S_old|
++constexpr int NMetric = 8;
++
++__global__ void svd_compare_kernel(uipc::backend::cuda_tool::CBufferView<M3> Fs,
++                                   uipc::backend::cuda_tool::BufferView<Float> out,
++                                   int n)
++{
++    int i = blockIdx.x * blockDim.x + threadIdx.x;
++    if(i >= n)
++        return;
++    namespace math = uipc::backend::cuda::math;
++
++    const M3 F = Fs(i);
++    M3       U, V, Uo, Vo;
++    V3       S, So;
++    math::qr_svd_fixed<4>(F, S, U, V);
++    math::qr_svd(F, So, Uo, Vo);
++
++    Float sc = F.cwiseAbs().maxCoeff();
++    if(!(sc > 0))
++        sc = 1;
++
++    out(i * NMetric + 0) = (U * S.asDiagonal() * V.transpose() - F).cwiseAbs().maxCoeff() / sc;
++    out(i * NMetric + 1) = (Uo * So.asDiagonal() * Vo.transpose() - F).cwiseAbs().maxCoeff() / sc;
++    out(i * NMetric + 2) = (V.transpose() * V - M3::Identity()).cwiseAbs().maxCoeff();
++    out(i * NMetric + 3) = (U.transpose() * U - M3::Identity()).cwiseAbs().maxCoeff();
++    out(i * NMetric + 4) = abs(V.determinant() - Float(1));
++
++    Float ord = S(1) - S(0);
++    Float o2  = abs(S(2)) - S(1);
++    if(o2 > ord)
++        ord = o2;
++    out(i * NMetric + 5) = (ord > 0 ? ord : Float(0)) / sc;
++
++    const Float detF = F.determinant();
++    Float       se   = 0;
++    if(abs(detF) > Float(1e-10) * sc * sc * sc)
++        se = (signbit(S(2)) == signbit(detF)) ? Float(0) : Float(1);
++    out(i * NMetric + 6) = se;
++
++    out(i * NMetric + 7) = (S - So).cwiseAbs().maxCoeff() / sc;
++}
++}  // namespace
++
++TEST_CASE("fixed-sweep 3x3 SVD matches the iterative QR-SVD on GPU", "[cuda][qr_svd]")
++{
++    using uipc::backend::cuda_tool::DeviceBuffer;
++
++    // 2^17 samples per family, 12 families = 1.57e6 randomised inputs, covering
++    // near-identity, large deformation, reflections (det < 0), repeated and
++    // zero singular values, and ill-conditioned F.
++    constexpr int N = 1 << 17;
++
++    std::mt19937_64                        rng(20260912);
++    std::normal_distribution<double>       g(0, 1);
++    std::uniform_real_distribution<double> uni(0, 1);
++
++    auto randM = [&](M3& M)
++    {
++        for(int i = 0; i < 3; ++i)
++            for(int j = 0; j < 3; ++j)
++                M(i, j) = g(rng);
++    };
++    auto randR = [&]()
++    {
++        M3 A;
++        randM(A);
++        Eigen::HouseholderQR<M3> qr(A);
++        M3                       R = qr.householderQ();
++        if(R.determinant() < 0)
++            R.col(2) = -R.col(2);
++        return R;
++    };
++
++    struct Family
++    {
++        const char* name;
++        // recon tolerance for the *new* path, relative to max|F|
++        double tol;
++    };
++    const Family fams[] = {
++        {"I + 1e-6*N", 1e-13},
++        {"I + 1e-3*N", 1e-13},
++        {"I + 1e-1*N", 1e-13},
++        {"full random N(0,1)", 1e-13},
++        {"R*(I + 1e-2*N)", 1e-13},
++        {"reflection (det < 0)", 1e-13},
++        {"two equal singular values", 1e-13},
++        {"three equal singular values", 1e-13},
++        {"rank 2 (s2 = 0)", 1e-13},
++        {"rank 1 (s1 = s2 = 0)", 1e-13},
++        {"near-zero det (s2 ~ 1e-12)", 1e-13},
++        {"cond(F) = 1e3", 1e-12},
++    };
++
++    std::vector<M3>    h_F(N);
++    std::vector<Float> h_out(size_t(N) * NMetric);
++    DeviceBuffer<M3>    d_F;
++    DeviceBuffer<Float> d_out;
++
++    for(int f = 0; f < int(sizeof(fams) / sizeof(fams[0])); ++f)
++    {
++        for(int k = 0; k < N; ++k)
++        {
++            M3 F;
++            V3 sv;
++            switch(f)
++            {
++                case 0: randM(F); F = M3::Identity() + 1e-6 * F; break;
++                case 1: randM(F); F = M3::Identity() + 1e-3 * F; break;
++                case 2: randM(F); F = M3::Identity() + 1e-1 * F; break;
++                case 3: randM(F); break;
++                case 4: { M3 Nn; randM(Nn); F = randR() * (M3::Identity() + 1e-2 * Nn); } break;
++                case 5: randM(F); if(F.determinant() > 0) F.col(0) = -F.col(0); break;
++                case 6: { double a = std::exp(g(rng)), b = std::exp(g(rng));
++                          sv << std::max(a, b), std::min(a, b), std::min(a, b);
++                          F = randR() * sv.asDiagonal() * randR().transpose(); } break;
++                case 7: { double a = std::exp(g(rng)); sv << a, a, a;
++                          F = randR() * sv.asDiagonal() * randR().transpose(); } break;
++                case 8: sv << 1.0, 0.5, 0.0; F = randR() * sv.asDiagonal() * randR().transpose(); break;
++                case 9: sv << 1.0, 0.0, 0.0; F = randR() * sv.asDiagonal() * randR().transpose(); break;
++                case 10: sv << 1.0, 0.5, 1e-12 * uni(rng);
++                         F = randR() * sv.asDiagonal() * randR().transpose(); break;
++                case 11: sv << 1.0, 1.0 / std::sqrt(1e3), 1.0 / 1e3;
++                         F = randR() * sv.asDiagonal() * randR().transpose(); break;
++            }
++            h_F[k] = F;
++        }
++        d_F.copy_from(h_F.data(), N);
++        d_out.resize(size_t(N) * NMetric);
++
++        constexpr int block = 128;
++        svd_compare_kernel<<<(N + block - 1) / block, block>>>(d_F.cview(), d_out.view(), N);
++        REQUIRE(cudaDeviceSynchronize() == cudaSuccess);
++        d_out.copy_to(h_out);
++
++        double m[NMetric] = {0};
++        for(int k = 0; k < N; ++k)
++            for(int j = 0; j < NMetric; ++j)
++                m[j] = std::max(m[j], double(h_out[size_t(k) * NMetric + j]));
++
++        INFO("family: " << fams[f].name << "  new_recon=" << m[0] << " old_recon=" << m[1]
++                        << " VtV=" << m[2] << " UtU=" << m[3] << " detV=" << m[4]
++                        << " ord=" << m[5] << " sign=" << m[6] << " dS=" << m[7]);
++        CHECK(m[0] <= fams[f].tol);  // reconstruction
++        CHECK(m[2] <= 1e-13);        // V orthogonal
++        CHECK(m[3] <= 1e-13);        // U orthogonal
++        CHECK(m[4] <= 1e-13);        // det V == +1
++        CHECK(m[5] <= 1e-13);        // S0 >= S1 >= |S2|
++        CHECK(m[6] == 0.0);          // sign(S2) == sign(det F)
++        CHECK(m[7] <= fams[f].tol);  // singular values agree with the old path
++    }
++}
+diff --git a/src/backends/cuda/algorithm/qr_svd.hpp b/src/backends/cuda/algorithm/qr_svd.hpp
+index 479911de..5e2e7cac 100644
+--- a/src/backends/cuda/algorithm/qr_svd.hpp
++++ b/src/backends/cuda/algorithm/qr_svd.hpp
+@@ -313,6 +313,289 @@ namespace math
+             sort_sigma<1>(U, S, V);
+         }
+     }
++    // ------------------------------------------------------------------
++    // Fixed-sweep, branch-free 3x3 SVD (McAdams / Gast-style Jacobi).
++    //
++    // Replaces the iterative Wilkinson-shift bidiagonal QR of qr_svd() with
++    // a fixed number of cyclic Jacobi sweeps on the normal matrix A^T A,
++    // followed by a Givens QR of A*V. There is no data-dependent loop, so
++    // every lane of a warp executes exactly the same instruction stream.
++    //
++    // Output convention is identical to qr_svd():
++    //   A = U * diag(S) * V^T,  U,V in SO(3) (det = +1),
++    //   S(0) >= S(1) >= |S(2)|,  sign(S(2)) = sign(det A).
++    // ------------------------------------------------------------------
++
++    template <typename T>
++    UIPC_GENERIC constexpr T svd_rsqrt(T x) noexcept
++    {
++#ifdef __CUDA_ARCH__
++        return ::rsqrt(x);
++#else
++        return T(1) / std::sqrt(x);
++#endif
++    }
++
++    // One exact Jacobi rotation annihilating the (p,q) entry of a symmetric
++    // 3x3 matrix, with the accumulating rotation applied to V's columns p,q.
++    // r is the remaining index. Uses 1 sqrt + 1 rsqrt and no division:
++    //   tan(2 theta) = -apq / tau,  tau = (app - aqq)/2,  w = hypot(tau, apq)
++    //   c = u / g, s = -sign(tau) * apq / g,  u = w + |tau|, g = sqrt(2 w u)
++    // which keeps |theta| <= pi/4 (the convergent branch).
++    template <typename T>
++    UIPC_GENERIC constexpr void jacobi_sym3_rot(T& app,
++                                                T& aqq,
++                                                T& apq,
++                                                T& apr,
++                                                T& aqr,
++                                                T& v0p,
++                                                T& v1p,
++                                                T& v2p,
++                                                T& v0q,
++                                                T& v1q,
++                                                T& v2q) noexcept
++    {
++        const T tau = T(0.5) * (app - aqq);
++        const T at  = tau < T(0) ? -tau : tau;
++        const T w   = std::sqrt(tau * tau + apq * apq);
++        const T u   = w + at;
++        const T gi  = svd_rsqrt(T(2) * w * u);
++
++        // The caller normalises A to max|A| = 1, so max|N| <= 3 and w <= 3.
++        // Below RotEps the plane is diagonal to far beyond double precision
++        // and the rotation is skipped; that also keeps 2*w*u (>= 2*w*w) in
++        // the normal range, where rsqrt is exact enough that c*c + s*s == 1
++        // and V stays orthogonal. Without this guard a late sweep on a matrix
++        // with repeated eigenvalues drives apq into the denormal range and
++        // rsqrt(2*w*u) loses V's orthogonality outright (measured: |V^T V - I|
++        // = 1.6e-1 at 5 sweeps on three equal singular values).
++        constexpr T RotEps = T(1e-150);
++        const bool  act    = (w > RotEps);
++        const T     sg     = tau < T(0) ? T(-1) : T(1);
++        const T     c      = act ? u * gi : T(1);
++        const T     s      = act ? -sg * apq * gi : T(0);
++
++        const T cc  = c * c;
++        const T ss  = s * s;
++        const T cs2 = T(2) * c * s;
++
++        const T npp = cc * app - cs2 * apq + ss * aqq;
++        const T nqq = ss * app + cs2 * apq + cc * aqq;
++        app         = npp;
++        aqq         = nqq;
++        apq         = T(0);  // annihilated exactly
++
++        const T t1 = apr;
++        const T t2 = aqr;
++        apr        = c * t1 - s * t2;
++        aqr        = s * t1 + c * t2;
++
++        // V <- V * J
++        T a, b;
++        a   = v0p;
++        b   = v0q;
++        v0p = c * a - s * b;
++        v0q = s * a + c * b;
++        a   = v1p;
++        b   = v1q;
++        v1p = c * a - s * b;
++        v1q = s * a + c * b;
++        a   = v2p;
++        b   = v2q;
++        v2p = c * a - s * b;
++        v2q = s * a + c * b;
++    }
++
++    // Givens rotation zeroing b in [c -s; s c] * [a; b], pivot becomes +hypot.
++    // rsqrt-based (1 sqrt + 1 rsqrt) variant of GivensRotation::computeConventional.
++    template <typename T>
++    UIPC_GENERIC constexpr void svd_givens(const T a, const T b, T& c, T& s) noexcept
++    {
++        const T d = a * a + b * b;
++        if(d > T(0))
++        {
++            const T t = svd_rsqrt(d);
++            c         = a * t;
++            s         = -b * t;
++        }
++        else
++        {
++            c = T(1);
++            s = T(0);
++        }
++    }
++
++    template <int NSweeps, typename T>
++    UIPC_GENERIC constexpr void qr_svd_fixed(const Eigen::Matrix<T, 3, 3>& A,
++                                             Eigen::Matrix<T, 3, 1>&       S,
++                                             Eigen::Matrix<T, 3, 3>&       U,
++                                             Eigen::Matrix<T, 3, 3>& V) noexcept
++    {
++        // ---- 0. scale A by a power of two so that max|M| is in [0.5, 1].
++        // Exact (no rounding), and it makes the whole routine scale invariant:
++        // forming A^T A otherwise overflows above |A| ~ 1e154 and underflows
++        // the Jacobi pivot below |A| ~ 1e-162.
++        T amax = T(0);
++#pragma unroll
++        for(int i = 0; i < 3; ++i)
++#pragma unroll
++            for(int j = 0; j < 3; ++j)
++            {
++                const T a = A(i, j) < T(0) ? -A(i, j) : A(i, j);
++                amax      = a > amax ? a : amax;
++            }
++        int     aexp  = 0;
++        const T dummy = (amax > T(0)) ? std::frexp(amax, &aexp) : T(0);
++        (void)dummy;
++        const T scl  = std::ldexp(T(1), -aexp);   // M = A * scl, max|M| in [0.5,1)
++        const T iscl = std::ldexp(T(1), aexp);
++
++        Eigen::Matrix<T, 3, 3> M;
++#pragma unroll
++        for(int i = 0; i < 3; ++i)
++#pragma unroll
++            for(int j = 0; j < 3; ++j)
++                M(i, j) = A(i, j) * scl;
++
++        // ---- 1. normal matrix N = M^T M (symmetric, 6 unique entries) ----
++        T n00 = M(0, 0) * M(0, 0) + M(1, 0) * M(1, 0) + M(2, 0) * M(2, 0);
++        T n11 = M(0, 1) * M(0, 1) + M(1, 1) * M(1, 1) + M(2, 1) * M(2, 1);
++        T n22 = M(0, 2) * M(0, 2) + M(1, 2) * M(1, 2) + M(2, 2) * M(2, 2);
++        T n01 = M(0, 0) * M(0, 1) + M(1, 0) * M(1, 1) + M(2, 0) * M(2, 1);
++        T n02 = M(0, 0) * M(0, 2) + M(1, 0) * M(1, 2) + M(2, 0) * M(2, 2);
++        T n12 = M(0, 1) * M(0, 2) + M(1, 1) * M(1, 2) + M(2, 1) * M(2, 2);
++
++        // ---- 2. NSweeps cyclic Jacobi sweeps; V accumulates the rotations ----
++        T v00 = T(1), v01 = T(0), v02 = T(0);
++        T v10 = T(0), v11 = T(1), v12 = T(0);
++        T v20 = T(0), v21 = T(0), v22 = T(1);
++
++#pragma unroll
++        for(int sweep = 0; sweep < NSweeps; ++sweep)
++        {
++            // (p,q,r) = (0,1,2)
++            jacobi_sym3_rot(n00, n11, n01, n02, n12, v00, v10, v20, v01, v11, v21);
++            // (p,q,r) = (0,2,1)
++            jacobi_sym3_rot(n00, n22, n02, n01, n12, v00, v10, v20, v02, v12, v22);
++            // (p,q,r) = (1,2,0)
++            jacobi_sym3_rot(n11, n22, n12, n01, n02, v01, v11, v21, v02, v12, v22);
++        }
++
++        // ---- 3. sort the eigenvalues of N descending, permuting V's columns.
++        // A 3-element sorting network; each swap flips det(V), so an odd
++        // permutation is repaired by negating the last column (which only
++        // flips the sign of S(2), whose sign is set by det(A) anyway).
++        bool odd = false;
++        {
++            T d0 = n00, d1 = n11, d2 = n22;
++            if(d0 < d1)
++            {
++                T t = d0;
++                d0  = d1;
++                d1  = t;
++                t = v00; v00 = v01; v01 = t;
++                t = v10; v10 = v11; v11 = t;
++                t = v20; v20 = v21; v21 = t;
++                odd = !odd;
++            }
++            if(d1 < d2)
++            {
++                T t = d1;
++                d1  = d2;
++                d2  = t;
++                t = v01; v01 = v02; v02 = t;
++                t = v11; v11 = v12; v12 = t;
++                t = v21; v21 = v22; v22 = t;
++                odd = !odd;
++            }
++            if(d0 < d1)
++            {
++                T t = d0;
++                d0  = d1;
++                d1  = t;
++                t = v00; v00 = v01; v01 = t;
++                t = v10; v10 = v11; v11 = t;
++                t = v20; v20 = v21; v21 = t;
++                odd = !odd;
++            }
++        }
++        if(odd)
++        {
++            v02 = -v02;
++            v12 = -v12;
++            v22 = -v22;
++        }
++
++        V(0, 0) = v00; V(0, 1) = v01; V(0, 2) = v02;
++        V(1, 0) = v10; V(1, 1) = v11; V(1, 2) = v12;
++        V(2, 0) = v20; V(2, 1) = v21; V(2, 2) = v22;
++
++        // ---- 4. B = A*V has orthogonal columns; a 3-Givens QR of it gives
++        // U (a product of rotations, det +1) and the signed singular values.
++        Eigen::Matrix<T, 3, 3> B = M * V;
++
++        U.setIdentity();
++
++        T c, s;
++        // zero B(2,0) on rows (1,2)
++        svd_givens(B(1, 0), B(2, 0), c, s);
++        {
++#pragma unroll
++            for(int j = 0; j < 3; ++j)
++            {
++                const T t1 = B(1, j), t2 = B(2, j);
++                B(1, j) = c * t1 - s * t2;
++                B(2, j) = s * t1 + c * t2;
++            }
++#pragma unroll
++            for(int i = 0; i < 3; ++i)
++            {
++                const T t1 = U(i, 1), t2 = U(i, 2);
++                U(i, 1) = c * t1 - s * t2;
++                U(i, 2) = s * t1 + c * t2;
++            }
++        }
++        // zero B(1,0) on rows (0,1)
++        svd_givens(B(0, 0), B(1, 0), c, s);
++        {
++#pragma unroll
++            for(int j = 0; j < 3; ++j)
++            {
++                const T t1 = B(0, j), t2 = B(1, j);
++                B(0, j) = c * t1 - s * t2;
++                B(1, j) = s * t1 + c * t2;
++            }
++#pragma unroll
++            for(int i = 0; i < 3; ++i)
++            {
++                const T t1 = U(i, 0), t2 = U(i, 1);
++                U(i, 0) = c * t1 - s * t2;
++                U(i, 1) = s * t1 + c * t2;
++            }
++        }
++        // zero B(2,1) on rows (1,2)
++        svd_givens(B(1, 1), B(2, 1), c, s);
++        {
++            const T t1 = B(1, 2), t2 = B(2, 2);
++            B(1, 2) = c * t1 - s * t2;
++            B(2, 2) = s * t1 + c * t2;
++            const T u1 = B(1, 1), u2 = B(2, 1);
++            B(1, 1) = c * u1 - s * u2;
++#pragma unroll
++            for(int i = 0; i < 3; ++i)
++            {
++                const T t3 = U(i, 1), t4 = U(i, 2);
++                U(i, 1) = c * t3 - s * t4;
++                U(i, 2) = s * t3 + c * t4;
++            }
++        }
++
++        // undo the power-of-two scaling (exact)
++        S(0) = B(0, 0) * iscl;  // >= 0 by construction
++        S(1) = B(1, 1) * iscl;  // >= 0 by construction
++        S(2) = B(2, 2) * iscl;  // signed: sign(det A)
++    }
++
+ }  // namespace math
+ 
+ }  // namespace uipc::backend::cuda
+diff --git a/src/backends/cuda/finite_element/constitutions/stable_neo_hookean_3d.cu b/src/backends/cuda/finite_element/constitutions/stable_neo_hookean_3d.cu
+index adadfac8..e85b5a96 100644
+--- a/src/backends/cuda/finite_element/constitutions/stable_neo_hookean_3d.cu
++++ b/src/backends/cuda/finite_element/constitutions/stable_neo_hookean_3d.cu
+@@ -58,7 +58,16 @@ namespace
+     // once, with the same expressions in the same order, is bit-identical.
+     // A template parameter so that each instantiation keeps its own register /
+     // stack profile (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form).
+-    template <bool HoistStretch>
++    // r5-s01: number of cyclic Jacobi sweeps in the fixed-iteration SVD.
++    // 4 is the smallest count that reaches full double precision: over 65 536
++    // samples of every deformation regime probed, the worst case needs 4
++    // (mean 3.2, median 3, p95 4) - the same shape as the iterative path's
++    // trip-count histogram in probe p01, and the same reason a fixed count is
++    // affordable here. 3 sweeps leaves 3.5e-6 residual; 5 buys nothing and
++    // costs 153 more FP64 instructions.
++    constexpr int SnkSvdSweeps = 4;
++
++    template <bool HoistStretch, bool FixedSvd>
+     __global__ void StableNeoHookean3D_do_compute_gradient_hessian_kernel(
+         cuda_tool::CBufferView<Float>          mus,
+         cuda_tool::CBufferView<Float>          lambdas,
+@@ -119,7 +128,10 @@ namespace
+         const Float J = F.determinant();
+         Matrix3x3   U, V;
+         Vector3     S;
+-        math::qr_svd(F, S, U, V);
++        if constexpr(FixedSvd)
++            math::qr_svd_fixed<SnkSvdSweeps>(F, S, U, V);
++        else
++            math::qr_svd(F, S, U, V);
+ 
+         const Float     evScale = lambda * (J - 1.0) - mu;
+         const Matrix3x3 sV      = V * Float(0.70710678118654752440);
+@@ -273,10 +285,18 @@ class StableNeoHookean3D final : public FEM3DConstitution
+     // (UIPC_SNK1_HOIST_STRETCH=0 restores the in-loop form). Bit-identical.
+     bool m_hoist_stretch = true;
+ 
++    // r5-s01: fixed-sweep branch-free Jacobi SVD instead of the iterative
++    // Wilkinson-shift bidiagonal QR (UIPC_QR_SVD_FIXED=0 restores the old
++    // path). Rounding-level change, not bit-identical.
++    bool m_fixed_svd = true;
++
+     virtual void do_build(BuildInfo& info) override
+     {
+         const char* e   = std::getenv("UIPC_SNK1_HOIST_STRETCH");
+         m_hoist_stretch = !(e && e[0] == '0');
++
++        const char* f = std::getenv("UIPC_QR_SVD_FIXED");
++        m_fixed_svd   = !(f && f[0] == '0');
+     }
+ 
+     virtual void do_report_extent(ReportExtentInfo& info) override
+@@ -369,9 +389,19 @@ class StableNeoHookean3D final : public FEM3DConstitution
+         };
+ 
+         if(m_hoist_stretch)
+-            launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true>);
++        {
++            if(m_fixed_svd)
++                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true, true>);
++            else
++                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<true, false>);
++        }
+         else
+-            launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false>);
++        {
++            if(m_fixed_svd)
++                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false, true>);
++            else
++                launch(StableNeoHookean3D_do_compute_gradient_hessian_kernel<false, false>);
++        }
+     }
+ };
+ 
