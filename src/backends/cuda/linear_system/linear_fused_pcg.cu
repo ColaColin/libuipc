@@ -129,8 +129,12 @@ namespace
                 e.ap_zero_verify = !(s[0] == '0');
             if(const char* s = std::getenv("UIPC_PCG_FOLD"))
             {
-                int v  = std::atoi(s);
-                e.fold = (v >= 0 && v <= 2) ? v : 1;
+                int v = std::atoi(s);
+                // out of range falls back to the DEFAULT, which is 0 (R7 was
+                // rejected). It used to fall back to 1, so UIPC_PCG_FOLD=3
+                // silently enabled the rejected fold; the sibling parses of
+                // ap_zero and dot_fence both fall back to their own defaults.
+                e.fold = (v >= 0 && v <= 2) ? v : 0;
             }
             if(const char* s = std::getenv("UIPC_PCG_FOLD_MAXGRID"))
                 e.fold_maxgrid = std::atoi(s);
