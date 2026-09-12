@@ -1,0 +1,648 @@
+========= COMPUTE-SANITIZER
+CUDA Backend Kernel Console Init Success!
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (96,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (97,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (98,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (99,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (100,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (101,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (102,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (103,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (104,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (105,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (106,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (107,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (108,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (109,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (110,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (111,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (112,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (113,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (114,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+========= Uninitialized __global__ memory read of size 4 bytes
+=========     at void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void>>::Policy900, const int *, int *, cub::CUB_200700_750_NS::ScanTileState<int, (bool)1>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int *>, unsigned int, int, (bool)0>(T2, T3, T4, int, T5, T6, T7)+0x110
+=========     by thread (115,0,0) in block (0,0,0)
+=========     Address 0x7aa213fffc00
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========         Host Frame: cudaLaunchKernel [0x773ce7] in libuipc_backend_cuda.so
+=========         Host Frame: void cub::CUB_200700_750_NS::DeviceScanKernel<cub::CUB_200700_750_NS::DeviceScanPolicy<int, cuda::std::__4::plus<void> >::Policy900, int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int, int, false>(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int) [0x22523a] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError thrust::THRUST_200700_750_NS::cuda_cub::launcher::triple_chevron::doit_host<void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int>(void (*)(int const*, int*, cub::CUB_200700_750_NS::ScanTileState<int, true>, int, cuda::std::__4::plus<void>, cub::CUB_200700_750_NS::detail::InputValue<int, int*>, unsigned int), int const* const&, int* const&, cub::CUB_200700_750_NS::ScanTileState<int, true> const&, int const&, cuda::std::__4::plus<void> const&, cub::CUB_200700_750_NS::detail::InputValue<int, int*> const&, unsigned int const&) const [clone .isra.0] [0x4fc0db] in libuipc_backend_cuda.so
+=========         Host Frame: cudaError cub::CUB_200700_750_NS::DeviceScan::ExclusiveSum<int const*, int*, int>(void*, unsigned long&, int const*, int*, int, CUstream_st*) [clone .isra.0] [0x501431] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::Impl::_distribute(uipc::backend::cuda::GlobalDyTopoEffectManager::ComputeDyTopoEffectInfo&) [0x5035c1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalDyTopoEffectManager::compute_dytopo_effect() [0x50d26e] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x23949d] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame:  [0x10afca] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0xad4c5] in pyuipc.cpython-311-x86_64-linux-gnu.so
+=========         Host Frame:  [0x13b6c6] in python
+=========         Host Frame: PyObject_Vectorcall [0x13b5fb] in python
+=========         Host Frame: _PyEval_EvalFrameDefault [0x12c29f] in python
+=========         Host Frame: PyEval_EvalCode [0x123f6a] in python
+=========         Host Frame:  [0x249166] in python
+=========         Host Frame:  [0x246abe] in python
+=========         Host Frame:  [0x252b4f] in python
+=========         Host Frame: _PyRun_SimpleFileObject [0x25289a] in python
+=========         Host Frame: _PyRun_AnyFileObject [0x2526c3] in python
+=========         Host Frame: Py_RunMain [0x25144e] in python
+=========         Host Frame: Py_BytesMain [0x2290a6] in python
+=========         Host Frame:  [0x27249] in libc.so.6
+=========         Host Frame: __libc_start_main [0x27304] in libc.so.6
+=========         Host Frame: _start [0x228f40] in python
+=========         Host Frame: <module> in main.py:153
+========= 
+track f10 cloth_min_y=0.4703
+track f20 cloth_min_y=0.3837
+TOTAL frames=20 mean=1324.6ms median=1154.8ms p95=2143.5ms
+BENCHMARK_RESULT {"frame_ms":[2131.511947955005,747.8468409972265,736.4847039571032,1143.7282089609653,1163.1830360274762,1157.0351020200178,1172.7604499319568,1152.5260149501264,1136.6177110467106,1134.4704600051045,1150.4571929108351,1148.6285279970616,2370.7299049710855,1837.2444629203528,1913.0159619962797,1538.2654879940674,1165.8142829546705,1461.7809389019385,1138.0329529056326,1091.484397999011],"frame_stats":[{"backend":"cuda","completed":true,"converged":true,"frame":1,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":2,"linear_solver_iterations":10,"newton_iterations":2,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":2,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":2,"linear_solver_iterations":15,"newton_iterations":2,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":3,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":2,"linear_solver_iterations":25,"newton_iterations":2,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":4,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":65,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":5,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":65,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":6,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":70,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":7,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":70,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":8,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":65,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":9,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":60,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":10,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":60,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":11,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":65,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":12,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":65,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":13,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":8,"linear_solver_iterations":175,"newton_iterations":6,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":14,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":5,"linear_solver_iterations":100,"newton_iterations":5,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":15,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":5,"linear_solver_iterations":120,"newton_iterations":5,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":16,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":4,"linear_solver_iterations":90,"newton_iterations":4,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":17,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":60,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":18,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":4,"linear_solver_iterations":70,"newton_iterations":4,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":19,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":55,"newton_iterations":3,"pipeline":"ipc","schema_version":1},{"backend":"cuda","completed":true,"converged":true,"frame":20,"hit_line_search_limit":false,"hit_newton_limit":false,"last_ccd_toi":1.0,"last_cfl_alpha":1.0,"last_line_search_alpha":1.0,"line_search_trials":3,"linear_solver_iterations":40,"newton_iterations":3,"pipeline":"ipc","schema_version":1}],"observables":{"final_frame":20,"cloth_min_y":0.3836543470860114}}
+========= ERROR SUMMARY: 25542 errors
+========= ERROR SUMMARY: 25522 errors were not printed. Use --print-limit option to adjust the number of printed errors

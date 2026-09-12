@@ -1,0 +1,442 @@
+========= COMPUTE-SANITIZER
+Randomness seeded to: 2585011860
+[2026-09-12 22:11:43.855] [info] Synchronize backend module [cuda]'s Polymorphic Memory Resource: 0x7cb02fdfc208->0x7cb02fdfc208
+[2026-09-12 22:11:43.855] [info] [cuda] Initializing Cuda Backend...
+[2026-09-12 22:11:43.947] [info] [cuda] Device: [0] NVIDIA GeForce RTX 2070 SUPER
+[2026-09-12 22:11:43.947] [info] [cuda] Compute Capability: 7.5
+[2026-09-12 22:11:43.947] [info] [cuda] Total Global Memory: 7784 MB
+CUDA Backend Kernel Console Init Success!
+[2026-09-12 22:11:44.261] [info] [cuda] Cuda Backend Init Success.
+[2026-09-12 22:11:44.262] [info] Scene Config dumped to /workspace/deps/libuipc-src/output/tests/regression/fem_mas_soft_vertex_stitch_regression.cpp/config.json
+[2026-09-12 22:11:44.307] [info] Synchronize module [uipc_sanity_check]'s Polymorphic Memory Resource: 0x7cb02fdfc208->0x7cb02fdfc208
+[2026-09-12 22:11:44.307] [info] Backend [cuda] insert_sanity_checkers: 3 registered checker(s)
+[2026-09-12 22:11:45.718] [info] SanityCheck Summary: 0 errors, 0 warns, 0 infos
+[2026-09-12 22:11:45.739] [info] [cuda] LinearFusedPCG: max_iter_ratio = 2, tol_rate = 0.001, check_interval = 5, graph_mode = 1
+[2026-09-12 22:11:45.740] [info] [cuda] System info dumped to /workspace/deps/libuipc-src/output/tests/regression/fem_mas_soft_vertex_stitch_regression.cpp/systems.json
+[2026-09-12 22:11:46.152] [info] [cuda] Scene diagonal: 1.421337366104126
+[2026-09-12 22:11:46.250] [info] [cuda] Adaptive kappa corridor: [1.972851e+05, 1.972851e+07] (meanMass=6.250000e-05, diag=1.421337366104126, d_hat=0.002, scale=1.000000e-16, dt=0.01)
+[2026-09-12 22:11:46.250] [warning] [cuda] Contact default kappa 1000000000 is clamped to [19728514.727341462] (valid range: [197285.14727341462, 19728514.727341462])
+[2026-09-12 22:11:47.205] [info] Scene surface with Faces(24964), Edges(37762), Vertices(12800) written to /workspace/deps/libuipc-src/output/tests/regression/fem_mas_soft_vertex_stitch_regression.cpp/scene_surface0.obj
+[2026-09-12 22:11:47.205] [info] [cuda] [dcd_candidate_reuse] ACTIVE: newton_iter > 0 reuses the certified trajectory candidate set
+[2026-09-12 22:11:47.205] [info] [cuda] >>> Begin Frame: 1
+[2026-09-12 22:11:47.729] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:47.729] [info] [cuda] SimplexTrajectoryFilter PTs: 0, EEs: 0, PEs: 0, PPs: 0
+[2026-09-12 22:11:47.729] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:47.729] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:47.729] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:47.729] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:48.740] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 87948
+[2026-09-12 22:11:48.740] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 87948
+[2026-09-12 22:11:49.020] [info] [cuda] LinearFusedPCG: captured CUDA graph (interval = 5, n = 38400)
+[2026-09-12 22:11:49.054] [info] [cuda] Iterative linear solver iteration count: 5
+[2026-09-12 22:11:49.758] [info] [cuda] CCD Filter: 0.5984226307548066 < 1
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:49.872] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 1 Newton Iteration 0 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.006197907058327431/0.0005 (vertex 6474)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:49.939] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:50.145] [info] [cuda] SimplexTrajectoryFilter PTs: 183, EEs: 830, PEs: 575, PPs: 0
+[2026-09-12 22:11:50.248] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:50.248] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 5777, DyTopo Hess3x3 count: 13580
+[2026-09-12 22:11:50.248] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:50.248] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:50.398] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 88970
+[2026-09-12 22:11:50.398] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 88970
+[2026-09-12 22:11:50.489] [info] [cuda] Iterative linear solver iteration count: 5
+[2026-09-12 22:11:50.624] [info] [cuda] Feasible Step Filter: 0.2743296122901117 < 1
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:50.706] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 1 Newton Iteration 1 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.0025933239877778875/0.0005 (vertex 6606)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:50.706] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:50.711] [info] [cuda] SimplexTrajectoryFilter PTs: 412, EEs: 2161, PEs: 2965, PPs: 29
+[2026-09-12 22:11:50.748] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:50.753] [info] [cuda] SimplexTrajectoryFilter PTs: 361, EEs: 1661, PEs: 1454, PPs: 0
+[2026-09-12 22:11:50.755] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:50.755] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 12450, DyTopo Hess3x3 count: 28944
+[2026-09-12 22:11:50.755] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:50.755] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:50.799] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 89691
+[2026-09-12 22:11:50.799] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 89691
+[2026-09-12 22:11:50.919] [info] [cuda] Iterative linear solver iteration count: 10
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:51.003] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 1 Newton Iteration 2 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.0019100511285762372/0.0005 (vertex 6698)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:51.004] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:51.009] [info] [cuda] SimplexTrajectoryFilter PTs: 358, EEs: 2686, PEs: 3958, PPs: 2450
+[2026-09-12 22:11:51.011] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:51.011] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 28950, DyTopo Hess3x3 count: 61538
+[2026-09-12 22:11:51.011] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:51.011] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:51.064] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 90609
+[2026-09-12 22:11:51.064] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 90609
+[2026-09-12 22:11:51.115] [info] [cuda] LinearFusedPCG: captured CUDA graph (interval = 5, n = 38400)
+[2026-09-12 22:11:51.308] [info] [cuda] Iterative linear solver iteration count: 20
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:51.426] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 1 Newton Iteration 3 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.001706825043211339/0.0005 (vertex 7439)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:51.426] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:51.431] [info] [cuda] SimplexTrajectoryFilter PTs: 342, EEs: 2812, PEs: 3816, PPs: 2501
+[2026-09-12 22:11:51.433] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:51.433] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 29066, DyTopo Hess3x3 count: 61939
+[2026-09-12 22:11:51.433] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:51.433] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:51.478] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 90772
+[2026-09-12 22:11:51.478] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 90772
+[2026-09-12 22:11:51.859] [info] [cuda] Iterative linear solver iteration count: 35
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:51.939] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 1 Newton Iteration 4 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.0011815139457352943/0.0005 (vertex 12796)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:51.939] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:51.944] [info] [cuda] SimplexTrajectoryFilter PTs: 411, EEs: 3110, PEs: 3793, PPs: 2264
+[2026-09-12 22:11:51.946] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:51.946] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 29991, DyTopo Hess3x3 count: 64760
+[2026-09-12 22:11:51.946] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:51.946] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:51.991] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 91042
+[2026-09-12 22:11:51.991] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 91042
+[2026-09-12 22:11:52.974] [info] [cuda] Iterative linear solver iteration count: 95
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:53.054] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 1 Newton Iteration 5 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.001592272040440816/0.0005 (vertex 79)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:53.054] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:53.059] [info] [cuda] SimplexTrajectoryFilter PTs: 487, EEs: 3769, PEs: 5055, PPs: 3136
+[2026-09-12 22:11:53.062] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:53.062] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 38461, DyTopo Hess3x3 count: 82298
+[2026-09-12 22:11:53.062] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:53.062] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:53.121] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 91626
+[2026-09-12 22:11:53.121] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 91626
+[2026-09-12 22:11:53.295] [info] [cuda] Iterative linear solver iteration count: 15
+[2026-09-12 22:11:53.376] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:53.381] [info] [cuda] SimplexTrajectoryFilter PTs: 515, EEs: 3820, PEs: 5254, PPs: 3213
+[2026-09-12 22:11:53.417] [info] [cuda] Newton Iteration Converged with Iteration Count: 6, Max: 1024
+[2026-09-12 22:11:53.417] [info] [cuda] <<< End Frame: 1
+[2026-09-12 22:11:53.434] [info] Scene surface with Faces(24964), Edges(37762), Vertices(12800) written to /workspace/deps/libuipc-src/output/tests/regression/fem_mas_soft_vertex_stitch_regression.cpp/scene_surface1.obj
+[2026-09-12 22:11:53.434] [info] [cuda] >>> Begin Frame: 2
+[2026-09-12 22:11:53.538] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:53.539] [info] [cuda] SimplexTrajectoryFilter PTs: 515, EEs: 3820, PEs: 5254, PPs: 3213
+[2026-09-12 22:11:53.539] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:53.539] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 39528, DyTopo Hess3x3 count: 84513
+[2026-09-12 22:11:53.539] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:53.539] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:53.585] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 91623
+[2026-09-12 22:11:53.585] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 91623
+[2026-09-12 22:11:54.009] [info] [cuda] Iterative linear solver iteration count: 40
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:54.097] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 2 Newton Iteration 0 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.0028440021406750484/0.0005 (vertex 7013)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:54.097] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:54.103] [info] [cuda] SimplexTrajectoryFilter PTs: 524, EEs: 4134, PEs: 5032, PPs: 3203
+[2026-09-12 22:11:54.105] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:54.105] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 40134, DyTopo Hess3x3 count: 86381
+[2026-09-12 22:11:54.105] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:54.105] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:54.152] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92024
+[2026-09-12 22:11:54.152] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92024
+[2026-09-12 22:11:55.340] [info] [cuda] Iterative linear solver iteration count: 115
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:55.425] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 2 Newton Iteration 1 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.001100946831365602/0.0005 (vertex 79)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:55.425] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:55.430] [info] [cuda] SimplexTrajectoryFilter PTs: 545, EEs: 4215, PEs: 5013, PPs: 3319
+[2026-09-12 22:11:55.433] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:55.433] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 40717, DyTopo Hess3x3 count: 87635
+[2026-09-12 22:11:55.433] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:55.433] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:55.479] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92138
+[2026-09-12 22:11:55.479] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92138
+[2026-09-12 22:11:56.280] [info] [cuda] Iterative linear solver iteration count: 75
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:56.363] [info] [cuda] >> Newton Tolerance Checker
+============================= [*] Frame 2 Newton Iteration 2 ============================
+    [*] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.0003041992341045225/0.0005 (vertex 961)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:56.364] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:56.369] [info] [cuda] SimplexTrajectoryFilter PTs: 504, EEs: 4189, PEs: 5100, PPs: 3299
+[2026-09-12 22:11:56.372] [info] [cuda] Newton Iteration Converged with Iteration Count: 2, Max: 1024
+[2026-09-12 22:11:56.372] [info] [cuda] <<< End Frame: 2
+[2026-09-12 22:11:56.407] [info] Scene surface with Faces(24964), Edges(37762), Vertices(12800) written to /workspace/deps/libuipc-src/output/tests/regression/fem_mas_soft_vertex_stitch_regression.cpp/scene_surface2.obj
+[2026-09-12 22:11:56.407] [info] [cuda] >>> Begin Frame: 3
+[2026-09-12 22:11:56.517] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:56.518] [info] [cuda] SimplexTrajectoryFilter PTs: 504, EEs: 4189, PEs: 5100, PPs: 3299
+[2026-09-12 22:11:56.518] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:56.518] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 40670, DyTopo Hess3x3 count: 87427
+[2026-09-12 22:11:56.518] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:56.518] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:56.564] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92109
+[2026-09-12 22:11:56.564] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92109
+[2026-09-12 22:11:56.890] [info] [cuda] Iterative linear solver iteration count: 30
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:56.982] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 3 Newton Iteration 0 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.004156165839215779/0.0005 (vertex 1120)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:56.982] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:56.988] [info] [cuda] SimplexTrajectoryFilter PTs: 527, EEs: 4169, PEs: 5102, PPs: 3249
+[2026-09-12 22:11:56.991] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:56.991] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 40588, DyTopo Hess3x3 count: 87319
+[2026-09-12 22:11:56.991] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:56.991] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:57.037] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92108
+[2026-09-12 22:11:57.037] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92108
+[2026-09-12 22:11:59.220] [info] [cuda] Iterative linear solver iteration count: 215
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:11:59.306] [info] [cuda] >> Newton Tolerance Checker
+============================= [x] Frame 3 Newton Iteration 1 ============================
+    [x] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.0008292648120088106/0.0005 (vertex 6474)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:11:59.307] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:11:59.312] [info] [cuda] SimplexTrajectoryFilter PTs: 453, EEs: 4114, PEs: 4950, PPs: 3530
+[2026-09-12 22:11:59.315] [info] [cuda] DyTopo Effect Assembly: GradientOnly=false, ComponentFlags=Contact|Complement
+[2026-09-12 22:11:59.315] [info] [cuda] <uipc::backend::cuda::IPCSimplexNormalContact> DyTopo Grad3 count: 40178, DyTopo Hess3x3 count: 85960
+[2026-09-12 22:11:59.315] [info] [cuda] <uipc::backend::cuda::IPCVertexHalfPlaneNormalContact> DyTopo Grad3 count: 0, DyTopo Hess3x3 count: 0
+[2026-09-12 22:11:59.315] [info] [cuda] <uipc::backend::cuda::InterPrimitiveConstitutionManager> DyTopo Grad3 count: 512, DyTopo Hess3x3 count: 768
+[2026-09-12 22:11:59.361] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92118
+[2026-09-12 22:11:59.361] [info] [cuda] GlobalLinearSystem has 38400 DoFs, Unique Triplet Count: 92118
+[2026-09-12 22:12:01.637] [info] [cuda] Iterative linear solver iteration count: 225
+========= Host API memory access error at host access to 0x7cafff9ffe00 of size 16 bytes
+=========     Uninitialized access at 0x7cafff9ffe00 on access by cudaMemcpy source
+=========     Saved host backtrace up to driver entry point at error
+=========         Host Frame: cudaMemcpyAsync [0x7c0770] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda_tool::details::host_read_pinned(void*, void const*, unsigned long, CUstream_st*, void*, unsigned long) [0x22d768] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::GlobalVertexManager::Impl::compute_axis_max_displacement_argmax(unsigned long&) [0x266405] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::MaxTranslationChecker::do_check(uipc::backend::cuda::NewtonToleranceManager::CheckResultInfo&) [0x27fab1] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::NewtonToleranceManager::check(uipc::backend::cuda::NewtonToleranceManager::ResultInfo&) [0x280491] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::backend::cuda::SimEngine::advance() [0x242bc8] in libuipc_backend_cuda.so
+=========         Host Frame: uipc::core::internal::Engine::advance() [0x1fe87a] in libuipc_core.so
+=========         Host Frame: uipc::core::internal::World::advance() [0x21113a] in libuipc_core.so
+=========         Host Frame: CATCH2_INTERNAL_TEST_0() [0x2da38] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::invokeActiveTestCase() [0x6679a] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runCurrentTest() [0x67518] in uipc_test_regression
+=========         Host Frame: Catch::RunContext::runTest(Catch::TestCaseHandle const&) [0x67914] in uipc_test_regression
+=========         Host Frame: Catch::Session::runInternal() [0x43f31] in uipc_test_regression
+=========         Host Frame: Catch::Session::run() [0x44239] in uipc_test_regression
+=========         Host Frame: main [0x2a437] in uipc_test_regression
+========= 
+[2026-09-12 22:12:01.724] [info] [cuda] >> Newton Tolerance Checker
+============================= [*] Frame 3 Newton Iteration 2 ============================
+    [*] <uipc::backend::cuda::MaxTranslationChecker> Residual/AbsTol: 0.00022690289339371428/0.0005 (vertex 6471)
+--------------------------------------------------------------------------------------------
+[2026-09-12 22:12:01.724] [info] [cuda] VertexHalfPlaneTrajectoryFilter PHs: 0.
+[2026-09-12 22:12:01.729] [info] [cuda] SimplexTrajectoryFilter PTs: 481, EEs: 4130, PEs: 4867, PPs: 3572
+[2026-09-12 22:12:01.732] [info] [cuda] Newton Iteration Converged with Iteration Count: 2, Max: 1024
+[2026-09-12 22:12:01.732] [info] [cuda] <<< End Frame: 3
+[2026-09-12 22:12:01.790] [info] Scene surface with Faces(24964), Edges(37762), Vertices(12800) written to /workspace/deps/libuipc-src/output/tests/regression/fem_mas_soft_vertex_stitch_regression.cpp/scene_surface3.obj
+[2026-09-12 22:12:01.790] [info] Cuda Backend Shutdown Success.
+===============================================================================
+All tests passed (4 assertions in 1 test case)
+
+========= ERROR SUMMARY: 12 errors

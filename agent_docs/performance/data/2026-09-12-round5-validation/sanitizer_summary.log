@@ -1,0 +1,45 @@
+SKIP head racecheck wb (cached)
+SKIP head racecheck cwc (cached)
+head racecheck c2 frames=20 rc=11 1s :: ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+head racecheck mb frames=20 rc=0 398s :: ========= RACECHECK SUMMARY: 20 hazards displayed (0 errors, 5996 warnings)
+head initcheck wb frames=20 rc=0 16s :: ========= ERROR SUMMARY: 0 errors
+head initcheck cwc frames=20 rc=0 31s :: ========= ERROR SUMMARY: 25522 errors were not printed. Use --print-limit option to adjust the number of printed errors
+head initcheck c2 frames=20 rc=0 115s :: ========= ERROR SUMMARY: 0 errors
+head initcheck mb frames=20 rc=0 38s :: ========= ERROR SUMMARY: 0 errors
+SKIP head memcheck wb (cached)
+SKIP head memcheck cwc (cached)
+SKIP head memcheck c2 (cached)
+SKIP head memcheck mb (cached)
+base memcheck wb frames=20 rc=0 28s :: ========= ERROR SUMMARY: 0 errors
+base memcheck cwc frames=20 rc=0 42s :: ========= ERROR SUMMARY: 0 errors
+base memcheck c2 frames=20 rc=0 130s :: ========= ERROR SUMMARY: 0 errors
+base memcheck mb frames=20 rc=0 44s :: ========= ERROR SUMMARY: 0 errors
+base racecheck wb frames=20 rc=0 163s :: ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+base racecheck cwc frames=20 rc=0 229s :: ========= RACECHECK SUMMARY: 20 hazards displayed (0 errors, 1307 warnings)
+base racecheck c2 frames=20 rc=0 1039s :: ========= RACECHECK SUMMARY: 21 hazards displayed (0 errors, 3380 warnings)
+base racecheck mb frames=20 rc=0 397s :: ========= RACECHECK SUMMARY: 20 hazards displayed (0 errors, 6000 warnings)
+base initcheck wb frames=20 rc=0 14s :: ========= ERROR SUMMARY: 0 errors
+base initcheck cwc frames=20 rc=0 29s :: ========= ERROR SUMMARY: 25522 errors were not printed. Use --print-limit option to adjust the number of printed errors
+base initcheck c2 frames=20 rc=0 119s :: ========= ERROR SUMMARY: 0 errors
+base initcheck mb frames=20 rc=0 36s :: ========= ERROR SUMMARY: 0 errors
+head racecheck c2 frames=20 rc=0 1038s :: ========= RACECHECK SUMMARY: 20 hazards displayed (0 errors, 3379 warnings)
+SKIP head memcheck bin_backend_cuda (cached)
+base memcheck bin_backend_cuda rc=0 71s :: ========= ERROR SUMMARY: 0 errors | All tests passed (352 assertions in 22 test cases)
+head memcheck bin_sanity_check rc=0 5s :: ========= ERROR SUMMARY: 0 errors | All tests passed (100 assertions in 3 test cases)
+base memcheck bin_sanity_check rc=0 5s :: ========= ERROR SUMMARY: 0 errors | All tests passed (100 assertions in 3 test cases)
+head memcheck bin_regression rc=0 23s :: ========= ERROR SUMMARY: 0 errors | All tests passed (4 assertions in 1 test case)
+base memcheck bin_regression rc=0 20s :: ========= ERROR SUMMARY: 0 errors | All tests passed (4 assertions in 1 test case)
+head initcheck bin_backend_cuda rc=0 71s :: ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+base initcheck bin_backend_cuda rc=0 69s :: ========= ERROR SUMMARY: 0 errors | All tests passed (352 assertions in 22 test cases)
+head initcheck bin_sanity_check rc=0 3s :: ========= ERROR SUMMARY: 0 errors | All tests passed (100 assertions in 3 test cases)
+base initcheck bin_sanity_check rc=0 3s :: ========= ERROR SUMMARY: 0 errors | All tests passed (100 assertions in 3 test cases)
+head initcheck bin_regression rc=0 18s :: ========= ERROR SUMMARY: 12 errors | All tests passed (4 assertions in 1 test case)
+base initcheck bin_regression rc=0 15s :: ========= ERROR SUMMARY: 12 errors | All tests passed (4 assertions in 1 test case)
+head racecheck bin_backend_cuda rc=0 137s :: ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings) | All tests passed (448 assertions in 23 test cases)
+base racecheck bin_backend_cuda rc=0 136s :: ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings) | All tests passed (352 assertions in 22 test cases)
+head racecheck bin_sanity_check rc=0 37s :: ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings) | All tests passed (100 assertions in 3 test cases)
+base racecheck bin_sanity_check rc=0 37s :: ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings) | All tests passed (100 assertions in 3 test cases)
+head racecheck bin_regression rc=0 121s :: ========= RACECHECK SUMMARY: 20 hazards displayed (0 errors, 882 warnings) | All tests passed (4 assertions in 1 test case)
+base racecheck bin_regression rc=0 117s :: ========= RACECHECK SUMMARY: 20 hazards displayed (0 errors, 887 warnings) | All tests passed (4 assertions in 1 test case)
+head memcheck bin_sim_case PARTIAL: 19/95 Catch2 cases in 35 min, 0 errors, stopped for time
+QUEUE2 DONE

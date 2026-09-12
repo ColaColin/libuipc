@@ -1,0 +1,60 @@
+[2026-09-12 23:42:16.346] [warning] [cuda] [convert-verify] calls=18 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=11060 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:16.466] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 4.405e-20 / max|y_ref| 1.128e-04 = 3.906e-16; max|ddot| 6.353e-22 / |dot_ref| 1.670e-06 = 3.805e-16; cumulative 545 launches, max rel y 1.743e-15, max rel dot 3.642e-15
+[2026-09-12 23:42:16.476] [warning] [cuda] [fill-probe] calls=19 n=1881695 total_triplets=35613021 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:16.488] [warning] [cuda] [convert-verify] calls=19 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=11649 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:16.627] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 1.085e-21 / max|y_ref| 2.902e-06 = 3.740e-16; max|ddot| 1.034e-25 / |dot_ref| 9.400e-10 = 1.100e-16; cumulative 590 launches, max rel y 1.743e-15, max rel dot 3.642e-15
+[2026-09-12 23:42:16.636] [warning] [cuda] [fill-probe] calls=20 n=1881691 total_triplets=37494712 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:16.636] [warning] [cuda] [pattern-probe] n=1881691 prev=1881695 common=1881691 first_diff=1812063 last_diff=1881690 ndiff=69274
+[2026-09-12 23:42:16.648] [warning] [cuda] [convert-verify] calls=20 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=12306 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:16.852] [warning] [cuda] [SpmvVerify] chunk=1 15 launches since the last assembly: max|dy| 1.236e-17 / max|y_ref| 8.928e-03 = 1.384e-15; max|ddot| 1.492e-16 / |dot_ref| 1.961e-02 = 7.609e-15; cumulative 605 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:16.861] [warning] [cuda] [fill-probe] calls=21 n=1881651 total_triplets=39376363 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:16.873] [warning] [cuda] [convert-verify] calls=21 nnz=286450 shape_mismatch=0 index_mismatch=0 bit_mismatch=12872 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:16.994] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 4.743e-20 / max|y_ref| 1.315e-04 = 3.608e-16; max|ddot| 1.059e-21 / |dot_ref| 2.270e-06 = 4.664e-16; cumulative 650 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:17.003] [warning] [cuda] [fill-probe] calls=22 n=1881659 total_triplets=41258022 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:17.015] [warning] [cuda] [convert-verify] calls=22 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=13522 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:17.154] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 1.138e-21 / max|y_ref| 2.948e-06 = 3.861e-16; max|ddot| 1.034e-25 / |dot_ref| 1.046e-09 = 9.888e-17; cumulative 695 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:17.163] [warning] [cuda] [fill-probe] calls=23 n=1881675 total_triplets=43139697 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:17.176] [warning] [cuda] [convert-verify] calls=23 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=14161 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:17.394] [warning] [cuda] [SpmvVerify] chunk=1 15 launches since the last assembly: max|dy| 1.518e-17 / max|y_ref| 1.020e-02 = 1.487e-15; max|ddot| 1.041e-17 / |dot_ref| 2.561e-02 = 4.064e-16; cumulative 710 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:17.403] [warning] [cuda] [fill-probe] calls=24 n=1881579 total_triplets=45021276 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:17.415] [warning] [cuda] [convert-verify] calls=24 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=14793 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:17.536] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 5.421e-20 / max|y_ref| 1.502e-04 = 3.610e-16; max|ddot| 1.059e-21 / |dot_ref| 2.964e-06 = 3.572e-16; cumulative 755 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:17.545] [warning] [cuda] [fill-probe] calls=25 n=1881687 total_triplets=46902963 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:17.557] [warning] [cuda] [convert-verify] calls=25 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=15416 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:17.699] [warning] [cuda] [SpmvVerify] chunk=1 50 launches since the last assembly: max|dy| 8.470e-22 / max|y_ref| 2.006e-06 = 4.222e-16; max|ddot| 3.102e-25 / |dot_ref| 5.735e-10 = 5.408e-16; cumulative 805 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:17.709] [warning] [cuda] [fill-probe] calls=26 n=1881699 total_triplets=48784662 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:17.721] [warning] [cuda] [convert-verify] calls=26 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=16013 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:17.950] [warning] [cuda] [SpmvVerify] chunk=1 15 launches since the last assembly: max|dy| 1.431e-17 / max|y_ref| 1.148e-02 = 1.247e-15; max|ddot| 6.245e-17 / |dot_ref| 3.241e-02 = 1.927e-15; cumulative 820 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:17.959] [warning] [cuda] [fill-probe] calls=27 n=1881549 total_triplets=50666211 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:17.971] [warning] [cuda] [convert-verify] calls=27 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=16596 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:18.093] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 9.487e-20 / max|y_ref| 1.689e-04 = 5.618e-16; max|ddot| 1.482e-21 / |dot_ref| 3.750e-06 = 3.952e-16; cumulative 865 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:18.102] [warning] [cuda] [fill-probe] calls=28 n=1881687 total_triplets=52547898 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:18.114] [warning] [cuda] [convert-verify] calls=28 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=17176 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:18.257] [warning] [cuda] [SpmvVerify] chunk=1 50 launches since the last assembly: max|dy| 1.271e-21 / max|y_ref| 2.382e-06 = 5.334e-16; max|ddot| 5.170e-25 / |dot_ref| 7.728e-10 = 6.690e-16; cumulative 915 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:18.266] [warning] [cuda] [fill-probe] calls=29 n=1881651 total_triplets=54429549 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:18.278] [warning] [cuda] [convert-verify] calls=29 nnz=286449 shape_mismatch=0 index_mismatch=0 bit_mismatch=17731 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:18.517] [warning] [cuda] [SpmvVerify] chunk=1 15 launches since the last assembly: max|dy| 1.821e-17 / max|y_ref| 1.276e-02 = 1.428e-15; max|ddot| 7.633e-17 / |dot_ref| 4.001e-02 = 1.908e-15; cumulative 930 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:18.526] [warning] [cuda] [fill-probe] calls=30 n=1881495 total_triplets=56311044 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:18.526] [warning] [cuda] [pattern-probe] n=1881495 prev=1881651 common=1881495 first_diff=1846857 last_diff=1881494 ndiff=34305
+[2026-09-12 23:42:18.538] [warning] [cuda] [convert-verify] calls=30 nnz=286450 shape_mismatch=0 index_mismatch=0 bit_mismatch=18368 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:18.660] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 6.776e-20 / max|y_ref| 1.875e-04 = 3.613e-16; max|ddot| 2.541e-21 / |dot_ref| 4.630e-06 = 5.489e-16; cumulative 975 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:18.669] [warning] [cuda] [fill-probe] calls=31 n=1881619 total_triplets=58192663 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:18.681] [warning] [cuda] [convert-verify] calls=31 nnz=286451 shape_mismatch=0 index_mismatch=0 bit_mismatch=18992 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:18.824] [warning] [cuda] [SpmvVerify] chunk=1 50 launches since the last assembly: max|dy| 8.470e-22 / max|y_ref| 2.266e-06 = 3.738e-16; max|ddot| 2.068e-25 / |dot_ref| 9.511e-10 = 2.174e-16; cumulative 1025 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:18.834] [warning] [cuda] [fill-probe] calls=32 n=1881531 total_triplets=60074194 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:18.846] [warning] [cuda] [convert-verify] calls=32 nnz=286451 shape_mismatch=0 index_mismatch=0 bit_mismatch=19607 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:19.093] [warning] [cuda] [SpmvVerify] chunk=1 15 launches since the last assembly: max|dy| 2.125e-17 / max|y_ref| 1.403e-02 = 1.514e-15; max|ddot| 4.163e-17 / |dot_ref| 4.842e-02 = 8.599e-16; cumulative 1040 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:19.103] [warning] [cuda] [fill-probe] calls=33 n=1881457 total_triplets=61955651 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:19.115] [warning] [cuda] [convert-verify] calls=33 nnz=286453 shape_mismatch=0 index_mismatch=0 bit_mismatch=20191 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:19.236] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 6.776e-20 / max|y_ref| 2.062e-04 = 3.286e-16; max|ddot| 1.694e-21 / |dot_ref| 5.602e-06 = 3.024e-16; cumulative 1085 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:19.245] [warning] [cuda] [fill-probe] calls=34 n=1881537 total_triplets=63837188 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:19.257] [warning] [cuda] [convert-verify] calls=34 nnz=286453 shape_mismatch=0 index_mismatch=0 bit_mismatch=20768 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:19.400] [warning] [cuda] [SpmvVerify] chunk=1 50 launches since the last assembly: max|dy| 1.059e-21 / max|y_ref| 2.904e-06 = 3.646e-16; max|ddot| 2.068e-25 / |dot_ref| 1.308e-09 = 1.581e-16; cumulative 1135 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:19.409] [warning] [cuda] [fill-probe] calls=35 n=1881435 total_triplets=65718623 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:19.421] [warning] [cuda] [convert-verify] calls=35 nnz=286453 shape_mismatch=0 index_mismatch=0 bit_mismatch=21361 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:19.680] [warning] [cuda] [SpmvVerify] chunk=1 15 launches since the last assembly: max|dy| 2.407e-17 / max|y_ref| 1.531e-02 = 1.572e-15; max|ddot| 1.041e-16 / |dot_ref| 5.762e-02 = 1.806e-15; cumulative 1150 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:19.689] [warning] [cuda] [fill-probe] calls=36 n=1881383 total_triplets=67600006 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:19.702] [warning] [cuda] [convert-verify] calls=36 nnz=286453 shape_mismatch=0 index_mismatch=0 bit_mismatch=21898 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16
+[2026-09-12 23:42:19.824] [warning] [cuda] [SpmvVerify] chunk=1 45 launches since the last assembly: max|dy| 1.084e-19 / max|y_ref| 2.248e-04 = 4.823e-16; max|ddot| 4.023e-21 / |dot_ref| 6.666e-06 = 6.036e-16; cumulative 1195 launches, max rel y 1.743e-15, max rel dot 7.609e-15
+[2026-09-12 23:42:19.833] [warning] [cuda] [fill-probe] calls=37 n=1881433 total_triplets=69481439 neg_index=0 unwritten_blocks=0 partial_blocks=0
+[2026-09-12 23:42:19.845] [warning] [cuda] [convert-verify] calls=37 nnz=286453 shape_mismatch=0 index_mismatch=0 bit_mismatch=22504 max|diff|=1.421e-14 max|ref|=1.398e+02 rel=1.017e-16

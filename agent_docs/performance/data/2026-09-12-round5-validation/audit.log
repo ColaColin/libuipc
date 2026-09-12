@@ -1,0 +1,608 @@
+=== PHASE A: default arms n=5 (22:58:38)
+Ahead wb rep1 mean=28.84476 med=24.59759 N=477 P=12975 LS=487 conv=True wall=4.0 obs={"ball_center": [8.113681024445302, 2.427322869696818, -0.042618722272219633], "final_frame": 120}
+Ahead wb rep2 mean=28.93434 med=24.41499 N=486 P=13075 LS=498 conv=True wall=4.0 obs={"ball_center": [8.087349507540829, 2.5319031041454627, -0.012721361323264922], "final_frame": 120}
+Ahead wb rep3 mean=28.35880 med=24.32979 N=471 P=12965 LS=481 conv=True wall=4.0 obs={"ball_center": [8.298918251395698, 2.3473251970695292, -0.1785633597671229], "final_frame": 120}
+Ahead wb rep4 mean=28.33878 med=24.37707 N=478 P=12980 LS=488 conv=True wall=3.9 obs={"ball_center": [8.05594023837956, 2.603021629896674, -0.006607290103864884], "final_frame": 120}
+Ahead wb rep5 mean=28.49244 med=25.13593 N=482 P=13180 LS=492 conv=True wall=4.0 obs={"ball_center": [8.05253136265326, 2.450571006710119, -0.09307557430659469], "final_frame": 120}
+Ahead cwc rep1 mean=68.24200 med=60.80221 N=597 P=22290 LS=618 conv=True wall=9.2 obs={"cloth_min_y": 0.2397102902576267, "final_frame": 120}
+Ahead cwc rep2 mean=67.93357 med=55.24539 N=587 P=22305 LS=611 conv=True wall=9.2 obs={"cloth_min_y": 0.2356584834646215, "final_frame": 120}
+Ahead cwc rep3 mean=69.34392 med=55.08419 N=595 P=22630 LS=618 conv=True wall=9.4 obs={"cloth_min_y": 0.24070261892921557, "final_frame": 120}
+Ahead cwc rep4 mean=66.71543 med=55.95914 N=582 P=21770 LS=599 conv=True wall=9.1 obs={"cloth_min_y": 0.2401695295671898, "final_frame": 120}
+Ahead cwc rep5 mean=67.13173 med=53.88148 N=585 P=21805 LS=605 conv=True wall=9.1 obs={"cloth_min_y": 0.22819352210382104, "final_frame": 120}
+Ahead c2 rep1 mean=185.20319 med=187.24494 N=1659 P=64275 LS=1764 conv=True wall=49.7 obs={"final_frame": 250, "lower_centroid": [-0.004577560297054754, -0.8843245010163572, 0.07033170314760136], "upper_centroid": [-0.7324097693889332, -0.865001916327097, -0.43944045983954005]}
+Ahead c2 rep2 mean=185.94827 med=187.30154 N=1662 P=64925 LS=1784 conv=True wall=50.0 obs={"final_frame": 250, "lower_centroid": [-0.008070636538290371, -0.8852931113419089, 0.12682045062171593], "upper_centroid": [-0.6279351823360398, -0.8692367046092915, -0.4394176626256227]}
+Ahead c2 rep3 mean=185.04766 med=188.11014 N=1657 P=63675 LS=1793 conv=True wall=49.8 obs={"final_frame": 250, "lower_centroid": [0.0017564828925393974, -0.882273033754423, 0.0674589055438721], "upper_centroid": [-0.7113618511182548, -0.8667837047175649, -0.4408347963945944]}
+Ahead c2 rep4 mean=187.05122 med=189.18898 N=1661 P=65450 LS=1802 conv=True wall=50.2 obs={"final_frame": 250, "lower_centroid": [-0.009775520735935846, -0.8852569043696237, 0.07666664242429164], "upper_centroid": [-0.6443903505766224, -0.8638810471622274, -0.4346481754698851]}
+Ahead c2 rep5 mean=187.74649 med=190.14870 N=1662 P=65360 LS=1798 conv=True wall=50.4 obs={"final_frame": 250, "lower_centroid": [0.0015545918075548322, -0.8844025155784886, 0.07253699995449989], "upper_centroid": [-0.7052729587287426, -0.8585628698494465, -0.4612874389646216]}
+Ahead mb rep1 mean=67.39111 med=74.32532 N=465 P=35225 LS=465 conv=True wall=8.6 obs={"bunny_centroid": [-0.14592167415656015, -0.786301199388838, 0.0552367515192498], "final_frame": 100}
+Ahead mb rep2 mean=67.39776 med=74.03724 N=465 P=35215 LS=465 conv=True wall=8.6 obs={"bunny_centroid": [-0.14592157455895743, -0.7863011724613942, 0.05523685830568082], "final_frame": 100}
+Ahead mb rep3 mean=67.31858 med=74.41296 N=465 P=35245 LS=465 conv=True wall=8.6 obs={"bunny_centroid": [-0.14592164259556523, -0.7863012187520573, 0.0552367396828121], "final_frame": 100}
+Ahead mb rep4 mean=67.18414 med=74.10942 N=465 P=35225 LS=465 conv=True wall=8.5 obs={"bunny_centroid": [-0.1459215220164597, -0.7863011628087797, 0.0552367472052036], "final_frame": 100}
+Ahead mb rep5 mean=67.17256 med=73.96520 N=465 P=35195 LS=465 conv=True wall=8.5 obs={"bunny_centroid": [-0.14592128257593553, -0.7863011580160116, 0.0552368290322162], "final_frame": 100}
+Abase wb rep1 mean=40.61919 med=33.60635 N=485 P=13285 LS=494 conv=True wall=5.4 obs={"ball_center": [8.19661220480108, 2.432410343894458, -0.045829935662002184], "final_frame": 120}
+Abase wb rep2 mean=38.78926 med=32.99736 N=470 P=12975 LS=483 conv=True wall=5.2 obs={"ball_center": [8.106846703208781, 2.4747642884420573, 0.023550125728159864], "final_frame": 120}
+Abase wb rep3 mean=39.93703 med=32.83932 N=479 P=13085 LS=493 conv=True wall=5.3 obs={"ball_center": [8.109395151352267, 2.511518829686764, 0.08705110896472254], "final_frame": 120}
+Abase wb rep4 mean=39.75361 med=33.73023 N=473 P=12900 LS=484 conv=True wall=5.3 obs={"ball_center": [8.110431403427313, 2.4592678340921585, 0.003143583982704], "final_frame": 120}
+Abase wb rep5 mean=38.96030 med=33.44400 N=468 P=12755 LS=480 conv=True wall=5.2 obs={"ball_center": [8.018796699342102, 2.5303110990742894, 0.03131116310006926], "final_frame": 120}
+Abase cwc rep1 mean=86.10191 med=76.74549 N=592 P=22060 LS=611 conv=True wall=11.4 obs={"cloth_min_y": 0.24686612341538255, "final_frame": 120}
+Abase cwc rep2 mean=85.10505 med=75.70243 N=583 P=22040 LS=603 conv=True wall=11.3 obs={"cloth_min_y": 0.2421039215849583, "final_frame": 120}
+Abase cwc rep3 mean=85.37621 med=70.77957 N=585 P=21965 LS=608 conv=True wall=11.3 obs={"cloth_min_y": 0.24025737453824, "final_frame": 120}
+Abase cwc rep4 mean=86.11283 med=77.48007 N=590 P=21715 LS=610 conv=True wall=11.4 obs={"cloth_min_y": 0.24577051894257448, "final_frame": 120}
+Abase cwc rep5 mean=86.24202 med=73.41387 N=589 P=22360 LS=611 conv=True wall=11.4 obs={"cloth_min_y": 0.2447854319180144, "final_frame": 120}
+Abase c2 rep1 mean=223.03810 med=227.68480 N=1660 P=64480 LS=1775 conv=True wall=59.2 obs={"final_frame": 250, "lower_centroid": [-0.006417772070396685, -0.8851966121867345, 0.07535816330268379], "upper_centroid": [-0.6746115026738057, -0.8678861331586855, -0.4384330624545772]}
+Abase c2 rep2 mean=222.58730 med=227.34587 N=1659 P=64370 LS=1772 conv=True wall=59.2 obs={"final_frame": 250, "lower_centroid": [-0.009289617643729509, -0.885013695000113, 0.11890939351184494], "upper_centroid": [-0.6269988799451773, -0.8727323201773197, -0.4649395625084177]}
+Abase c2 rep3 mean=224.71717 med=232.28381 N=1660 P=65210 LS=1784 conv=True wall=59.7 obs={"final_frame": 250, "lower_centroid": [-0.006838482215042904, -0.8797888473527691, 0.03832388482444422], "upper_centroid": [-0.8311837589772736, -0.8519338888295115, -0.4206821956481188]}
+Abase c2 rep4 mean=222.78786 med=228.74780 N=1662 P=64265 LS=1796 conv=True wall=59.2 obs={"final_frame": 250, "lower_centroid": [0.0015282412283274174, -0.8822721485367775, 0.06619949698596538], "upper_centroid": [-0.6920176579581092, -0.866478388959769, -0.42598748121662644]}
+Abase c2 rep5 mean=223.15033 med=229.42557 N=1660 P=64785 LS=1791 conv=True wall=59.2 obs={"final_frame": 250, "lower_centroid": [-0.002295268417747829, -0.8856172642549713, 0.07788352253769015], "upper_centroid": [-0.7173421319322779, -0.8643909153010204, -0.4174497168515734]}
+Abase mb rep1 mean=73.95793 med=82.36221 N=465 P=35205 LS=465 conv=True wall=9.1 obs={"bunny_centroid": [-0.14592145398351203, -0.7863011652959262, 0.05523686128847773], "final_frame": 100}
+Abase mb rep2 mean=73.98361 med=82.14176 N=465 P=35220 LS=465 conv=True wall=9.2 obs={"bunny_centroid": [-0.14592198803132833, -0.7863012230607261, 0.05523680527416566], "final_frame": 100}
+Abase mb rep3 mean=74.06675 med=82.05699 N=465 P=35230 LS=465 conv=True wall=9.3 obs={"bunny_centroid": [-0.1459208997409138, -0.7863011189706339, 0.055236771673019054], "final_frame": 100}
+Abase mb rep4 mean=74.02296 med=82.15271 N=465 P=35245 LS=465 conv=True wall=9.2 obs={"bunny_centroid": [-0.14592140377720458, -0.7863011868994538, 0.05523681891595125], "final_frame": 100}
+Abase mb rep5 mean=73.97606 med=81.94983 N=465 P=35225 LS=465 conv=True wall=9.2 obs={"bunny_centroid": [-0.14592204089308658, -0.7863012553501733, 0.055236780880750305], "final_frame": 100}
+=== PHASE A DONE (23:11:43)
+=== PHASE B: switch audit, 60 frames, n=2 (23:12:02)
+Bref wb rep1 mean=24.41707 med=23.52814 N=190 P=4075 LS=198 conv=True wall=2.0 obs={"ball_center": [-0.0617808767476653, 5.188218161068429, -0.007280791300013112], "final_frame": 60}
+Bref wb rep2 mean=23.79197 med=23.34444 N=189 P=3965 LS=197 conv=True wall=2.0 obs={"ball_center": [-0.061034127016668105, 5.18907866867221, -0.00731703284637961], "final_frame": 60}
+Bref wb rep3 mean=24.00474 med=23.93118 N=189 P=4055 LS=197 conv=True wall=2.0 obs={"ball_center": [-0.061819936002789566, 5.1882319626242515, -0.007321026972764953], "final_frame": 60}
+Bref wb rep4 mean=23.96002 med=23.56547 N=189 P=3985 LS=197 conv=True wall=2.0 obs={"ball_center": [-0.060825128123416894, 5.189210804323542, -0.007270904515221346], "final_frame": 60}
+Bref wb rep5 mean=23.57504 med=23.22302 N=188 P=3960 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.060993384077668855, 5.1891292176908905, -0.0073571701206827066], "final_frame": 60}
+Bref c2 rep1 mean=150.26010 med=165.16798 N=328 P=12470 LS=334 conv=True wall=12.3 obs={"final_frame": 60, "lower_centroid": [-0.20947042019003795, -0.9396642912026657, 0.0419690993051601], "upper_centroid": [-0.1211915480162995, -0.8036509638523542, 0.045906561308044685]}
+Bref c2 rep2 mean=151.42491 med=166.38584 N=328 P=12645 LS=336 conv=True wall=12.5 obs={"final_frame": 60, "lower_centroid": [-0.20904554178623122, -0.9397382508851937, 0.041953621364208736], "upper_centroid": [-0.12109155165262711, -0.8033790472571337, 0.045848295468502234]}
+Bref c2 rep3 mean=152.92735 med=166.75853 N=331 P=12715 LS=340 conv=True wall=12.5 obs={"final_frame": 60, "lower_centroid": [-0.20982919072041784, -0.9396101906594134, 0.04211453403317351], "upper_centroid": [-0.12082769274495128, -0.803564358183362, 0.0456862311831397]}
+Bref c2 rep4 mean=151.24428 med=166.83771 N=329 P=12495 LS=339 conv=True wall=12.4 obs={"final_frame": 60, "lower_centroid": [-0.20989327029800456, -0.93942406883168, 0.04264527679177054], "upper_centroid": [-0.12093828425857048, -0.8035469456554899, 0.04549583082757566]}
+Bref c2 rep5 mean=151.35353 med=165.69117 N=328 P=12650 LS=332 conv=True wall=12.5 obs={"final_frame": 60, "lower_centroid": [-0.20952263389609763, -0.939848003490796, 0.04206497275624095], "upper_centroid": [-0.12066836026566498, -0.8036301860207655, 0.04572570001798233]}
+Bref cwc rep1 mean=54.01488 med=44.71753 N=319 P=10510 LS=338 conv=True wall=4.3 obs={"cloth_min_y": -0.26760666693062324, "final_frame": 60}
+Bref cwc rep2 mean=53.74315 med=44.59791 N=320 P=10270 LS=340 conv=True wall=4.3 obs={"cloth_min_y": -0.26627923137381165, "final_frame": 60}
+Bref cwc rep3 mean=53.45509 med=44.53398 N=318 P=10360 LS=339 conv=True wall=4.3 obs={"cloth_min_y": -0.26750736115382723, "final_frame": 60}
+Bref mb rep1 mean=65.38687 med=76.96999 N=283 P=19855 LS=283 conv=True wall=5.7 obs={"bunny_centroid": [-0.1866770236753156, -0.7917685971527458, 0.052317497342398156], "final_frame": 60}
+Bref mb rep2 mean=65.55099 med=77.20522 N=283 P=19870 LS=283 conv=True wall=5.7 obs={"bunny_centroid": [-0.1866769469906167, -0.7917687298027002, 0.05231743836829869], "final_frame": 60}
+Bref mb rep3 mean=65.34871 med=77.29587 N=283 P=19900 LS=283 conv=True wall=5.7 obs={"bunny_centroid": [-0.18667749146948026, -0.7917687153550365, 0.05231760641202082], "final_frame": 60}
+B_GRID_SPREAD=0 wb rep1 mean=31.39257 med=31.10944 N=188 P=3930 LS=196 conv=True wall=2.5 obs={"ball_center": [-0.06072242560416741, 5.189258358290788, -0.007265539879045513], "final_frame": 60}
+B_GRID_SPREAD=0 wb rep2 mean=31.65119 med=31.06368 N=189 P=4075 LS=197 conv=True wall=2.4 obs={"ball_center": [-0.06182139370442474, 5.188128425993601, -0.007222222516154662], "final_frame": 60}
+B_GRID_SPREAD_BLOCK=32 wb rep1 mean=22.90672 med=22.46579 N=190 P=4090 LS=198 conv=True wall=1.9 obs={"ball_center": [-0.061946294831240145, 5.188084635228536, -0.007271915789271273], "final_frame": 60}
+B_GRID_SPREAD_BLOCK=32 wb rep2 mean=24.03144 med=23.82711 N=189 P=4035 LS=197 conv=True wall=2.0 obs={"ball_center": [-0.06133729634640028, 5.188667489501526, -0.0072902045098346335], "final_frame": 60}
+B_GRID_SPREAD_BPSM=1 wb rep1 mean=24.20356 med=23.94534 N=188 P=4040 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.06147940492224202, 5.188397919874285, -0.0072916828980599925], "final_frame": 60}
+B_GRID_SPREAD_BPSM=1 wb rep2 mean=24.38790 med=24.02290 N=189 P=4060 LS=197 conv=True wall=2.0 obs={"ball_center": [-0.0617921943085451, 5.188192298567862, -0.007290112665528535], "final_frame": 60}
+B_GRID_SPREAD_ONLY=ZZNOSUCHTAG wb rep1 mean=27.29035 med=26.86099 N=188 P=3940 LS=196 conv=True wall=2.2 obs={"ball_center": [-0.06101134472289349, 5.189102675379692, -0.007348863976030148], "final_frame": 60}
+B_GRID_SPREAD_ONLY=ZZNOSUCHTAG wb rep2 mean=27.32223 med=26.80604 N=189 P=3960 LS=197 conv=True wall=2.2 obs={"ball_center": [-0.061456334546419855, 5.188610592133738, -0.007197377635971173], "final_frame": 60}
+B_HOST_SYNC_FAST=0 wb rep1 mean=23.77141 med=23.41139 N=188 P=4070 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.061861068619420756, 5.188178354755386, -0.0072203949067918], "final_frame": 60}
+B_HOST_SYNC_FAST=0 wb rep2 mean=23.73420 med=23.28243 N=190 P=4020 LS=198 conv=True wall=2.0 obs={"ball_center": [-0.061604282441368285, 5.188584677004008, -0.007240662495082672], "final_frame": 60}
+B_HOST_SYNC_SPIN=1 wb rep1 mean=23.44059 med=23.08197 N=188 P=3950 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.061041694875648256, 5.18899582986024, -0.007316391288000769], "final_frame": 60}
+B_HOST_SYNC_SPIN=1 wb rep2 mean=23.67178 med=23.38979 N=187 P=3930 LS=195 conv=True wall=2.0 obs={"ball_center": [-0.06153514603035992, 5.189156368187471, -0.007204209347751792], "final_frame": 60}
+B_BVH_BATCH_COUNTS=0 wb rep1 mean=23.94839 med=23.64610 N=188 P=3955 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.061057324294631066, 5.1889862833112055, -0.007230605501909407], "final_frame": 60}
+B_BVH_BATCH_COUNTS=0 wb rep2 mean=23.81210 med=23.36453 N=188 P=3990 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.061266575801758094, 5.188772635611635, -0.007231756077826098], "final_frame": 60}
+B_CONTACT_SPD_TQL=0 wb rep1 mean=24.10577 med=24.54580 N=180 P=3880 LS=189 conv=True wall=2.0 obs={"ball_center": [-0.06126734426509994, 5.191790370415373, -0.0070736646451035135], "final_frame": 60}
+B_CONTACT_SPD_TQL=0 wb rep2 mean=24.97367 med=24.59698 N=189 P=4020 LS=197 conv=True wall=2.1 obs={"ball_center": [-0.06140435970216718, 5.188623037089596, -0.007141758060848938], "final_frame": 60}
+B_CONTACT_SPD2=0 wb rep1 mean=23.63718 med=23.38054 N=188 P=3985 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.06150560721184939, 5.188617884916011, -0.007316727084600802], "final_frame": 60}
+B_CONTACT_SPD2=0 wb rep2 mean=23.42819 med=23.08114 N=186 P=3940 LS=194 conv=True wall=2.0 obs={"ball_center": [-0.06102634607209367, 5.189026746867025, -0.007336884203113978], "final_frame": 60}
+B_PCG_FOLD=1 wb rep1 mean=23.47696 med=22.82659 N=191 P=4080 LS=199 conv=True wall=2.0 obs={"ball_center": [-0.061809385317562526, 5.1882107022602115, -0.007267308097978409], "final_frame": 60}
+B_PCG_FOLD=1 wb rep2 mean=23.22187 med=22.65999 N=191 P=4035 LS=199 conv=True wall=1.9 obs={"ball_center": [-0.06145015295857359, 5.189085995425835, -0.0072220683905657845], "final_frame": 60}
+B_PCG_FOLD=2 wb rep1 mean=23.28218 med=22.80416 N=189 P=4055 LS=197 conv=True wall=1.9 obs={"ball_center": [-0.06190251108993183, 5.1881745865821, -0.007286708430943409], "final_frame": 60}
+B_PCG_FOLD=2 wb rep2 mean=23.37201 med=23.36166 N=186 P=3935 LS=194 conv=True wall=2.0 obs={"ball_center": [-0.06114705785069585, 5.188977551193384, -0.007383320213124352], "final_frame": 60}
+B_PCG_DOT_FENCE=1 wb rep1 mean=23.78497 med=23.44931 N=189 P=3955 LS=197 conv=True wall=2.0 obs={"ball_center": [-0.06103120290043962, 5.189090308983891, -0.007337084183710322], "final_frame": 60}
+B_PCG_DOT_FENCE=1 wb rep2 mean=23.25055 med=23.03250 N=186 P=3960 LS=194 conv=True wall=1.9 obs={"ball_center": [-0.06109179161978062, 5.1890478709381185, -0.007348298236043071], "final_frame": 60}
+B_MAKE_SPD_JACOBI=0 wb rep1 mean=22.85499 med=22.51720 N=185 P=3855 LS=193 conv=True wall=1.9 obs={"ball_center": [-0.06042149050759149, 5.189569401088441, -0.00713956427611555], "final_frame": 60}
+B_MAKE_SPD_JACOBI=0 wb rep2 mean=23.77732 med=23.49938 N=188 P=4045 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.061803649026634044, 5.188144256794634, -0.007262937748447419], "final_frame": 60}
+B_BUFFER_FILL_SPREAD=0 wb rep1 mean=23.35930 med=23.04100 N=188 P=4010 LS=196 conv=True wall=2.0 obs={"ball_center": [-0.061357746111180056, 5.1885899984588795, -0.007248304595504241], "final_frame": 60}
+B_BUFFER_FILL_SPREAD=0 wb rep2 mean=22.94174 med=22.91495 N=182 P=3995 LS=190 conv=True wall=1.9 obs={"ball_center": [-0.061907769579270466, 5.188068957110229, -0.007247493013732472], "final_frame": 60}
+B_QR_SVD_FIXED=0 c2 rep1 mean=154.10057 med=167.97996 N=329 P=12645 LS=338 conv=True wall=12.5 obs={"final_frame": 60, "lower_centroid": [-0.21041318978854834, -0.9392643863494495, 0.042058235540132535], "upper_centroid": [-0.1207629606366997, -0.8035726877043746, 0.04574974840075354]}
+B_QR_SVD_FIXED=0 c2 rep2 mean=155.40605 med=170.65019 N=330 P=12760 LS=339 conv=True wall=12.7 obs={"final_frame": 60, "lower_centroid": [-0.20918215942608231, -0.9395722641409613, 0.04175845975956301], "upper_centroid": [-0.12115768727089289, -0.8037020461012475, 0.0458351102135399]}
+B_SNK1_STENCIL2=0 c2 rep1 mean=155.46565 med=173.05352 N=328 P=12465 LS=333 conv=True wall=12.7 obs={"final_frame": 60, "lower_centroid": [-0.209632461677288, -0.9395172969531117, 0.04202633129504875], "upper_centroid": [-0.12084847920361594, -0.8035256426023023, 0.04565673498448525]}
+B_SNK1_STENCIL2=0 c2 rep2 mean=157.37283 med=172.17139 N=331 P=12725 LS=339 conv=True wall=12.8 obs={"final_frame": 60, "lower_centroid": [-0.20958760438292162, -0.9394434939417048, 0.042086882737967866], "upper_centroid": [-0.12118834585571522, -0.8035347375173274, 0.04583709323192778]}
+B_SNK1_OCC=0 c2 rep1 mean=155.13805 med=172.78085 N=329 P=12395 LS=338 conv=True wall=12.5 obs={"final_frame": 60, "lower_centroid": [-0.20923382197925317, -0.9393869774608729, 0.04228202433550525], "upper_centroid": [-0.12093968305436577, -0.8035547413189535, 0.04567438673562848]}
+B_SNK1_OCC=0 c2 rep2 mean=155.23532 med=172.27317 N=329 P=12415 LS=335 conv=True wall=12.8 obs={"final_frame": 60, "lower_centroid": [-0.2095263811135721, -0.9399589013492893, 0.04238505057483913], "upper_centroid": [-0.12115228590823333, -0.803561144229431, 0.045678403950473845]}
+B_SKIP_DEAD_FILL=0 c2 rep1 mean=154.36831 med=172.04857 N=328 P=12425 LS=334 conv=True wall=12.5 obs={"final_frame": 60, "lower_centroid": [-0.20986471437966747, -0.9394679934492548, 0.04256013746418754], "upper_centroid": [-0.12087499465362207, -0.8035724325896528, 0.04552905206098486]}
+B_SKIP_DEAD_FILL=0 c2 rep2 mean=154.77292 med=171.12257 N=329 P=12350 LS=334 conv=True wall=12.7 obs={"final_frame": 60, "lower_centroid": [-0.20856632389921848, -0.9397458880404441, 0.04194413662300839], "upper_centroid": [-0.12153002199648183, -0.8035234411336877, 0.04590652097399002]}
+B_SEG_NARROW_FILL=0 c2 rep1 mean=151.68197 med=166.24039 N=329 P=12570 LS=334 conv=True wall=12.4 obs={"final_frame": 60, "lower_centroid": [-0.2094850254378758, -0.9395150651984682, 0.041788549322022146], "upper_centroid": [-0.12084996000751695, -0.8035865231936178, 0.0458998698277893]}
+B_SEG_NARROW_FILL=0 c2 rep2 mean=150.97089 med=166.49703 N=327 P=12640 LS=334 conv=True wall=12.4 obs={"final_frame": 60, "lower_centroid": [-0.2096420501135111, -0.939757155237704, 0.04228709110297817], "upper_centroid": [-0.12100220073166013, -0.8036297900695217, 0.04573860076544105]}
+B_BUFFER_FILL_SPREAD=0 c2 rep1 mean=150.77436 med=165.63749 N=329 P=12480 LS=336 conv=True wall=12.5 obs={"final_frame": 60, "lower_centroid": [-0.20936603997374026, -0.9397489547634572, 0.042488488742279604], "upper_centroid": [-0.12112709771156464, -0.8035638661117713, 0.045670011447849636]}
+B_BUFFER_FILL_SPREAD=0 c2 rep2 mean=151.52488 med=165.29207 N=329 P=12720 LS=339 conv=True wall=12.4 obs={"final_frame": 60, "lower_centroid": [-0.2097608969010001, -0.9396490467397866, 0.04154269059809067], "upper_centroid": [-0.12068313798081047, -0.8036563881383597, 0.045779148573686694]}
+B_BUFFER_FILL_BPSM=8 c2 rep1 mean=151.76861 med=166.73839 N=330 P=12615 LS=339 conv=True wall=12.5 obs={"final_frame": 60, "lower_centroid": [-0.20918758705151594, -0.9395923963256294, 0.041762581616188656], "upper_centroid": [-0.1212906774573985, -0.803629105652367, 0.04598959238274236]}
+B_BUFFER_FILL_BPSM=8 c2 rep2 mean=150.26676 med=165.64684 N=328 P=12410 LS=332 conv=True wall=12.3 obs={"final_frame": 60, "lower_centroid": [-0.20955444992964664, -0.9397236956357571, 0.0422329973310746], "upper_centroid": [-0.12151747932337688, -0.8035010131299779, 0.04563908781303666]}
+B_GRID_SPREAD=0 c2 rep1 mean=161.35632 med=178.25522 N=328 P=12575 LS=339 conv=True wall=13.1 obs={"final_frame": 60, "lower_centroid": [-0.20925759653703088, -0.9396338169206034, 0.04225951936958587], "upper_centroid": [-0.12085840341011021, -0.8035158174214831, 0.04555167410671428]}
+B_GRID_SPREAD=0 c2 rep2 mean=160.56996 med=177.27320 N=330 P=12345 LS=337 conv=True wall=13.0 obs={"final_frame": 60, "lower_centroid": [-0.2096973172865141, -0.9396150053290635, 0.04239078875284224], "upper_centroid": [-0.12098402450357736, -0.8034657811754611, 0.045704378178111564]}
+B_SPMV_GRID_STRIDE=1 c2 rep1 mean=151.35090 med=166.02716 N=330 P=12620 LS=340 conv=True wall=12.4 obs={"final_frame": 60, "lower_centroid": [-0.20965333143107145, -0.9397283397667313, 0.04205545756668596], "upper_centroid": [-0.12082721165681258, -0.8034232896632149, 0.04551012186233332]}
+B_SPMV_GRID_STRIDE=1 c2 rep2 mean=150.06262 med=165.77744 N=329 P=12420 LS=336 conv=True wall=12.4 obs={"final_frame": 60, "lower_centroid": [-0.2097263687578629, -0.9394522100734587, 0.04210150733577671], "upper_centroid": [-0.12132901741900642, -0.8034896397813253, 0.0458358998888914]}
+B_SPMV_GRID_STRIDE=1+WAVES=4 c2 rep1 mean=150.22312 med=165.30406 N=329 P=12615 LS=337 conv=True wall=12.4 obs={"final_frame": 60, "lower_centroid": [-0.2095502679868231, -0.9395284666149039, 0.04228632033235573], "upper_centroid": [-0.12115709240390406, -0.8034988071005975, 0.045671685174328576]}
+B_SPMV_GRID_STRIDE=1+WAVES=4 c2 rep2 mean=151.94042 med=165.52727 N=332 P=12780 LS=341 conv=True wall=12.6 obs={"final_frame": 60, "lower_centroid": [-0.20971715851928152, -0.939600532392293, 0.04235220156708865], "upper_centroid": [-0.12127853022103612, -0.8035887926229086, 0.04548977790554697]}
+B_MAKE_SPD_JACOBI=0 cwc rep1 mean=55.96268 med=47.53037 N=318 P=10355 LS=338 conv=True wall=4.5 obs={"cloth_min_y": -0.26752511395860784, "final_frame": 60}
+B_MAKE_SPD_JACOBI=0 cwc rep2 mean=55.69519 med=47.43853 N=318 P=10340 LS=336 conv=True wall=4.4 obs={"cloth_min_y": -0.26772574785970754, "final_frame": 60}
+B_GRID_SPREAD=0 cwc rep1 mean=67.19563 med=57.88619 N=318 P=10305 LS=337 conv=True wall=5.2 obs={"cloth_min_y": -0.2662743367937877, "final_frame": 60}
+B_GRID_SPREAD=0 cwc rep2 mean=67.49504 med=57.93823 N=318 P=10470 LS=338 conv=True wall=5.1 obs={"cloth_min_y": -0.2681307614105465, "final_frame": 60}
+B_QR_SVD_FIXED=0 mb rep1 mean=66.34193 med=78.57293 N=283 P=19895 LS=283 conv=True wall=5.8 obs={"bunny_centroid": [-0.18667703007781525, -0.7917686087164354, 0.0523177452755709], "final_frame": 60}
+B_QR_SVD_FIXED=0 mb rep2 mean=66.37540 med=78.23603 N=283 P=19895 LS=283 conv=True wall=5.8 obs={"bunny_centroid": [-0.1866771057819156, -0.7917687066108118, 0.052317490513020475], "final_frame": 60}
+B_SKIP_DEAD_FILL=0 mb rep1 mean=66.75457 med=78.73732 N=283 P=19905 LS=283 conv=True wall=5.9 obs={"bunny_centroid": [-0.18667714125661117, -0.7917686711736733, 0.05231747057641875], "final_frame": 60}
+B_SKIP_DEAD_FILL=0 mb rep2 mean=66.79754 med=79.04422 N=283 P=19905 LS=283 conv=True wall=5.8 obs={"bunny_centroid": [-0.18667741251124764, -0.7917684963311614, 0.05231752849061997], "final_frame": 60}
+=== PHASE B DONE (23:19:35)
+=== PHASE C: all step switches off (23:19:35)
+C_alloff wb rep1 mean=40.96736 med=33.45310 N=484 P=13300 LS=493 conv=True wall=5.5 obs={"ball_center": [8.250760841624231, 2.545140597328512, 0.0656261820811866], "final_frame": 120}
+C_alloff wb rep2 mean=39.03404 med=33.54985 N=470 P=12730 LS=482 conv=True wall=5.2 obs={"ball_center": [8.042252820664235, 2.3854060061203337, -0.005379365503928646], "final_frame": 120}
+C_alloff wb rep3 mean=39.78456 med=33.47178 N=473 P=12805 LS=492 conv=True wall=5.3 obs={"ball_center": [8.059972127851205, 2.451176319369588, -0.05116969223750971], "final_frame": 120}
+C_alloff cwc rep1 mean=84.96371 med=76.18369 N=585 P=21530 LS=605 conv=True wall=11.3 obs={"cloth_min_y": 0.2465077857711474, "final_frame": 120}
+C_alloff cwc rep2 mean=87.55035 med=80.84570 N=601 P=21985 LS=625 conv=True wall=11.6 obs={"cloth_min_y": 0.24106076617624583, "final_frame": 120}
+C_alloff cwc rep3 mean=87.84490 med=77.21452 N=595 P=22630 LS=615 conv=True wall=11.6 obs={"cloth_min_y": 0.22841434449162185, "final_frame": 120}
+C_alloff c2 rep1 mean=224.14480 med=230.10513 N=1663 P=64915 LS=1805 conv=True wall=59.5 obs={"final_frame": 250, "lower_centroid": [-0.0036566915251573, -0.8853946355305918, 0.07924815320731576], "upper_centroid": [-0.7378742591249206, -0.8627723560607305, -0.42074939624991275]}
+C_alloff c2 rep2 mean=222.94467 med=227.16545 N=1659 P=63825 LS=1783 conv=True wall=59.2 obs={"final_frame": 250, "lower_centroid": [0.003420330022534681, -0.8816808151876138, 0.053507263942711415], "upper_centroid": [-0.7397737608874115, -0.86089356254829, -0.40176554470313697]}
+C_alloff c2 rep3 mean=222.25122 med=227.92194 N=1656 P=64380 LS=1787 conv=True wall=59.1 obs={"final_frame": 250, "lower_centroid": [-0.00908894544835259, -0.8863315448668002, 0.07909473283487123], "upper_centroid": [-0.712581587792734, -0.8643695674968485, -0.4404014756058523]}
+C_alloff mb rep1 mean=73.93347 med=82.03937 N=465 P=35230 LS=465 conv=True wall=9.1 obs={"bunny_centroid": [-0.1459219126035859, -0.7863012452691083, 0.055236882982824226], "final_frame": 100}
+C_alloff mb rep2 mean=74.07239 med=82.08381 N=465 P=35225 LS=465 conv=True wall=9.3 obs={"bunny_centroid": [-0.14592204694966696, -0.7863012131289341, 0.05523679017878308], "final_frame": 100}
+C_alloff mb rep3 mean=74.06537 med=82.10303 N=465 P=35220 LS=465 conv=True wall=9.2 obs={"bunny_centroid": [-0.14592099883989873, -0.7863011699797875, 0.0552367479881573], "final_frame": 100}
+=== PHASE C DONE (23:23:51)
+=== PHASE D: all probes composed (23:23:51)
+D_probes_wb wb rep1 mean=91.81115 med=86.83067 N=28 P=215 LS=35 conv=True wall=1.7 obs={"ball_center": [-0.6194601573924364, 11.332041541114915, -0.008345296030704235], "final_frame": 12}
+STDERR>>>
+1
+[seg-poison] matrix<3,3> in=6540 out=5740 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=6540 out=5740 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=6540 out=5740 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=6540 out=5740 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=6540 out=5740 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=6540 out=5740 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=8620 out=7020 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=8620 out=7020 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=8620 out=7020 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=8620 out=7020 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=10700 out=8300 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=10700 out=8300 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=10700 out=8300 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=10700 out=8300 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=12780 out=9580 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=12780 out=9580 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=12780 out=9580 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=12780 out=9580 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=12780 out=9580 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=12780 out=9580 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=14860 out=10860 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=14860 out=10860 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=14860 out=10860 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=14860 out=10860 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=14860 out=10860 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=14860 out=10860 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=16940 out=12140 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=16940 out=12140 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=16976 out=12156 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=16976 out=12156 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=19056 out=13436 unwritten=0 partial=0 first=-1 last=-1
+[ABDDiagApplyVerify] total: 159 applies, 0 mismatched entries (lanes=1)
+[ABDDiagSpreadVerify] total: 2314368 output words compared, 0 mismatching
+[OrthoSpreadVerify] total: 2507232 output words compared, 0 mismatching
+[SpreadVerify] IPCVertexHalfPlaneNormalContact::energy        26240 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCVertexHalfPlaneFrictionalContact::energy    24960 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCSimplexNormalContact::energy                2318908 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCSimplexFrictionalContact::energy            1999632 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] AffineBodyBDF1Kinetic::energy                  53956 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] GlobalContactManager::ccd_PP                   707294 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] GlobalContactManager::ccd_PE                   427628 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] GlobalContactManager::ccd_EE                   177820 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] GlobalContactManager::ccd_PT                   14766 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] ABDLinearSubsystem::dytopo_pair_k3             8634368 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] AffineBodyBDF1Kinetic::gradient_hessian        5014464 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] ABDLinearSubsystem::kinetic_shape_k2           9771776 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] ABDLinearSubsystem::kinetic_shape_k1           385728 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCVertexHalfPlaneNormalContact::assemble      207360 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCVertexHalfPlaneFrictionalContact::assemble  198720 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCSimplexFrictionalContact::assemble          70609329 output words (32-bit) compared, 0 mismatching
+[d2h] readbacks=1398 bytes=58935280 drain=420.366 ms stall=16.911 ms (stall/readback=12.10 us) oversize=0 verify=1398 bad=0
+[d2h-sites] 0 stacks
+[BufferFillVerify] 378 fills checked, 31941575 words (32-bit) compared, 0 mismatching; 40 skipped (inside a stream capture), 0 skipped (element size not a multiple of 4)
+
+<<<
+D_probes_cwc cwc rep1 mean=90.33350 med=98.37542 N=33 P=635 LS=33 conv=True wall=2.2 obs={"cloth_min_y": 0.4703292224553305, "final_frame": 12}
+STDERR>>>
+x<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=194177 out=48001 unwritten=0 partial=0 first=-1 last=-1
+[ABDDiagApplyVerify] total: 614 applies, 0 mismatched entries (lanes=1)
+[ABDDiagSpreadVerify] total: 9123840 output words compared, 0 mismatching
+[OrthoSpreadVerify] total: 9884160 output words compared, 0 mismatching
+[SpreadVerify] DiscreteShellBending::energy                   1094400 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] AffineBodyBDF1Kinetic::energy                  172800 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] DiscreteShellBending::gradient_hessian         91491840 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] AffineBodyBDF1Kinetic::gradient_hessian        19768320 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] ABDLinearSubsystem::kinetic_shape_k2           38522880 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] ABDLinearSubsystem::kinetic_shape_k1           1520640 output words (32-bit) compared, 0 mismatching
+[d2h] readbacks=1989 bytes=54727228 drain=409.303 ms stall=19.769 ms (stall/readback=9.94 us) oversize=0 verify=1989 bad=0
+[d2h-sites] 0 stacks
+[BufferFillVerify] 596 fills checked, 229006688 words (32-bit) compared, 0 mismatching; 5 skipped (inside a stream capture), 0 skipped (element size not a multiple of 4)
+
+<<<
+D_probes_c2 c2 rep1 mean=521.67005 med=530.02338 N=37 P=1245 LS=37 conv=True wall=9.5 obs={"final_frame": 12, "lower_centroid": [-0.11664384958342457, -0.5675996188575331, 0.04064691207690588], "upper_centroid": [-0.11664372618594757, 0.5824004196767795, 0.0406467814092748]}
+STDERR>>>
+itten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881871 out=286459 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881871 out=286459 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881829 out=286459 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881829 out=286459 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881655 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881655 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881599 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881599 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881641 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881641 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881723 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881723 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881679 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881679 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881695 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881695 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881691 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881691 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881651 out=286450 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881651 out=286450 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881659 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881659 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881675 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881675 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881579 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881579 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881687 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881687 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881699 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881699 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881549 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881549 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881687 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881687 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881651 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881651 out=286449 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881495 out=286450 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881495 out=286450 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881619 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881619 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881531 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881531 out=286451 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881457 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881457 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881537 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881537 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881435 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881435 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881383 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881383 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881433 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=1881433 out=286453 unwritten=0 partial=0 first=-1 last=-1
+[ABDDiagApplyVerify] total: 0 applies, 0 mismatched entries (lanes=1)
+[ABDDiagSpreadVerify] total: 0 output words compared, 0 mismatching
+[SpreadVerify] DiscreteShellBending::energy                   1191680 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCSimplexNormalContact::energy                567608 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCSimplexFrictionalContact::energy            487116 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] GlobalContactManager::ccd_PP                   10012 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] GlobalContactManager::ccd_PE                   402406 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] GlobalContactManager::ccd_EE                   18142 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] GlobalContactManager::ccd_PT                   1114 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] DiscreteShellBending::gradient_hessian         102581760 output words (32-bit) compared, 0 mismatching
+[SpreadVerify] IPCSimplexFrictionalContact::assemble          26185907 output words (32-bit) compared, 0 mismatching
+[d2h] readbacks=2193 bytes=470955644 drain=2354.023 ms stall=81.586 ms (stall/readback=37.20 us) oversize=0 verify=2193 bad=0
+[d2h-sites] 0 stacks
+[BufferFillVerify] 636 fills checked, 1995432377 words (32-bit) compared, 0 mismatching; 5 skipped (inside a stream capture), 0 skipped (element size not a multiple of 4)
+
+<<<
+D_probes_mb mb rep1 mean=83.59013 med=85.41861 N=24 P=600 LS=24 conv=True wall=2.7 obs={"bunny_centroid": [-0.11664380672311361, -0.5450637963704943, 0.04065739433676015], "final_frame": 12}
+STDERR>>>
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[seg-poison] matrix<3,3> in=818543 out=128736 unwritten=0 partial=0 first=-1 last=-1
+[ABDDiagApplyVerify] total: 0 applies, 0 mismatched entries (lanes=1)
+[ABDDiagSpreadVerify] total: 0 output words compared, 0 mismatching
+[d2h] readbacks=1396 bytes=47109180 drain=571.361 ms stall=15.404 ms (stall/readback=11.03 us) oversize=0 verify=1396 bad=0
+[d2h-sites] 0 stacks
+[BufferFillVerify] 438 fills checked, 575182667 words (32-bit) compared, 0 mismatching; 5 skipped (inside a stream capture), 0 skipped (element size not a multiple of 4)
+
+<<<
+=== PHASE D DONE (23:24:08)
+=== PHASE E: wide-print racecheck + gates (23:24:18)
+head racecheck-wide cwc :: ========= RACECHECK SUMMARY: 600 hazards displayed (0 errors, 1311 warnings)
+head racecheck-wide kernels :: MASPreconditionerEngine_build_connect_mask_Lx_kernel MASPreconditionerEngine_build_multi_level_R_kernel MASPreconditionerEngine_next_level_cluster_kernel MASPreconditionerEngine_prefix_sum_Lx_kernel 
+base racecheck-wide cwc :: ========= RACECHECK SUMMARY: 600 hazards displayed (0 errors, 1306 warnings)
+base racecheck-wide kernels :: MASPreconditionerEngine_build_connect_mask_Lx_kernel MASPreconditionerEngine_build_multi_level_R_kernel MASPreconditionerEngine_next_level_cluster_kernel MASPreconditionerEngine_prefix_sum_Lx_kernel 
+=== gate run 3 (head) (23:32:00)
+=== common
+All tests passed (11 assertions in 3 test cases)
+=== core
+All tests passed (1112 assertions in 36 test cases)
+=== geometry
+All tests passed (2730 assertions in 46 test cases)
+=== sanity_check
+All tests passed (100 assertions in 3 test cases)
+=== regression
+All tests passed (4 assertions in 1 test case)
+=== backend_cuda
+All tests passed (448 assertions in 23 test cases)
+=== sim_case
+All tests passed (14213 assertions in 95 test cases)
+=== pytest
+.
+48 passed, 1 skipped, 86 deselected in 1.21s
+=== gate (base build) (23:33:11)
+=== common
+All tests passed (11 assertions in 3 test cases)
+=== core
+All tests passed (1112 assertions in 36 test cases)
+=== geometry
+All tests passed (2730 assertions in 46 test cases)
+=== sanity_check
+All tests passed (100 assertions in 3 test cases)
+=== regression
+All tests passed (4 assertions in 1 test case)
+=== backend_cuda
+All tests passed (352 assertions in 22 test cases)
+=== sim_case
+All tests passed (14213 assertions in 95 test cases)
+=== pytest
+.
+48 passed, 1 skipped, 86 deselected in 1.32s
+=== PHASE E DONE (23:34:25)
+=== PHASE F: deepened drift on the two observables that separated at n=5 (23:34:39)
+Fhead cwc rep1 mean=68.41950 med=55.35558 N=588 P=22085 LS=609 conv=True wall=9.3 obs={"cloth_min_y": 0.23241701151338762, "final_frame": 120}
+Fhead cwc rep2 mean=67.93134 med=58.06081 N=590 P=21865 LS=611 conv=True wall=9.2 obs={"cloth_min_y": 0.23760862050127723, "final_frame": 120}
+Fhead cwc rep3 mean=68.77965 med=55.29640 N=593 P=22180 LS=613 conv=True wall=9.3 obs={"cloth_min_y": 0.2323831592863108, "final_frame": 120}
+Fhead cwc rep4 mean=66.89038 med=58.24657 N=583 P=21840 LS=605 conv=True wall=9.2 obs={"cloth_min_y": 0.24598724185769247, "final_frame": 120}
+Fhead cwc rep5 mean=65.19369 med=53.44799 N=576 P=21255 LS=600 conv=True wall=8.9 obs={"cloth_min_y": 0.23690315820902105, "final_frame": 120}
+Fhead cwc rep6 mean=66.56314 med=56.03843 N=580 P=21765 LS=599 conv=True wall=9.0 obs={"cloth_min_y": 0.22841552927153064, "final_frame": 120}
+Fhead cwc rep7 mean=64.94615 med=54.54554 N=571 P=21675 LS=595 conv=True wall=8.9 obs={"cloth_min_y": 0.22571873953755853, "final_frame": 120}
+Fhead cwc rep8 mean=66.28117 med=53.80563 N=581 P=21575 LS=604 conv=True wall=9.1 obs={"cloth_min_y": 0.23991860063303777, "final_frame": 120}
+Fhead cwc rep9 mean=68.80569 med=60.41518 N=603 P=22145 LS=626 conv=True wall=9.3 obs={"cloth_min_y": 0.2392826457146116, "final_frame": 120}
+Fhead cwc rep10 mean=67.48997 med=60.17569 N=593 P=22050 LS=616 conv=True wall=9.1 obs={"cloth_min_y": 0.24793577172899942, "final_frame": 120}
+Fbase cwc rep1 mean=86.60310 med=73.76497 N=595 P=21885 LS=616 conv=True wall=11.5 obs={"cloth_min_y": 0.24947960635610722, "final_frame": 120}
+Fbase cwc rep2 mean=85.33915 med=72.82896 N=586 P=21700 LS=608 conv=True wall=11.3 obs={"cloth_min_y": 0.24520366502306945, "final_frame": 120}
+Fbase cwc rep3 mean=85.64586 med=80.96580 N=591 P=21605 LS=609 conv=True wall=11.3 obs={"cloth_min_y": 0.24110812760998063, "final_frame": 120}
+Fbase cwc rep4 mean=85.06048 med=73.59911 N=582 P=21835 LS=608 conv=True wall=11.3 obs={"cloth_min_y": 0.24799452586567353, "final_frame": 120}
+Fbase cwc rep5 mean=84.33922 med=68.32768 N=576 P=22000 LS=597 conv=True wall=11.2 obs={"cloth_min_y": 0.23950779879262987, "final_frame": 120}
+Fbase cwc rep6 mean=83.66032 med=71.27517 N=577 P=21450 LS=598 conv=True wall=11.1 obs={"cloth_min_y": 0.23520741655525007, "final_frame": 120}
+Fbase cwc rep7 mean=85.28525 med=72.99577 N=586 P=21850 LS=609 conv=True wall=11.3 obs={"cloth_min_y": 0.23458079833633194, "final_frame": 120}
+Fbase cwc rep8 mean=83.68888 med=70.01592 N=574 P=21490 LS=593 conv=True wall=11.1 obs={"cloth_min_y": 0.24166236665965782, "final_frame": 120}
+Fbase cwc rep9 mean=83.23339 med=77.18707 N=582 P=20920 LS=603 conv=True wall=11.0 obs={"cloth_min_y": 0.24726764120742514, "final_frame": 120}
+Fbase cwc rep10 mean=85.34405 med=79.44735 N=588 P=21685 LS=606 conv=True wall=11.3 obs={"cloth_min_y": 0.2436765145013654, "final_frame": 120}
+Fspd2off cwc rep1 mean=66.21232 med=59.29673 N=579 P=21490 LS=602 conv=True wall=9.0 obs={"cloth_min_y": 0.2512352870203275, "final_frame": 120}
+Fspd2off cwc rep2 mean=66.74769 med=56.26781 N=578 P=21175 LS=597 conv=True wall=9.1 obs={"cloth_min_y": 0.24858310002355963, "final_frame": 120}
+Fspd2off cwc rep3 mean=65.66024 med=55.69552 N=575 P=20820 LS=596 conv=True wall=9.0 obs={"cloth_min_y": 0.2578438055580433, "final_frame": 120}
+Fspd2off cwc rep4 mean=68.05020 med=56.92889 N=582 P=21810 LS=605 conv=True wall=9.2 obs={"cloth_min_y": 0.23675853215380416, "final_frame": 120}
+Fspd2off cwc rep5 mean=69.34971 med=57.84591 N=593 P=21980 LS=616 conv=True wall=9.4 obs={"cloth_min_y": 0.2425663818922382, "final_frame": 120}
+Fspd2off cwc rep6 mean=67.53923 med=57.20331 N=587 P=21480 LS=608 conv=True wall=9.2 obs={"cloth_min_y": 0.230512008306937, "final_frame": 120}
+Fspd2off cwc rep7 mean=66.37401 med=60.61064 N=579 P=21670 LS=598 conv=True wall=9.0 obs={"cloth_min_y": 0.2406811101419876, "final_frame": 120}
+Fspd2off cwc rep8 mean=68.89232 med=57.55277 N=589 P=22295 LS=610 conv=True wall=9.3 obs={"cloth_min_y": 0.22810867576518415, "final_frame": 120}
+Fspd2off cwc rep9 mean=67.11032 med=60.76272 N=585 P=21530 LS=605 conv=True wall=9.1 obs={"cloth_min_y": 0.2400965331449728, "final_frame": 120}
+Fspd2off cwc rep10 mean=66.28150 med=57.00968 N=578 P=21270 LS=599 conv=True wall=9.0 obs={"cloth_min_y": 0.23890763794182598, "final_frame": 120}
+Fhead wb rep1 mean=28.42862 med=24.44258 N=473 P=12550 LS=489 conv=True wall=4.0 obs={"ball_center": [8.062913561179608, 2.98324709985107, -0.10736964749022734], "final_frame": 120}
+Fhead wb rep2 mean=28.28011 med=24.25950 N=468 P=12955 LS=477 conv=True wall=3.9 obs={"ball_center": [8.344294484296894, 2.367975146243735, -0.17621068985962998], "final_frame": 120}
+Fhead wb rep3 mean=27.42417 med=24.47365 N=462 P=12820 LS=473 conv=True wall=3.8 obs={"ball_center": [8.174403258281027, 2.3674230270170282, -0.04735043851723111], "final_frame": 120}
+Fhead wb rep4 mean=27.93022 med=24.36717 N=473 P=13005 LS=482 conv=True wall=3.9 obs={"ball_center": [8.181333423834026, 2.3564571170859745, -0.00030380187475730763], "final_frame": 120}
+Fhead wb rep5 mean=28.21826 med=24.45615 N=478 P=13045 LS=488 conv=True wall=3.9 obs={"ball_center": [8.02711915860874, 2.5098340841223186, -0.013269535097662086], "final_frame": 120}
+Fhead wb rep6 mean=28.62921 med=24.56902 N=475 P=13110 LS=485 conv=True wall=4.0 obs={"ball_center": [8.20789282484082, 2.4400974123004486, -0.09667047002068474], "final_frame": 120}
+Fhead wb rep7 mean=27.85853 med=24.30358 N=469 P=12910 LS=478 conv=True wall=3.9 obs={"ball_center": [8.123361064836034, 2.493666908960348, 0.017642623595001582], "final_frame": 120}
+Fhead wb rep8 mean=28.84352 med=24.77670 N=483 P=13305 LS=492 conv=True wall=4.0 obs={"ball_center": [8.149663576612324, 2.48415269177558, -0.062052219616045394], "final_frame": 120}
+Fhead wb rep9 mean=27.25102 med=24.36153 N=460 P=12550 LS=469 conv=True wall=3.8 obs={"ball_center": [8.055051546564782, 2.6447035332719055, 0.09094734331256527], "final_frame": 120}
+Fhead wb rep10 mean=28.48712 med=24.14306 N=484 P=13110 LS=498 conv=True wall=4.0 obs={"ball_center": [8.22359660481755, 2.4151787014651536, -0.11629615843980456], "final_frame": 120}
+Fbase wb rep1 mean=39.34587 med=32.95519 N=474 P=12800 LS=491 conv=True wall=5.3 obs={"ball_center": [8.082073803822391, 2.4462296264611556, 0.020438353732742012], "final_frame": 120}
+Fbase wb rep2 mean=39.95550 med=33.91166 N=475 P=13015 LS=483 conv=True wall=5.3 obs={"ball_center": [8.07774551246033, 2.451611438733976, -0.024493612476137253], "final_frame": 120}
+Fbase wb rep3 mean=39.25419 med=33.53928 N=472 P=12895 LS=483 conv=True wall=5.3 obs={"ball_center": [8.055913420651489, 2.3700712827740906, 0.01113197356623784], "final_frame": 120}
+Fbase wb rep4 mean=39.68242 med=33.17348 N=478 P=13070 LS=489 conv=True wall=5.3 obs={"ball_center": [8.010844097068462, 2.525890611117674, 0.00886328602529353], "final_frame": 120}
+Fbase wb rep5 mean=39.72283 med=33.08551 N=477 P=12760 LS=488 conv=True wall=5.3 obs={"ball_center": [8.135658516387355, 2.6156859313064484, 0.02506887666217423], "final_frame": 120}
+Fbase wb rep6 mean=38.76754 med=33.44859 N=466 P=12850 LS=482 conv=True wall=5.2 obs={"ball_center": [8.060652271627529, 2.5278823842008604, -0.09266734357842757], "final_frame": 120}
+Fbase wb rep7 mean=40.00384 med=33.47284 N=478 P=13135 LS=486 conv=True wall=5.3 obs={"ball_center": [8.087907303187007, 2.6278575656906833, 0.030179653078709873], "final_frame": 120}
+Fbase wb rep8 mean=39.00224 med=32.53700 N=471 P=13050 LS=484 conv=True wall=5.2 obs={"ball_center": [8.133080971069475, 2.4040180326646814, 0.02386240620612723], "final_frame": 120}
+Fbase wb rep9 mean=40.08777 med=33.91197 N=472 P=12845 LS=483 conv=True wall=5.4 obs={"ball_center": [8.173623908379163, 2.369238456678166, -0.08661045244787831], "final_frame": 120}
+Fbase wb rep10 mean=40.19941 med=33.51199 N=478 P=13060 LS=490 conv=True wall=5.4 obs={"ball_center": [8.071544900824218, 2.441063048086411, 0.014629344336661541], "final_frame": 120}
+Fspd2off wb rep1 mean=28.05776 med=24.30921 N=473 P=12940 LS=488 conv=True wall=3.9 obs={"ball_center": [8.185576413688525, 2.421101710090989, 0.00014717035342286765], "final_frame": 120}
+Fspd2off wb rep2 mean=28.09375 med=24.33234 N=474 P=12520 LS=486 conv=True wall=3.9 obs={"ball_center": [7.8923320361142615, 2.8115239748191683, 0.055049680166722265], "final_frame": 120}
+Fspd2off wb rep3 mean=27.69951 med=24.27358 N=467 P=12780 LS=476 conv=True wall=3.9 obs={"ball_center": [7.9774501471325, 2.5270899347871203, -0.07242143127205734], "final_frame": 120}
+Fspd2off wb rep4 mean=28.39288 med=24.71706 N=477 P=12890 LS=485 conv=True wall=4.0 obs={"ball_center": [8.007170768263357, 2.486491076542172, -0.04573467743322211], "final_frame": 120}
+Fspd2off wb rep5 mean=28.66955 med=24.38559 N=480 P=13095 LS=496 conv=True wall=4.0 obs={"ball_center": [8.14211338288731, 2.4584710454392305, -0.1436890299616116], "final_frame": 120}
+Fspd2off wb rep6 mean=28.79217 med=24.53870 N=480 P=13110 LS=490 conv=True wall=4.0 obs={"ball_center": [8.24767106035698, 2.711645080928494, -0.020596447635479465], "final_frame": 120}
+Fspd2off wb rep7 mean=28.73265 med=24.68770 N=485 P=12750 LS=499 conv=True wall=4.0 obs={"ball_center": [8.049241436103179, 2.7779863312924036, -0.02664335037068785], "final_frame": 120}
+Fspd2off wb rep8 mean=28.67796 med=24.82480 N=476 P=12815 LS=488 conv=True wall=4.0 obs={"ball_center": [8.096526169324305, 2.5633037567241646, -0.03732976711305048], "final_frame": 120}
+Fspd2off wb rep9 mean=28.49437 med=24.36331 N=478 P=12930 LS=489 conv=True wall=4.0 obs={"ball_center": [8.081568755645563, 2.6779806281401717, 0.05873113178226343], "final_frame": 120}
+Fspd2off wb rep10 mean=28.29861 med=24.47793 N=477 P=12915 LS=486 conv=True wall=3.9 obs={"ball_center": [8.109176806770813, 2.4958952523895577, -0.09895723586752506], "final_frame": 120}
+=== PHASE F DONE (23:41:46)
+=== PHASE G: kernel-level switch audit (nsys) (23:42:04)
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_head (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_base (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_spd2off (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_tqloff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_gsoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_gsonly (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_gsblock32 (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_gsbpsm1 (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_bvhoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_hsfastoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_hsspin (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_fold1 (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_fold2 (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_mspdoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/wb_bfsoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_head (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_base (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_svdoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_st2off (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_occoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_dfoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_segoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_bfsoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_bfbpsm8 (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_gsoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/c2_spmvgs (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/cwc_head (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+NSYS-FAIL no trace csv for /workspace/output/round5/validation/nsys/cwc_mspdoff (rc=1)
+Error: Nsight Systems #VERSION_RSPLIT# hasn't been installed with CUDA Toolkit #CUDA_MAJOR#.#CUDA_MINOR#
+=== PHASE G DONE (23:42:04)
+=== PHASE H: composed probe run, full stderr (23:42:06)
+probe wb rc=0 stderr_lines=78
+probe cwc rc=0 stderr_lines=78
+probe c2 rc=0 stderr_lines=88
+probe mb rc=0 stderr_lines=53
+probe wb_fold rc=0 stderr_lines=79
+=== PHASE H DONE (23:42:24)
+=== PHASE G: kernel-level switch audit (nsys) (23:43:19)
+nsysrun ok /workspace/output/round5/validation/nsys/wb_head rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_base rc=0 rows=10238
+nsysrun ok /workspace/output/round5/validation/nsys/wb_spd2off rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_tqloff rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_gsoff rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_gsonly rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_gsblock32 rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_gsbpsm1 rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_bvhoff rc=0 rows=10171
+nsysrun ok /workspace/output/round5/validation/nsys/wb_hsfastoff rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_hsspin rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_fold1 rc=0 rows=9717
+nsysrun ok /workspace/output/round5/validation/nsys/wb_fold2 rc=0 rows=9754
+nsysrun ok /workspace/output/round5/validation/nsys/wb_mspdoff rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/wb_bfsoff rc=0 rows=9997
+nsysrun ok /workspace/output/round5/validation/nsys/c2_head rc=0 rows=18035
+nsysrun ok /workspace/output/round5/validation/nsys/c2_base rc=0 rows=18264
+nsysrun ok /workspace/output/round5/validation/nsys/c2_svdoff rc=0 rows=18035
+nsysrun ok /workspace/output/round5/validation/nsys/c2_st2off rc=0 rows=18035
+nsysrun ok /workspace/output/round5/validation/nsys/c2_occoff rc=0 rows=18035
+nsysrun ok /workspace/output/round5/validation/nsys/c2_dfoff rc=0 rows=18072
+nsysrun ok /workspace/output/round5/validation/nsys/c2_segoff rc=0 rows=18035
+nsysrun ok /workspace/output/round5/validation/nsys/c2_bfsoff rc=0 rows=18035
+=== PHASE I: silent probes at default frames (23:45:25)
+nsysrun ok /workspace/output/round5/validation/nsys/c2_bfbpsm8 rc=0 rows=18035
+nsysrun ok /workspace/output/round5/validation/nsys/c2_gsoff rc=0 rows=18035
+nsysrun ok /workspace/output/round5/validation/nsys/c2_spmvgs rc=0 rows=18035
+nsysrun ok /workspace/output/round5/validation/nsys/cwc_head rc=0 rows=13213
+nsysrun ok /workspace/output/round5/validation/nsys/cwc_mspdoff rc=0 rows=13305
+=== PHASE G DONE (23:45:52)
+probe-long wb rc=0
+probe-long mb rc=0
+probe-long mb_fold rc=0
+=== PHASE I DONE (23:46:27)
