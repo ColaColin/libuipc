@@ -1,0 +1,35 @@
+tumbler-garments noise floor, n=5 full runs through scripts/run_benchmark.py
+RTX 2070 SUPER, cc 7.5, build-perf at perf-round6-base + this branch, default 180 frames
+
+ run    meanMs  medianMs    p95Ms   newton      pcg lineSrch  wall_s  peakGPU_MiB
+   1    162.00    147.12   258.59     1562    58315     1870    30.0         1700
+   2    145.15    138.29   211.68     1433    42615     1602    27.0         1612
+   3    155.55    143.40   269.42     1458    48485     1726    28.9         1678
+   4    144.09    137.71   210.24     1393    41395     1569    26.8         2278
+   5    147.91    136.91   250.86     1453    45955     1749    27.5         1618
+
+meanFrameMs          mean=    150.94 median=    147.91 min=    144.09 max=    162.00 sd=     7.64 cv=  5.06% spread= 11.86%
+medianFrameMs        mean=    140.69 median=    138.29 min=    136.91 max=    147.12 sd=     4.41 cv=  3.13% spread=  7.26%
+p95FrameMs           mean=    240.16 median=    250.86 min=    210.24 max=    269.42 sd=    27.46 cv= 11.44% spread= 24.64%
+newton_total         mean=    1459.8 median=    1453.0 min=    1393.0 max=    1562.0 sd=     62.6 cv=  4.29% spread= 11.58%
+pcg_total            mean=     47353 median=     45955 min=     41395 max=     58315 sd=     6733 cv= 14.22% spread= 35.73%
+linesearch_total     mean=    1703.2 median=    1726.0 min=    1569.0 max=    1870.0 sd=    121.1 cv=  7.11% spread= 17.67%
+ms_per_newton        mean=    18.609 median=    18.619 min=    18.232 max=    19.204 sd=    0.381 cv=  2.05% spread=  5.22%
+ms_per_pcg           mean=    0.5793 median=    0.5793 min=    0.5000 max=    0.6266 sd=   0.0491 cv=  8.48% spread= 21.84%
+
+Determinism: the scene is NOT deterministic.
+  newton sequence identical across the 5 runs: False
+  pcg    sequence identical across the 5 runs: False
+  frames 1-3 are bit-reproducible; the first differing PCG count is frame 4 and the first differing Newton count is frame 6
+
+Resolving power (Welch, alpha=.05, power=.80):
+  meanFrameMs      cv= 5.06%  min detectable effect at n=5/arm =  8.96%   n/arm for 2% =  101   for 5% =  17   for 10% =   5
+  medianFrameMs    cv= 3.13%  min detectable effect at n=5/arm =  5.55%   n/arm for 2% =   39   for 5% =   7   for 10% =   2
+  ms_per_newton    cv= 2.05%  min detectable effect at n=5/arm =  3.63%   n/arm for 2% =   17   for 5% =   3   for 10% =   1
+
+For comparison, cube-wall-cloth on the same box, n=3 (this branch, unchanged scene):
+  run1: mean=71.32ms newton=508 pcg=19975
+  run2: mean=72.12ms newton=514 pcg=20280
+  run3: mean=72.44ms newton=520 pcg=20045
+  meanFrameMs cv = 0.80 % -- also non-deterministic in iteration counts (newton 508/514/520),
+  but its wall scatter is 6x tighter than the tumbler's.

@@ -93,6 +93,29 @@
       "unsetEnvironment": ["NO_MAS", "NO_GRAPH", "WB_TIMER"],
       "metadataOutput": "output/benchmark-runs/cube-wall-cloth.json",
       "comparability": "Keep the 1920-body wall, pinned cloth, MAS, and sample configuration unchanged; compare identical repo, samples, CUDA, GPU, driver, and frame counts."
+    },
+    {
+      "name": "tumbler-garments",
+      "description": "Rotating tumbler drum with four garments: multi-layer cloth self-contact, continuous frictional sliding, shell bending and one kinematic affine-body drum",
+      "entrypoint": "libuipc-samples/examples/95_tumbler_garments/main.py",
+      "workingDirectory": "libuipc-samples/examples/95_tumbler_garments",
+      "arguments": ["--headless", "{frames}"],
+      "defaultFrames": 180,
+      "quickFrames": 3,
+      "requiredPaths": [
+        "libuipc-samples/examples/95_tumbler_garments/main.py",
+        "libuipc-samples/examples/95_tumbler_garments/tumbler_geometry.py",
+        "libuipc-samples/examples/95_tumbler_garments/verify.py",
+        "libuipc-samples/examples/95_tumbler_garments/asset_dir.py",
+        "libuipc-samples/examples/benchmark_utils.py"
+      ],
+      "environment": {
+        "WB_LOG": "Warn",
+        "UIPC_BENCHMARK_TIMERS": "0"
+      },
+      "unsetEnvironment": ["NO_MAS", "NO_GRAPH", "WB_TIMER"],
+      "metadataOutput": "output/benchmark-runs/tumbler-garments.json",
+      "comparability": "The geometry is procedural, so the scene parameters are the assets: keep the drum spec (R=0.30 m, depth 0.40 m, 3 lifters, 48 segments), 40 rpm, dt=1/60, the four garments and their placement, the 6.2 mm element size, the shell moduli/thickness, d_hat and the friction table unchanged -- each of them moves the contact count. Compare identical repo, samples, CUDA, GPU, driver, and frame counts."
     }
   ]
 }

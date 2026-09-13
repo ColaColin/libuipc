@@ -1,0 +1,45 @@
+`main.py --headless 180 --verify` on the shipped scene (RTX 2070 SUPER, build-perf).
+
+tumbler: 4 garments, 10224 verts, 19920 tris (drum 1644), edge_len=6.2mm, h_min=4.24mm, r=1.00mm, d_hat=1.27mm, 40rpm, 180 frames
+TOTAL frames=180 mean=140.2ms median=131.5ms p95=224.4ms
+
+VERIFY_RESULT:
+{
+  "verify_all_finite": true,
+  "verify_r_max": 0.2986393959509087,
+  "verify_r_limit": 0.3022727922061358,
+  "verify_contained_radial": true,
+  "verify_abs_z_max": 0.19859438701925067,
+  "verify_z_limit": 0.2022727922061358,
+  "verify_contained_axial": true,
+  "verify_lifter_depth_max": -0.0011063668136597725,
+  "verify_area_ratio_min": 0.8382699151166437,
+  "verify_area_ratio_max": 1.2534457527273861,
+  "verify_tri_height_min": 0.0038517158676834523,
+  "verify_max_speed": 3.201696358399351,
+  "verify_drum_track_err_deg_max": 0.0395724184579378,
+  "verify_drum_track_err_deg_final": -0.0003199051350389081,
+  "verify_drum_turn_deg": 719.9996800948649,
+  "verify_drum_commanded_deg": 719.9999999999999,
+  "verify_mean_disp_mm": 15.442672120553578,
+  "verify_mean_disp_mm_last_quarter": 17.397415520689417,
+  "verify_centroid_turn_deg": [
+    556.7693119361413,
+    714.3171981358277,
+    332.355823598699,
+    739.3674160963819
+  ],
+  "verify_newton_min": 3,
+  "verify_newton_max": 16,
+  "verify_newton_mean": 7.866666666666666,
+  "verify_newton_first_quarter": 7.2,
+  "verify_newton_last_quarter": 8.422222222222222,
+  "verify_pcg_min": 15,
+  "verify_pcg_max": 705,
+  "verify_pcg_mean": 260.8333333333333,
+  "verify_pcg_first_quarter": 206.66666666666666,
+  "verify_pcg_last_quarter": 275.77777777777777,
+  "verify_gpu_mem_proc_max_mib": 2010,
+  "verify_not_converged_frames": 0,
+  "verify_ok": true
+}

@@ -1,0 +1,117 @@
+
+=== tumbler-garments (180f): total GPU kernel time 29598.8 ms over 788992 launches
+ #   share   total ms  launches  us/launch  kernel
+ 1  18.09%     5355.1      1539    3479.63  DiscreteShellBending_do_compute_gradient_hessian_kernel
+ 2  17.25%     5104.4      4569    1117.19  do_assemble_kernel
+ 3   7.41%     2194.0      1539    1425.60  InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel
+ 4   6.64%     1965.3      3455     568.83  InfoStacklessBVH_pairFilter_kernel
+ 5   5.81%     1718.9     50755      33.87  Spmv_rbk_sym_spmv_dot_chunked_kernel
+ 6   4.94%     1461.3      1727     846.16  InfoStacklessBVH_stacklessSelf_kernel
+ 7   3.82%     1129.6      1539     733.95  InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel
+ 8   3.13%      925.4      2027     456.54  InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k4_kernel
+ 9   2.50%      738.8      4589     160.99  fast_segmental_reduce_matrix_kernel
+10   2.42%      715.5     52294      13.68  MASPreconditionerEngine_schwarz_local_solve_rowdot_kernel
+11   2.26%      670.2      1539     435.45  abd_diag_preconditioner_do_assemble_kernel
+12   2.18%      646.7      1728     374.25  InfoStacklessBVH_stacklessOther_kernel
+13   2.06%      609.2     17428      34.96  DeviceRadixSortOnesweepKernel
+14   1.81%      536.5      2027     264.69  InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k3_kernel
+15   1.67%      494.8      1539     321.48  StrainLimitingBaraffWitkinShell2D_do_compute_gradient_hessian_kernel
+
+=== cube-wall-cloth (100f): total GPU kernel time 7046.4 ms over 272501 launches
+ #   share   total ms  launches  us/launch  kernel
+ 1  21.77%     1533.9      1098    1397.04  do_assemble_kernel
+ 2  12.59%      886.8       504    1759.58  DiscreteShellBending_do_compute_gradient_hessian_kernel
+ 3   8.62%      607.1     19380      31.33  Spmv_rbk_sym_spmv_dot_chunked_kernel
+ 4   3.75%      264.1       607     435.01  InfoStacklessBVH_stacklessSelf_kernel
+ 5   3.32%      233.8       504     463.84  abd_diag_preconditioner_do_assemble_kernel
+ 6   3.29%      232.1       504     460.60  InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel
+ 7   2.97%      209.3      1240     168.79  fast_segmental_reduce_matrix_kernel
+ 8   2.82%      198.9      1215     163.74  InfoStacklessBVH_pairFilter_kernel
+ 9   2.73%      192.2      6356      30.23  DeviceRadixSortOnesweepKernel
+10   2.43%      171.5     19884       8.63  abd_diag_preconditioner_do_apply_lanes_kernel
+11   2.37%      166.8     19884       8.39  MASPreconditionerEngine_schwarz_local_solve_rowdot_kernel
+12   2.35%      165.4       504     328.20  ortho_potential_compute_gradient_hessian_kernel
+13   1.80%      126.9       504     251.86  InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel
+14   1.61%      113.2       368     307.49  matrix_converter_radix_sort_indices_and_blocks_k3_kernel
+15   1.55%      109.6       871     125.80  do_compute_energy_k3_kernel
+
+=== rigid-wrecking-balls (120f): total GPU kernel time 3875.3 ms over 148038 launches
+ #   share   total ms  launches  us/launch  kernel
+ 1  37.23%     1442.8      2418     596.68  do_assemble_kernel
+ 2   7.18%      278.2       487     571.29  abd_linear_subsystem_assemble_dytopo_effect_pair_warp_kernel
+ 3   6.25%      242.4       617     392.84  InfoStacklessBVH_stacklessSelf_kernel
+ 4   4.65%      180.1       491     366.90  abd_diag_preconditioner_do_assemble_kernel
+ 5   4.37%      169.4      1231     137.62  InfoStacklessBVH_pairFilter_kernel
+ 6   4.23%      164.1       491     334.12  ortho_potential_compute_gradient_hessian_kernel
+ 7   3.74%      145.0       484     299.66  InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel
+ 8   3.28%      127.1     12870       9.88  Spmv_rbk_sym_spmv_dot_chunked_kernel
+ 9   2.86%      110.9       614     180.60  InfoStacklessBVH_stacklessOther_kernel
+10   2.15%       83.3       484     172.18  InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel
+11   1.98%       76.7      4379      17.52  DeviceRadixSortOnesweepKernel
+12   1.75%       67.7       620     109.16  InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k4_kernel
+13   1.63%       63.0       487     129.36  abd_linear_subsystem_assemble_dytopo_effect_k1_kernel
+14   1.53%       59.4      1231      48.28  do_compute_energy_k3_kernel
+15   1.15%       44.8       620      72.19  InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k3_kernel
+
+
+=== side by side: share of total GPU kernel time (full runs) ===
+kernel                                                              tumbler-garments       cube-wall-cloth  rigid-wrecking-balls
+--------------------------------------------------------------------------------------------------------------------------------
+DiscreteShellBending_do_compute_gradient_hessian_kernel            18.09%    5355.1ms     12.59%     886.8ms                    - 
+do_assemble_kernel                                                 17.25%    5104.4ms     21.77%    1533.9ms     37.23%    1442.8ms
+InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel        7.41%    2194.0ms      3.29%     232.1ms      3.74%     145.0ms
+InfoStacklessBVH_pairFilter_kernel                                  6.64%    1965.3ms      2.82%     198.9ms      4.37%     169.4ms
+Spmv_rbk_sym_spmv_dot_chunked_kernel                                5.81%    1718.9ms      8.62%     607.1ms      3.28%     127.1ms
+InfoStacklessBVH_stacklessSelf_kernel                               4.94%    1461.3ms      3.75%     264.1ms      6.25%     242.4ms
+InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel        3.82%    1129.6ms      1.80%     126.9ms      2.15%      83.3ms
+InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k4_ker        3.13%     925.4ms      1.43%     101.0ms      1.75%      67.7ms
+fast_segmental_reduce_matrix_kernel                                 2.50%     738.8ms      2.97%     209.3ms      0.23%       9.1ms
+MASPreconditionerEngine_schwarz_local_solve_rowdot_kernel           2.42%     715.5ms      2.37%     166.8ms                    - 
+abd_diag_preconditioner_do_assemble_kernel                          2.26%     670.2ms      3.32%     233.8ms      4.65%     180.1ms
+InfoStacklessBVH_stacklessOther_kernel                              2.18%     646.7ms      1.53%     108.0ms      2.86%     110.9ms
+DeviceRadixSortOnesweepKernel                                       2.06%     609.2ms      2.73%     192.2ms      1.98%      76.7ms
+InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k3_ker        1.81%     536.5ms      0.87%      61.1ms      1.15%      44.8ms
+StrainLimitingBaraffWitkinShell2D_do_compute_gradient_hessia        1.67%     494.8ms      1.17%      82.7ms                    - 
+ortho_potential_compute_gradient_hessian_kernel                     1.12%     330.4ms      2.35%     165.4ms      4.23%     164.1ms
+matrix_converter_radix_sort_indices_and_blocks_k3_kernel            1.08%     321.0ms      1.61%     113.2ms                    - 
+do_compute_energy_k3_kernel                                         0.70%     208.2ms      1.55%     109.6ms      1.53%      59.4ms
+abd_diag_preconditioner_do_apply_lanes_kernel                       0.36%     107.6ms      2.43%     171.5ms      0.95%      37.0ms
+abd_linear_subsystem_assemble_dytopo_effect_pair_warp_kernel        0.12%      35.9ms      0.55%      38.9ms      7.18%     278.2ms
+abd_linear_subsystem_assemble_dytopo_effect_k1_kernel               0.03%       7.8ms      0.09%       6.5ms      1.63%      63.0ms
+
+
+=== family shares (full runs, nsys cuda_gpu_kern_sum) ===
+family                                                     tumbler                 cwc                 rwb
+BVH broad/narrow + CCD (InfoStacklessBVH*)         30.94%     9158ms     17.80%     1254ms     25.27%      979ms
+contact assemble (do_assemble_kernel)              17.25%     5104ms     21.77%     1534ms     37.23%     1443ms
+shell bending (DiscreteShellBending*)              18.39%     5443ms     12.77%      900ms      0.00%        0ms
+membrane (StrainLimiting*/NeoHookeanShell*)         2.53%      750ms      2.32%      163ms      0.00%        0ms
+ABD elasticity (ortho_potential*)                   1.30%      386ms      2.63%      185ms      4.69%      182ms
+PCG spmv (Spmv_*)                                   5.81%     1719ms      8.62%      607ms      3.28%      127ms
+preconditioners (MAS*/abd_diag*)                    8.62%     2552ms     12.01%      846ms      5.60%      217ms
+cub/thrust primitives (Device*)                     3.67%     1085ms      4.37%      308ms      3.64%      141ms
+matrix converter / segmental reduce                 4.23%     1251ms      5.29%      373ms      0.36%       14ms
+energy eval (do_compute_energy*)                    1.96%      579ms      3.36%      237ms      4.16%      161ms
+TOTAL GPU kernel ms                                         29599ms               7046ms               3875ms
+
+
+=== per-launch cost of the shared kernels (us) -- 'more work' vs 'slower work' ===
+kernel                                                                     tumbler                   cwc                   rwb
+DiscreteShellBending_do_compute_gradient_hessian_kernel          3479.63us x   1539     1759.58us x    504                     -
+do_assemble_kernel                                               1117.19us x   4569     1397.04us x   1098      596.68us x   2418
+InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kern       1425.60us x   1539      460.60us x    504      299.66us x    484
+InfoStacklessBVH_pairFilter_kernel                                568.83us x   3455      163.74us x   1215      137.62us x   1231
+Spmv_rbk_sym_spmv_dot_chunked_kernel                               33.87us x  50755       31.33us x  19380        9.88us x  12870
+InfoStacklessBVH_stacklessSelf_kernel                             846.16us x   1727      435.01us x    607      392.84us x    617
+InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kern        733.95us x   1539      251.86us x    504      172.18us x    484
+InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k4_k        456.54us x   2027      171.46us x    589      109.16us x    620
+fast_segmental_reduce_matrix_kernel                               160.99us x   4589      168.79us x   1240       18.53us x    491
+MASPreconditionerEngine_schwarz_local_solve_rowdot_kernel          13.68us x  52294        8.39us x  19884                     -
+abd_diag_preconditioner_do_assemble_kernel                        435.45us x   1539      463.84us x    504      366.90us x    491
+InfoStacklessBVH_stacklessOther_kernel                            374.25us x   1728      177.61us x    608      180.60us x    614
+DeviceRadixSortOnesweepKernel                                      34.96us x  17428       30.23us x   6356       17.52us x   4379
+InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k3_k        264.69us x   2027      103.81us x    589       72.19us x    620
+StrainLimitingBaraffWitkinShell2D_do_compute_gradient_hess        321.48us x   1539      164.00us x    504                     -
+MASPreconditionerEngine_build_multi_level_R_kernel                  6.76us x  52294        5.34us x  19884                     -
+ortho_potential_compute_gradient_hessian_kernel                   214.71us x   1539      328.20us x    504      334.12us x    491
+matrix_converter_radix_sort_indices_and_blocks_k3_kernel          210.50us x   1525      307.49us x    368                     -
