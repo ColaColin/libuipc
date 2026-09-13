@@ -12,6 +12,7 @@ single build of `perf/round6-s04-ccd`, with the two arms selected by the env swi
 | `ccd_earlyout_probe.cu`, `.txt`, `build_probe.sh` | the numerics proof: both instantiations of all four `*_ccd` functions, same thread, same inputs, 10^6 randomised samples per pair type |
 | `sass_identity.txt` | per-instantiation SASS diff of the filter's translation unit, base vs head |
 | `scope_tum.txt`, `scope_cwc.txt`, `scope_rwb.txt`, `scope_c2.txt` | the targeted-scope A/B: per-launch µs and family totals, 3 full runs per arm, plus the same-run ratio normalisation |
+| `nsys/` | the 26 per-run `cuda_gpu_kern_sum` csvs the scope tables and the ranking are computed from (the 2 GB of `.nsys-rep` / `.sqlite` are not kept) |
 | `ab/` | the end-to-end A/B: `ab.py` raw per-run json + summary per scene, n=5 per arm, ABBA + one discarded warm-up |
 | `verify/` | the tumbler `--verify` audit, 180 frames, 3 runs per arm |
 | `gate.txt`, `gate_eo0.txt` | the correctness gate in both arms |
