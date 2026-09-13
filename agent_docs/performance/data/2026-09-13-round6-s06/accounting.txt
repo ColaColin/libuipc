@@ -1,0 +1,72 @@
+=== tum
+runs c0=3 c1=3
+filter_toi_k4 launches (~Newton iterations): 1425 -> 1470  (+3.18 %)
+
+kernel                      total ms old  total ms new   delta ms   delta %
+filter_active_k4                   874.8         141.9     -732.9   -83.78 %
+filter_active_k3                   501.2          91.6     -409.5   -81.72 %
+filter_toi_k4                     1605.8        1654.8      +49.0    +3.05 %
+filter_toi_k3                      778.5         799.8      +21.3    +2.73 %
+stacklessSelf                     1482.9        1444.0      -38.8    -2.62 %
+stacklessOther                     631.7         639.3       +7.7    +1.22 %
+pairFilter_kernel<(bool)1         1494.0        1480.7      -13.3    -0.89 %
+pairFilter_kernel<(bool)0          594.1         588.8       -5.3    -0.88 %
+
+four targeted kernels        NET -1072.1 ms   = -4.80 % of the old arm's scene GPU kernel time
+scene GPU kernel time       22353.7 -> 21852.8  (-2.24 %) RAW
+scene GPU kernel time per filter_toi launch: 15.6905 -> 14.8658 ms  (-5.26 %) NORMALISED
+
+=== c2
+runs c0=3 c1=3
+filter_toi_k4 launches (~Newton iterations): 1663 -> 1663  (-0.02 %)
+
+kernel                      total ms old  total ms new   delta ms   delta %
+filter_active_k4                   725.9          96.5     -629.4   -86.71 %
+filter_active_k3                   399.6          86.8     -312.8   -78.28 %
+filter_toi_k4                     1370.9        1404.2      +33.3    +2.43 %
+filter_toi_k3                      634.2         649.1      +14.9    +2.35 %
+stacklessSelf                     1800.5        1806.3       +5.8    +0.32 %
+stacklessOther                     850.6         855.4       +4.8    +0.57 %
+pairFilter_kernel<(bool)1         2113.3        2108.3       -5.0    -0.23 %
+pairFilter_kernel<(bool)0          900.0         900.3       +0.3    +0.03 %
+
+four targeted kernels        NET -893.9 ms   = -2.05 % of the old arm's scene GPU kernel time
+scene GPU kernel time       43652.6 -> 42956.8  (-1.59 %) RAW
+scene GPU kernel time per filter_toi launch: 26.2440 -> 25.8309 ms  (-1.57 %) NORMALISED
+
+=== cwc
+runs c0=3 c1=3
+filter_toi_k4 launches (~Newton iterations): 505 -> 509  (+0.73 %)
+
+kernel                      total ms old  total ms new   delta ms   delta %
+filter_active_k4                   101.6          29.0      -72.7   -71.48 %
+filter_active_k3                    61.1          24.7      -36.4   -59.62 %
+filter_toi_k4                      169.4         173.4       +4.1    +2.40 %
+filter_toi_k3                       85.9          87.7       +1.8    +2.05 %
+stacklessSelf                      263.8         268.4       +4.5    +1.72 %
+stacklessOther                     108.1         109.0       +0.9    +0.85 %
+pairFilter_kernel<(bool)1          134.4         135.9       +1.5    +1.10 %
+pairFilter_kernel<(bool)0           63.3          64.0       +0.7    +1.18 %
+
+four targeted kernels        NET -103.3 ms   = -1.68 % of the old arm's scene GPU kernel time
+scene GPU kernel time       6159.5 -> 6107.1  (-0.85 %) RAW
+scene GPU kernel time per filter_toi launch: 12.1970 -> 12.0060 ms  (-1.57 %) NORMALISED
+
+=== mb
+runs c0=2 c1=2
+filter_toi_k4 launches (~Newton iterations): 465 -> 465  (+0.00 %)
+
+kernel                      total ms old  total ms new   delta ms   delta %
+filter_active_k4                    20.7           1.1      -19.6   -94.70 %
+filter_active_k3                    19.2           0.9      -18.3   -95.45 %
+filter_toi_k4                       39.5          40.0       +0.5    +1.18 %
+filter_toi_k3                       21.6          21.7       +0.2    +0.87 %
+stacklessSelf                      136.1         135.7       -0.5    -0.34 %
+stacklessOther                      67.8          67.7       -0.1    -0.13 %
+pairFilter_kernel<(bool)1           86.5          86.3       -0.3    -0.30 %
+pairFilter_kernel<(bool)0           36.5          36.4       -0.1    -0.21 %
+
+four targeted kernels        NET -37.3 ms   = -0.57 % of the old arm's scene GPU kernel time
+scene GPU kernel time       6536.4 -> 6487.2  (-0.75 %) RAW
+scene GPU kernel time per filter_toi launch: 14.0568 -> 13.9510 ms  (-0.75 %) NORMALISED
+

@@ -1,0 +1,14 @@
+[   49.3s] rep 5      new: 26.949 ms/frame  Newton 467  PCG 12785
+[   53.3s] rep 6      new: 26.773 ms/frame  Newton 465  PCG 12835
+[   57.4s] rep 6      old: 27.948 ms/frame  Newton 483  PCG 12980
+
+=== s06b  rigid-wrecking-balls  n=6 per arm ===
+       mean_ms: old    27.8443 [27.0820, 28.4918]   new    27.3629 [26.7587, 28.1259]     -1.73%  overlapping  t=+1.50 p=0.165
+     median_ms: old    23.8725 [23.0929, 24.8386]   new    23.5215 [23.2410, 23.8868]     -1.47%  overlapping
+ ms_per_newton: old     6.9973 [6.9293, 7.1229]   new     6.9028 [6.8175, 6.9734]     -1.35%  overlapping  t=+2.54 p=0.0307
+    ms_per_pcg: old     0.2567 [0.2526, 0.2599]   new     0.2532 [0.2477, 0.2605]     -1.39%  overlapping  t=+1.65 p=0.14
+        newton: old   477.5000 [469.0000, 483.0000]   new   475.6667 [465.0000, 485.0000]     -0.38%  overlapping
+           pcg: old 13014.1667 [12835.0000, 13180.0000]   new 12970.0000 [12785.0000, 13180.0000]     -0.34%  overlapping
+   line_search: old   489.1667 [480.0000, 498.0000]   new   486.0000 [473.0000, 500.0000]     -0.65%  overlapping
+
+raw runs + summary: /workspace/output/round6/s06/ab

@@ -1,0 +1,48 @@
+
+=== tumbler-garments: re-ranked at THIS head, UIPC_CCD_COMPACT=1, 3 full runs, total GPU kernel time 21853 ms
+  BVH/CCD                   7168.3 ms  32.80 %
+  contact assemble          4908.9 ms  22.46 %
+  precond                   2384.8 ms  10.91 %
+  other                     2340.3 ms  10.71 %
+  cub/thrust                1655.2 ms   7.57 %
+  spmv                      1540.7 ms   7.05 %
+  membrane                   710.0 ms   3.25 %
+  bending                    586.8 ms   2.69 %
+  energy                     557.7 ms   2.55 %
+  -- top kernels --
+  22.46 %   4908.3 ms    4362 launches   1125.2 us/l  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<
+  11.23 %   2454.5 ms    2940 launches    834.9 us/l  c::backend::cuda::<unnamed>::InfoStacklessBVHSimplexTrajectory
+   9.47 %   2069.5 ms    3318 launches    623.7 us/l  c::backend::cuda::<unnamed>::InfoStacklessBVH_pairFilter_kerne
+   7.05 %   1540.7 ms   46505 launches     33.1 us/l  c::backend::cuda::<unnamed>::Spmv_rbk_sym_spmv_dot_chunked_ker
+   6.61 %   1444.0 ms    1659 launches    870.6 us/l  c::backend::cuda::<unnamed>::InfoStacklessBVH_stacklessSelf_ke
+   3.26 %    712.4 ms    4382 launches    162.6 us/l  c::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix
+   3.25 %    709.9 ms    3354 launches    211.7 us/l  ckend::cuda::<unnamed>::StrainLimitingBaraffWitkinShell2D_do_c
+   2.99 %    654.3 ms   47975 launches     13.6 us/l  ckend::cuda::<unnamed>::MASPreconditionerEngine_schwarz_local_
+   2.93 %    641.4 ms    1470 launches    436.3 us/l  ckend::cuda::<unnamed>::abd_diag_preconditioner_do_assemble_ke
+   2.93 %    639.3 ms    1660 launches    385.2 us/l  c::backend::cuda::<unnamed>::InfoStacklessBVH_stacklessOther_k
+   2.70 %    589.5 ms   16737 launches     35.2 us/l  ::CUB_200700_750_NS::DeviceRadixSortOnesweepKernel<cub::CUB_20
+   2.31 %    504.9 ms    1470 launches    343.4 us/l  c::backend::cuda::<unnamed>::DiscreteShellBending_do_compute_g
+
+=== stiff-gipc-case2: re-ranked at THIS head, UIPC_CCD_COMPACT=1, 3 full runs, total GPU kernel time 42957 ms
+  other                     9519.3 ms  22.16 %
+  BVH/CCD                   8702.8 ms  20.26 %
+  precond                   7809.5 ms  18.18 %
+  spmv                      7721.3 ms  17.97 %
+  contact assemble          3650.7 ms   8.50 %
+  cub/thrust                3589.7 ms   8.36 %
+  energy                    1084.2 ms   2.52 %
+  membrane                   538.2 ms   1.25 %
+  bending                    341.0 ms   0.79 %
+  -- top kernels --
+  17.97 %   7721.3 ms   65273 launches    118.3 us/l  c::backend::cuda::<unnamed>::Spmv_rbk_sym_spmv_dot_chunked_ker
+  11.07 %   4754.4 ms    1663 launches   2858.9 us/l  c::backend::cuda::<unnamed>::StableNeoHookean3D_do_compute_gra
+   8.35 %   3584.8 ms   66936 launches     53.6 us/l  ckend::cuda::<unnamed>::MASPreconditionerEngine_schwarz_local_
+   8.07 %   3466.5 ms    4984 launches    695.5 us/l  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<
+   7.00 %   3008.6 ms    3848 launches    781.9 us/l  c::backend::cuda::<unnamed>::InfoStacklessBVH_pairFilter_kerne
+   4.78 %   2053.3 ms    3326 launches    617.3 us/l  c::backend::cuda::<unnamed>::InfoStacklessBVHSimplexTrajectory
+   4.58 %   1965.5 ms    1663 launches   1181.9 us/l  c::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix
+   4.20 %   1806.3 ms    1923 launches    939.3 us/l  c::backend::cuda::<unnamed>::InfoStacklessBVH_stacklessSelf_ke
+   3.55 %   1527.1 ms   66936 launches     22.8 us/l  ckend::cuda::<unnamed>::MASPreconditionerEngine_build_multi_le
+   2.67 %   1147.3 ms    3326 launches    345.0 us/l  ckend::cuda::<unnamed>::MASPreconditionerEngine_scatter_hessia
+   2.54 %   1092.8 ms    9672 launches    113.0 us/l  ::CUB_200700_750_NS::DeviceRadixSortOnesweepKernel<cub::CUB_20
+   2.28 %    978.1 ms   65273 launches     15.0 us/l  uipc::backend::cuda::<unnamed>::fused_update_xr_kernel

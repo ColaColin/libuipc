@@ -1,0 +1,23 @@
+[    7.4s] warmup       old: 61.258 ms/frame (discarded)
+[   14.8s] warmup       new: 60.684 ms/frame (discarded)
+[   22.5s] rep 1      old: 64.035 ms/frame  Newton 519  PCG 20505
+[   29.9s] rep 1      new: 60.776 ms/frame  Newton 507  PCG 20020
+[   37.4s] rep 2      new: 60.949 ms/frame  Newton 512  PCG 20200
+[   44.7s] rep 2      old: 59.356 ms/frame  Newton 498  PCG 19345
+[   52.0s] rep 3      old: 60.697 ms/frame  Newton 503  PCG 19655
+[   59.5s] rep 3      new: 61.096 ms/frame  Newton 515  PCG 19960
+[   66.8s] rep 4      new: 59.879 ms/frame  Newton 509  PCG 19595
+[   74.2s] rep 4      old: 60.931 ms/frame  Newton 507  PCG 19900
+[   81.5s] rep 5      old: 60.152 ms/frame  Newton 502  PCG 19775
+[   88.6s] rep 5      new: 58.299 ms/frame  Newton 499  PCG 19240
+
+=== s06  cube-wall-cloth  n=5 per arm ===
+       mean_ms: old    61.0342 [59.3559, 64.0354]   new    60.1999 [58.2989, 61.0959]     -1.37%  overlapping  t=+0.88 p=0.411
+     median_ms: old    53.6508 [52.4787, 54.2386]   new    51.8436 [49.5040, 52.9036]     -3.37%  overlapping
+ ms_per_newton: old    12.0649 [11.9189, 12.3382]   new    11.8404 [11.6832, 11.9874]     -1.86%  overlapping  t=+2.50 p=0.0397
+    ms_per_pcg: old     0.3077 [0.3042, 0.3123]   new     0.3040 [0.3017, 0.3061]     -1.19%  overlapping  t=+2.29 p=0.0583
+        newton: old   505.8000 [498.0000, 519.0000]   new   508.4000 [499.0000, 515.0000]     +0.51%  overlapping
+           pcg: old 19836.0000 [19345.0000, 20505.0000]   new 19803.0000 [19240.0000, 20200.0000]     -0.17%  overlapping
+   line_search: old   525.8000 [518.0000, 540.0000]   new   529.6000 [520.0000, 538.0000]     +0.72%  overlapping
+
+raw runs + summary: /workspace/output/round6/s06/ab

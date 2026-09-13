@@ -1,0 +1,12 @@
+== 88_stiff_gipc_benchmark 250
+[2026-09-13 17:27:49.972] [warning] [cuda] [ccd_compact_verify] contents checks=1600 MISMATCHES=0
+[2026-09-13 17:27:51.361] [warning] [cuda] [ccd_compact_verify] calls=1800 candidates=773960982 dropped=712058400 (92.00 %) active_pairs=28894953 MISMATCHES=0
+== 93_cube_wall_cloth 100
+[2026-09-13 17:27:56.878] [warning] [cuda] [ccd_compact_verify] calls=400 candidates=53118066 dropped=41130192 (77.43 %) active_pairs=10653487 MISMATCHES=0
+[2026-09-13 17:27:57.333] [warning] [cuda] [ccd_compact_verify] contents checks=400 MISMATCHES=0
+== 6_wrecking_balls 120
+[2026-09-13 17:28:02.785] [warning] [cuda] [ccd_compact_verify] calls=400 candidates=44536097 dropped=31743671 (71.28 %) active_pairs=10369342 MISMATCHES=0
+[2026-09-13 17:28:02.859] [warning] [cuda] [ccd_compact_verify] contents checks=400 MISMATCHES=0
+== 89_mas_bunny 100
+[2026-09-13 17:28:10.738] [warning] [cuda] [ccd_compact_verify] contents checks=400 MISMATCHES=0
+[2026-09-13 17:28:10.738] [warning] [cuda] [ccd_compact_verify] calls=400 candidates=15219166 dropped=15174628 (99.71 %) active_pairs=2797 MISMATCHES=0
