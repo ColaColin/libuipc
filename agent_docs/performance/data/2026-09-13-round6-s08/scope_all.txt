@@ -1,0 +1,44 @@
+== cwc: contact part 1 / part 2 per launch (us), full runs, n=3 per arm
+arm     part1 us/launch       d%    part2 us/launch       d%  sceneGPU ms       d%  p1 launches
+b0               2131.1    +0.00             1392.7    +0.00       6167.7    +0.00          375
+     raw part1: [2129.1, 2131.5, 2132.9]
+b1               1987.0    -6.76             1386.2    -0.47       6174.6    +0.11          377
+     raw part1: [1970.4, 1996.0, 1994.6]
+b2               1686.8   -20.85             1357.9    -2.50       6913.7   +12.09          425
+     raw part1: [1717.3, 1634.0, 1709.2]
+
+== rwb: contact part 1 / part 2 per launch (us), full runs, n=3 per arm
+arm     part1 us/launch       d%    part2 us/launch       d%  sceneGPU ms       d%  p1 launches
+b0               1533.4    +0.00              976.0    +0.00       3564.3    +0.00          465
+     raw part1: [1524.1, 1534.7, 1541.2]
+b1               1493.7    -2.59              895.8    -8.22       3548.0    -0.46          472
+     raw part1: [1517.8, 1512.5, 1450.7]
+b2               1467.4    -4.30              778.2   -20.26       3458.2    -2.98          466
+     raw part1: [1435.7, 1486.4, 1479.9]
+
+== c2: contact part 1 / part 2 per launch (us), full runs, n=3 per arm
+arm     part1 us/launch       d%    part2 us/launch       d%  sceneGPU ms       d%  p1 launches
+b0                997.6    +0.00              797.3    +0.00      42392.6    +0.00         1659
+     raw part1: [994.9, 1004.3, 993.6]
+b1                888.0   -10.98              753.7    -5.47      42220.7    -0.41         1659
+     raw part1: [886.7, 893.0, 884.3]
+b2                702.0   -29.63              702.1   -11.95     160742.7  +279.18         2178
+     raw part1: [691.8, 702.0, 712.2]
+
+== tum: contact part 1 / part 2 per launch (us), full runs, n=3 per arm
+arm     part1 us/launch       d%    part2 us/launch       d%  sceneGPU ms       d%  p1 launches
+b0               2007.7    +0.00              870.1    +0.00      22013.8    +0.00         1453
+     raw part1: [1939.0, 2100.6, 1983.4]
+b1               1810.9    -9.80              809.0    -7.03      20808.0    -5.48         1448
+     raw part1: [1901.4, 1801.1, 1730.4]
+b2               1779.1   -11.39              924.9    +6.30      42026.7   +90.91         1900
+     raw part1: [1761.8, 1766.6, 1808.8]
+
+cwc  b0 kernel-sum     6168 ms  wall(nsys)     6310 ms  sum/wall  0.977 | part1     799 ms (12.96% of kernel sum)  part2     522 ms ( 8.47%)  critical stream = part 1
+cwc  b1 kernel-sum     6175 ms  wall(nsys)     6333 ms  sum/wall  0.975 | part1     749 ms (12.13% of kernel sum)  part2     523 ms ( 8.47%)  critical stream = part 1
+rwb  b0 kernel-sum     3564 ms  wall(nsys)     3440 ms  sum/wall  1.036 | part1     714 ms (20.02% of kernel sum)  part2     454 ms (12.74%)  critical stream = part 1
+rwb  b1 kernel-sum     3548 ms  wall(nsys)     3460 ms  sum/wall  1.025 | part1     706 ms (19.89% of kernel sum)  part2     423 ms (11.94%)  critical stream = part 1
+c2   b0 kernel-sum    42393 ms  wall(nsys)    42433 ms  sum/wall  0.999 | part1    1655 ms ( 3.90% of kernel sum)  part2    1323 ms ( 3.12%)  critical stream = part 1
+c2   b1 kernel-sum    42221 ms  wall(nsys)    42358 ms  sum/wall  0.997 | part1    1474 ms ( 3.49% of kernel sum)  part2    1251 ms ( 2.96%)  critical stream = part 1
+tum  b0 kernel-sum    22014 ms  wall(nsys)    21666 ms  sum/wall  1.016 | part1    2916 ms (13.25% of kernel sum)  part2    1266 ms ( 5.75%)  critical stream = part 1
+tum  b1 kernel-sum    20808 ms  wall(nsys)    20496 ms  sum/wall  1.015 | part1    2624 ms (12.61% of kernel sum)  part2    1171 ms ( 5.63%)  critical stream = part 1

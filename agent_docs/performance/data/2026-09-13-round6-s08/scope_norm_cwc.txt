@@ -1,0 +1,14 @@
+== cwc: per-launch us, and part1 normalised by untouched kernels of other families
+b0  part1=  2131.1  part2=  1392.7  stacklessSelf=   437.1  filter_toi=   174.8  pairFilter=   163.7  do_compute_energy_k2=    79.5  do_compute_energy_k1=    29.8
+b1  part1=  1987.0  part2=  1386.2  stacklessSelf=   437.8  filter_toi=   176.3  pairFilter=   165.1  do_compute_energy_k2=    80.5  do_compute_energy_k1=    30.1
+b2  part1=  1686.8  part2=  1357.9  stacklessSelf=   449.6  filter_toi=   181.7  pairFilter=   168.7  do_compute_energy_k2=    80.6  do_compute_energy_k1=    30.2
+-- b1 vs b0
+     part1                      -6.76 %
+     part2                      -0.47 %
+     stacklessSelf              +0.16 %
+     filter_toi                 +0.85 %
+     pairFilter                 +0.83 %
+     do_compute_energy_k2       +1.20 %
+     do_compute_energy_k1       +0.83 %
+     part1 / stacklessSelf      -6.91 %   arm [4.5539, 4.5322, 4.5295]  base [4.8961, 4.8478, 4.8827]
+     part1 / filter_toi         -7.55 %   arm [11.4235, 11.19, 11.2031]  base [12.3074, 12.2189, 12.0503]

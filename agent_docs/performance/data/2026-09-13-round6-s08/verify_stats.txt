@@ -1,0 +1,26 @@
+tumbler --verify, 180 frames, n=8 (b0 = shipped dense-Q) / 8 (b1 = basis-free), one build
+  verify_ok                          b0 8/8 true   b1 8/8 true
+  verify_all_finite                  b0 8/8 true   b1 8/8 true
+  verify_contained_radial            b0 8/8 true   b1 8/8 true
+  verify_contained_axial             b0 8/8 true   b1 8/8 true
+  verify_cc_min_dist                 b0   0.00248782 [0.00234211, 0.00268092]   b1   0.00249864 [0.00237184, 0.00262155]  Welch p=0.833  MW p=0.798
+  verify_bore_gap_min                b0  0.000853706 [0.000720698, 0.00100483]   b1  0.000815781 [0.000723271, 0.000885853]  Welch p=0.310  MW p=0.505
+  verify_tri_height_min              b0   0.00334464 [0.00259272, 0.00378527]   b1   0.00374592 [0.00342277, 0.00398436]  Welch p=0.021  MW p=0.028
+  verify_lifter_depth_max            b0  -0.00117297 [-0.001236, -0.00105202]   b1    -0.001027 [-0.00131765, 0.000164151]  Welch p=0.429  MW p=1.000
+  verify_area_ratio_max              b0      1.38304 [1.17893, 1.74295]   b1      1.28767 [1.16055, 1.42934]  Welch p=0.251  MW p=0.442
+  verify_area_ratio_min              b0     0.755695 [0.599661, 0.836054]   b1     0.812322 [0.774941, 0.893342]  Welch p=0.080  MW p=0.050
+  verify_max_speed                   b0      2.79965 [2.39041, 3.51913]   b1      2.90243 [2.45519, 3.53123]  Welch p=0.622  MW p=0.505
+  verify_r_max                       b0     0.298569 [0.298402, 0.298642]   b1     0.298615 [0.298525, 0.298683]  Welch p=0.188  MW p=0.442
+  verify_mean_disp_mm_last_quarter   b0      16.8959 [13.7697, 18.0604]   b1      16.3178 [14.4752, 17.6707]  Welch p=0.394  MW p=0.279
+  verify_newton_total                b0         1453 [1414, 1486]   b1         1473 [1427, 1531]  Welch p=0.246  MW p=0.371
+  verify_pcg_total                   b0      45978.1 [43730, 47940]   b1      48974.4 [43670, 60950]  Welch p=0.182  MW p=0.328
+  verify_line_search_total           b0      1687.62 [1615, 1734]   b1      1726.88 [1648, 1837]  Welch p=0.202  MW p=0.279
+  verify_not_converged_frames        b0            0 [0, 0]   b1            0 [0, 0]
+  verify_hit_newton_limit_frames     b0            0 [0, 0]   b1            0 [0, 0]
+  verify_hit_ls_limit_frames         b0            0 [0, 0]   b1            0 [0, 0]
+  verify_e_tot_max                   b0     0.711316 [0.488366, 0.904712]   b1     0.702189 [0.538903, 0.846531]  Welch p=0.881  MW p=0.721
+  verify_ccd_toi_min                 b0       0.6275 [0.469344, 0.860838]   b1     0.495408 [0.273156, 0.72414]  Welch p=0.076  MW p=0.083
+
+  sorted verify_area_ratio_max:
+    b0: 1.179 1.200 1.283 1.286 1.351 1.428 1.594 1.743
+    b1: 1.161 1.194 1.194 1.264 1.289 1.381 1.390 1.429

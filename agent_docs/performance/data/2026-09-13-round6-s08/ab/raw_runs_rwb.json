@@ -1,0 +1,130 @@
+[
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_new_r1.json",
+  "arm": "new",
+  "meanFrameMs": 27.91600946705633,
+  "medianFrameMs": 23.507286503445357,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_new_r2.json",
+  "arm": "new",
+  "meanFrameMs": 27.59211705609535,
+  "medianFrameMs": 23.640664992854,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_new_r3.json",
+  "arm": "new",
+  "meanFrameMs": 27.21462995687034,
+  "medianFrameMs": 23.693681054282933,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_new_r4.json",
+  "arm": "new",
+  "meanFrameMs": 27.35383808030747,
+  "medianFrameMs": 23.544637951999903,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_new_r5.json",
+  "arm": "new",
+  "meanFrameMs": 26.765861116776552,
+  "medianFrameMs": 23.34795444039628,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_new_r6.json",
+  "arm": "new",
+  "meanFrameMs": 27.351613401939783,
+  "medianFrameMs": 23.529103491455317,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_new_r7.json",
+  "arm": "new",
+  "meanFrameMs": 27.504353787905227,
+  "medianFrameMs": 23.773006512783468,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_new_r8.json",
+  "arm": "new",
+  "meanFrameMs": 27.630901685915887,
+  "medianFrameMs": 23.646216082852334,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_old_r1.json",
+  "arm": "old",
+  "meanFrameMs": 27.84824944877376,
+  "medianFrameMs": 23.430911998730153,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_old_r2.json",
+  "arm": "old",
+  "meanFrameMs": 27.80541451938916,
+  "medianFrameMs": 23.688160465098917,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_old_r3.json",
+  "arm": "old",
+  "meanFrameMs": 27.261359939196456,
+  "medianFrameMs": 23.31260754726827,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_old_r4.json",
+  "arm": "old",
+  "meanFrameMs": 28.381549670787837,
+  "medianFrameMs": 24.203734996262938,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_old_r5.json",
+  "arm": "old",
+  "meanFrameMs": 27.480991374856483,
+  "medianFrameMs": 22.746350965462625,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_old_r6.json",
+  "arm": "old",
+  "meanFrameMs": 28.466449522723753,
+  "medianFrameMs": 24.308162974193692,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_old_r7.json",
+  "arm": "old",
+  "meanFrameMs": 27.521439048966084,
+  "medianFrameMs": 23.767706530634314,
+  "newton": null,
+  "pcg": null
+ },
+ {
+  "file": "s08-rwb_rigid-wrecking-balls_old_r8.json",
+  "arm": "old",
+  "meanFrameMs": 27.645772458830226,
+  "medianFrameMs": 23.629378993064165,
+  "newton": null,
+  "pcg": null
+ }
+]

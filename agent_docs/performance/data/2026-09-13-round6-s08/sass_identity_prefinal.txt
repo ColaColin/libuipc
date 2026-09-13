@@ -1,0 +1,8 @@
+base functions 71, head functions 74, common 71
+identical SASS streams: 71 / 71   differing: 0
+functions only in head (new instantiations): 3
+     23706 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi7EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28274 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi8EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     12210 instr  _ZN4uipc7backend4cuda3sym25codim_ipc_simplex_contact19PT_barrier_make_spdILi1ELi1EEEvRN5Eigen6MatrixIdLi12ELi1
+
+body-hash rename match: 0/0 base-only functions found byte-identical in head

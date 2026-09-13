@@ -1,0 +1,5 @@
+instantiation                                  instr    FP64   MUFU    LDL    STL
+part1 Proj=0 (shipped, base)                   30954    1908     48    329    373
+part1 Proj=7 (stub, head)                      23706    2022     14     57    410
+part1 Proj=8 (basis-free, head)                28274    1640     67     92    231
+part1 Proj=0 (head, must match base)           30954    1908     48    329    373

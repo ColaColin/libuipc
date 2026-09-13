@@ -1,0 +1,6 @@
+-- dflt_unset
+do_assemble_kernel<(bool)0, (int)1, (bool)1, (bool)1, (bool)0, (int)8>
+do_assemble_kernel<(bool)0, (int)2, (bool)0, (bool)0, (bool)1, (int)5>
+-- dflt_off
+do_assemble_kernel<(bool)0, (int)1, (bool)1, (bool)1, (bool)0, (int)0>
+do_assemble_kernel<(bool)0, (int)2, (bool)0, (bool)0, (bool)1, (int)5>

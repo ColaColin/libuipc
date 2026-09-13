@@ -1,0 +1,41 @@
+# s08 end-to-end predictions, written from the measured scope BEFORE any
+# end-to-end benchmark run.  (PERF_METHOD 2.9 / AGENT_BRIEF "predict first".)
+#
+# Change: contact part 1's (PT + un-mollified EE) reduced PSD projection moves
+# from the dense-Q form of `barrier_range_basis` to s31's basis-free form,
+# extended from M <= 3 to the M = 4 branch.  Exact up to rounding.
+#
+# Model.  Part 1 is the CRITICAL stream in every scene measured (K9 splits
+# PT+EE onto a side stream and PE+PP onto the default stream; part 1's total
+# GPU time exceeds part 2's in all four scenes), so a delta on part 1 is a
+# delta on the critical path and should convert at ~1, not at part 2's
+# discounted rate.  s07's measured kernel-family -> wall conversion on
+# cube-wall-cloth was 0.82; both bounds are quoted.
+#
+# measured per-launch delta (n=3 full runs per arm, nsys cuda_gpu_kern_sum):
+#   cube-wall-cloth      part1 -6.76 %   part1 = 12.96 % of scene GPU kernel time
+#   rigid-wrecking-balls part1 -2.59 %   part1 = 20.02 %
+#   stiff-gipc-case2     part1 -10.98 %  part1 =  3.90 %
+#   tumbler-garments     pending
+#
+# PREDICTION (ms per Newton iteration, end to end):
+#   cube-wall-cloth      -0.88 % (conversion 1.0)  ..  -0.72 % (conversion 0.82)
+#                        -> above the scene's +-0.54 % null on ms/Newton, but
+#                           only just: needs n >= 20 per arm to resolve; n = 40 used.
+#   stiff-gipc-case2     -0.43 % (1.0) .. -0.35 % (0.82)
+#                        -> the flat-count instrument (+-0.15 % on Newton,
+#                           ~0.3 % on ms/Newton); marginal, n = 10 per arm.
+#   rigid-wrecking-balls -0.52 % (1.0) .. -0.43 % (0.82)
+#                        -> BELOW that scene's +-0.90 % ms/Newton null envelope.
+#                           PREDICTED UNRESOLVABLE; report as such, do not
+#                           pick a flattering denominator.
+#   tumbler-garments     predicted from its own scope once measured; the scene
+#                        cannot resolve below ~6 % (round-record correction to
+#                        s00), so it is a SCOPE + observable instrument here,
+#                        not an end-to-end one.
+#
+# Newton counts must not move: the change is a different orthonormal basis for
+# the same 5-dimensional subspace, projected with the same make_spd<5>, so the
+# Hessian differs only at rounding (measured 1.3e-15 mean / 6.3e-15 max
+# relative Frobenius error over 1.14 M dim-4 samples).  Any count drift beyond
+# each scene's null envelope would falsify that.

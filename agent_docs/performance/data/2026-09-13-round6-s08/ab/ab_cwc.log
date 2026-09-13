@@ -1,0 +1,93 @@
+[    7.4s] warmup       old: 61.321 ms/frame (discarded)
+[   14.7s] warmup       new: 60.238 ms/frame (discarded)
+[   22.1s] rep 1      old: 60.259 ms/frame  Newton 511  PCG 19730
+[   29.3s] rep 1      new: 59.824 ms/frame  Newton 509  PCG 19920
+[   36.6s] rep 2      new: 60.131 ms/frame  Newton 511  PCG 19940
+[   44.1s] rep 2      old: 61.981 ms/frame  Newton 519  PCG 20445
+[   51.3s] rep 3      old: 58.852 ms/frame  Newton 502  PCG 19550
+[   58.6s] rep 3      new: 60.084 ms/frame  Newton 509  PCG 20085
+[   65.8s] rep 4      new: 58.916 ms/frame  Newton 506  PCG 19770
+[   73.2s] rep 4      old: 60.707 ms/frame  Newton 510  PCG 20025
+[   80.5s] rep 5      old: 59.495 ms/frame  Newton 504  PCG 19720
+[   87.9s] rep 5      new: 60.716 ms/frame  Newton 515  PCG 20135
+[   95.1s] rep 6      new: 58.619 ms/frame  Newton 507  PCG 19255
+[  102.3s] rep 6      old: 58.625 ms/frame  Newton 502  PCG 19130
+[  109.7s] rep 7      old: 61.304 ms/frame  Newton 513  PCG 20190
+[  117.2s] rep 7      new: 61.528 ms/frame  Newton 515  PCG 20465
+[  124.3s] rep 8      new: 58.821 ms/frame  Newton 506  PCG 19660
+[  131.7s] rep 8      old: 60.591 ms/frame  Newton 510  PCG 20190
+[  138.9s] rep 9      old: 59.177 ms/frame  Newton 504  PCG 19485
+[  146.4s] rep 9      new: 61.317 ms/frame  Newton 518  PCG 20320
+[  153.6s] rep 10      new: 59.200 ms/frame  Newton 508  PCG 19835
+[  160.8s] rep 10      old: 59.524 ms/frame  Newton 505  PCG 19590
+[  168.0s] rep 11      old: 58.958 ms/frame  Newton 505  PCG 19445
+[  175.2s] rep 11      new: 58.543 ms/frame  Newton 504  PCG 19340
+[  182.6s] rep 12      new: 60.099 ms/frame  Newton 509  PCG 19765
+[  189.9s] rep 12      old: 60.128 ms/frame  Newton 510  PCG 19845
+[  197.1s] rep 13      old: 59.412 ms/frame  Newton 506  PCG 19385
+[  204.3s] rep 13      new: 58.394 ms/frame  Newton 504  PCG 19370
+[  211.4s] rep 14      new: 58.594 ms/frame  Newton 505  PCG 19675
+[  218.8s] rep 14      old: 61.436 ms/frame  Newton 515  PCG 20185
+[  226.2s] rep 15      old: 60.404 ms/frame  Newton 507  PCG 19955
+[  234.0s] rep 15      new: 65.855 ms/frame  Newton 560  PCG 21050
+[  241.3s] rep 16      new: 59.926 ms/frame  Newton 508  PCG 20100
+[  248.8s] rep 16      old: 61.337 ms/frame  Newton 515  PCG 20035
+[  256.1s] rep 17      old: 60.288 ms/frame  Newton 508  PCG 19695
+[  263.4s] rep 17      new: 59.589 ms/frame  Newton 513  PCG 19760
+[  270.6s] rep 18      new: 57.960 ms/frame  Newton 502  PCG 19350
+[  277.8s] rep 18      old: 59.485 ms/frame  Newton 509  PCG 19570
+[  285.1s] rep 19      old: 59.135 ms/frame  Newton 504  PCG 19415
+[  292.4s] rep 19      new: 61.193 ms/frame  Newton 517  PCG 20355
+[  299.6s] rep 20      new: 59.295 ms/frame  Newton 506  PCG 19775
+[  307.2s] rep 20      old: 62.574 ms/frame  Newton 519  PCG 20655
+[  314.2s] rep 21      old: 57.662 ms/frame  Newton 495  PCG 19020
+[  321.5s] rep 21      new: 60.222 ms/frame  Newton 510  PCG 20155
+[  328.7s] rep 22      new: 58.838 ms/frame  Newton 505  PCG 19390
+[  336.2s] rep 22      old: 61.998 ms/frame  Newton 515  PCG 20545
+[  343.5s] rep 23      old: 60.102 ms/frame  Newton 506  PCG 19650
+[  350.8s] rep 23      new: 60.535 ms/frame  Newton 508  PCG 20250
+[  358.0s] rep 24      new: 58.508 ms/frame  Newton 501  PCG 19310
+[  365.4s] rep 24      old: 61.770 ms/frame  Newton 513  PCG 20255
+[  372.7s] rep 25      old: 59.724 ms/frame  Newton 505  PCG 19680
+[  380.2s] rep 25      new: 61.782 ms/frame  Newton 520  PCG 20545
+[  387.3s] rep 26      new: 57.628 ms/frame  Newton 496  PCG 19300
+[  394.9s] rep 26      old: 63.735 ms/frame  Newton 526  PCG 20960
+[  402.3s] rep 27      old: 61.203 ms/frame  Newton 513  PCG 20100
+[  409.7s] rep 27      new: 60.904 ms/frame  Newton 513  PCG 20190
+[  416.9s] rep 28      new: 59.161 ms/frame  Newton 507  PCG 19810
+[  424.2s] rep 28      old: 60.988 ms/frame  Newton 507  PCG 20020
+[  431.6s] rep 29      old: 61.106 ms/frame  Newton 512  PCG 20095
+[  438.8s] rep 29      new: 58.673 ms/frame  Newton 508  PCG 19435
+[  446.1s] rep 30      new: 59.943 ms/frame  Newton 511  PCG 19910
+[  453.3s] rep 30      old: 59.122 ms/frame  Newton 504  PCG 19600
+[  460.6s] rep 31      old: 59.557 ms/frame  Newton 506  PCG 19690
+[  468.0s] rep 31      new: 60.858 ms/frame  Newton 513  PCG 20225
+[  475.3s] rep 32      new: 60.574 ms/frame  Newton 511  PCG 20070
+[  482.5s] rep 32      old: 59.396 ms/frame  Newton 506  PCG 19430
+[  489.9s] rep 33      old: 60.603 ms/frame  Newton 511  PCG 19970
+[  496.9s] rep 33      new: 57.314 ms/frame  Newton 495  PCG 19295
+[  504.3s] rep 34      new: 59.949 ms/frame  Newton 507  PCG 20060
+[  511.4s] rep 34      old: 58.736 ms/frame  Newton 500  PCG 19260
+[  518.8s] rep 35      old: 60.937 ms/frame  Newton 510  PCG 20010
+[  526.1s] rep 35      new: 60.215 ms/frame  Newton 512  PCG 19755
+[  533.4s] rep 36      new: 60.519 ms/frame  Newton 508  PCG 20200
+[  540.7s] rep 36      old: 59.870 ms/frame  Newton 507  PCG 19515
+[  548.1s] rep 37      old: 61.135 ms/frame  Newton 511  PCG 19905
+[  555.4s] rep 37      new: 59.821 ms/frame  Newton 504  PCG 20005
+[  562.8s] rep 38      new: 61.089 ms/frame  Newton 512  PCG 20170
+[  570.2s] rep 38      old: 61.247 ms/frame  Newton 513  PCG 20070
+[  577.7s] rep 39      old: 61.533 ms/frame  Newton 515  PCG 19990
+[  585.0s] rep 39      new: 60.398 ms/frame  Newton 512  PCG 19955
+[  592.4s] rep 40      new: 60.407 ms/frame  Newton 518  PCG 20080
+[  599.9s] rep 40      old: 61.446 ms/frame  Newton 515  PCG 20150
+
+=== s08-cwc  cube-wall-cloth  n=40 per arm ===
+       mean_ms: old    60.3885 [57.6616, 63.7349]   new    59.8985 [57.3138, 65.8548]     -0.81%  overlapping  t=+1.62 p=0.109
+     median_ms: old    52.8718 [50.6748, 55.1835]   new    52.6985 [50.4966, 65.1663]     -0.33%  overlapping
+ ms_per_newton: old    11.8584 [11.6488, 12.1169]   new    11.7423 [11.5458, 11.9471]     -0.98%  overlapping  t=+4.37 p=3.73e-05
+    ms_per_pcg: old     0.3042 [0.3001, 0.3078]   new     0.3010 [0.2970, 0.3128]     -1.05%  overlapping  t=+6.27 p=3.11e-08
+        newton: old   509.2000 [495.0000, 526.0000]   new   510.0750 [495.0000, 560.0000]     +0.17%  overlapping
+           pcg: old 19853.8750 [19020.0000, 20960.0000]   new 19900.8750 [19255.0000, 21050.0000]     +0.24%  overlapping
+   line_search: old   529.9000 [519.0000, 548.0000]   new   530.9250 [514.0000, 590.0000]     +0.19%  overlapping
+
+raw runs + summary: /workspace/output/round6/s08/ab_cwc

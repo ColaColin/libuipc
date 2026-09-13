@@ -1,0 +1,209 @@
+base functions 71, head functions 74, common 21
+identical SASS streams: 21 / 21   differing: 0
+functions only in head (new instantiations): 53
+     29642 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28482 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb0ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     29730 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb1ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28538 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb1ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     29714 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28546 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb0ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     29770 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28594 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     27818 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi1EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     22362 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi2EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     22298 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi3EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     17930 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi4EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     27034 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi5EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     27530 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi6EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     32642 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     23418 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb0ELb1ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     32714 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     30954 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     30954 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi1EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     20090 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi2EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     20002 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi3EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     16946 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi4EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     23706 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi7EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28274 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi8EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     13698 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     12306 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      4850 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi1EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      4850 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi2EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      4802 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi3EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      5722 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi4EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     10730 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi5EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      6410 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi6EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      7506 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb1ELi0ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      5306 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb1ELi1ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      2250 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb1ELi2ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      1618 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_compute_energy_k1_kernelENS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoef
+      2138 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_compute_energy_k2_kernelENS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoef
+      1058 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_compute_energy_k3_kernelENS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoef
+       586 instr  ANONZN4uipc7backend4cuda68GLOBALNdo_compute_energy_k4_kernelENS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoef
+       170 instr  ANONZN4uipc7backend4cuda68GLOBALNee_mollifier_partition_kernelENS0_9cuda_tool11CBufferViewIN5Eigen6MatrixIiLi4
+        26 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_calculate_block_offsets_k1_kernelENS0_9cuda_tool11CBufferVie
+        66 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_fused_compact_keys_k2_kernelENS0_9cuda_tool11CBufferViewIiEE
+        34 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_fused_flag_upper_k1_kernelENS0_9cuda_tool11CBufferViewIiEES5
+        34 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_make_unique_block_warp_reduction_k1_kernelENS0_9cuda_tool10B
+        34 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_make_unique_indices_k1_kernelENS0_9cuda_tool10BufferViewINS1
+        34 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_make_unique_segment_warp_reduction_k1_kernelENS0_9cuda_tool1
+        26 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_make_unique_vector_indices_k1_kernelENS0_9cuda_tool10BufferV
+        42 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k1_kernelENS0_9cuda_t
+        58 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k2_kernelENS0_9cuda_t
+        42 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_radix_sort_indices_and_blocks_k1_kernelENS0_9cuda_tool11CBuf
+        58 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_radix_sort_indices_and_blocks_k2_kernelENS0_9cuda_tool10Buff
+        34 instr  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_sym2ge_k1_kernelENS0_9cuda_tool10BufferViewIiEENS3_11CBuffer
+     12210 instr  _ZN4uipc7backend4cuda3sym25codim_ipc_simplex_contact19PT_barrier_make_spdILi1ELi1EEEvRN5Eigen6MatrixIdLi12ELi1
+functions only in base (REMOVED): 50
+     29642 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28482 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb0ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     29730 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb1ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28538 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb1ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     29714 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28546 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb0ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     29770 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     28594 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     27818 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi1EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     22362 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi2EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     22298 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi3EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     17930 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi4EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     27034 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi5EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     27530 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi6EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     32642 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     23418 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb0ELb1ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     32714 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     30954 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     30954 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi1EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     20090 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi2EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     20002 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi3EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     16946 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi4EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     13698 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     12306 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      4850 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi1EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      4850 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi2EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      4802 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi3EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      5722 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi4EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     10730 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi5EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      6410 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi6EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      7506 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb1ELi0ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      5306 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb1ELi1ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      2250 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb1ELi2ELb0ELb0ELb0ELi0EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      1618 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_compute_energy_k1_kernelENS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoef
+      2138 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_compute_energy_k2_kernelENS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoef
+      1058 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_compute_energy_k3_kernelENS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoef
+       586 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_compute_energy_k4_kernelENS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoef
+       170 instr  ANONZN4uipc7backend4cuda70GLOBALNee_mollifier_partition_kernelENS0_9cuda_tool11CBufferViewIN5Eigen6MatrixIiLi4
+        26 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_calculate_block_offsets_k1_kernelENS0_9cuda_tool11CBufferVie
+        66 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_fused_compact_keys_k2_kernelENS0_9cuda_tool11CBufferViewIiEE
+        34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_fused_flag_upper_k1_kernelENS0_9cuda_tool11CBufferViewIiEES5
+        34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_make_unique_block_warp_reduction_k1_kernelENS0_9cuda_tool10B
+        34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_make_unique_indices_k1_kernelENS0_9cuda_tool10BufferViewINS1
+        34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_make_unique_segment_warp_reduction_k1_kernelENS0_9cuda_tool1
+        26 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_make_unique_vector_indices_k1_kernelENS0_9cuda_tool10BufferV
+        42 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k1_kernelENS0_9cuda_t
+        58 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k2_kernelENS0_9cuda_t
+        42 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_radix_sort_indices_and_blocks_k1_kernelENS0_9cuda_tool11CBuf
+        58 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_radix_sort_indices_and_blocks_k2_kernelENS0_9cuda_tool10Buff
+        34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_sym2ge_k1_kernelENS0_9cuda_tool10BufferViewIiEENS3_11CBuffer
+
+body-hash rename match: 50/50 base-only functions found byte-identical in head
+    OK   29642 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+    OK   28482 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb0ELb1ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb0ELb1ELi0EEEvNS0_9cuda_t
+    OK   29730 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb1ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb1ELb0ELi0EEEvNS0_9cuda_t
+    OK   28538 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb1ELb1ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb0ELb1ELb1ELi0EEEvNS0_9cuda_t
+    OK   29714 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb0ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb0ELb0ELi0EEEvNS0_9cuda_t
+    OK   28546 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb0ELb1ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb0ELb1ELi0EEEvNS0_9cuda_t
+    OK   29770 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb0ELi0EEEvNS0_9cuda_t
+    OK   28594 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi0EEEvNS0_9cuda_t
+    OK   27818 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi1EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi1EEEvNS0_9cuda_t
+    OK   22362 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi2EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi2EEEvNS0_9cuda_t
+    OK   22298 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi3EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi3EEEvNS0_9cuda_t
+    OK   17930 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi4EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi4EEEvNS0_9cuda_t
+    OK   27034 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi5EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi5EEEvNS0_9cuda_t
+    OK   27530 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi6EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi6EEEvNS0_9cuda_t
+    OK   32642 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+    OK   23418 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb0ELb1ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb0ELb1ELb0ELi0EEEvNS0_9cuda_t
+    OK   32714 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb0ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb0ELb0ELi0EEEvNS0_9cuda_t
+    OK   30954 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi0EEEvNS0_9cuda_t
+    OK   30954 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi1EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi0EEEvNS0_9cuda_t
+    OK   20090 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi2EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi2EEEvNS0_9cuda_t
+    OK   20002 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi3EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi3EEEvNS0_9cuda_t
+    OK   16946 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi4EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi1ELb1ELb1ELb0ELi4EEEvNS0_9cuda_t
+    OK   13698 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+    OK   12306 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi0EEEvNS0_9cuda_t
+    OK    4850 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi1EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi1EEEvNS0_9cuda_t
+    OK    4850 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi2EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi1EEEvNS0_9cuda_t
+    OK    4802 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi3EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi3EEEvNS0_9cuda_t
+    OK    5722 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi4EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi4EEEvNS0_9cuda_t
+    OK   10730 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi5EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi5EEEvNS0_9cuda_t
+    OK    6410 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi6EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi6EEEvNS0_9cuda_t
+    OK    7506 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb1ELi0ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb1ELi0ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+    OK    5306 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb1ELi1ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb1ELi1ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+    OK    2250 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb1ELi2ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_assemble_kernelILb1ELi2ELb0ELb0ELb0ELi0EEEvNS0_9cuda_t
+    OK    1618 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_compute_energy_k1_kernelENS0_9cuda_tool11Dense2DBaseIL
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_compute_energy_k1_kernelENS0_9cuda_tool11Dense2DBaseIL
+    OK    2138 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_compute_energy_k2_kernelENS0_9cuda_tool11Dense2DBaseIL
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_compute_energy_k2_kernelENS0_9cuda_tool11Dense2DBaseIL
+    OK    1058 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_compute_energy_k3_kernelENS0_9cuda_tool11Dense2DBaseIL
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_compute_energy_k3_kernelENS0_9cuda_tool11Dense2DBaseIL
+    OK     586 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_compute_energy_k4_kernelENS0_9cuda_tool11Dense2DBaseIL
+          ->  ANONZN4uipc7backend4cuda68GLOBALNdo_compute_energy_k4_kernelENS0_9cuda_tool11Dense2DBaseIL
+    OK     170 instr  ANONZN4uipc7backend4cuda70GLOBALNee_mollifier_partition_kernelENS0_9cuda_tool11CBufferView
+          ->  ANONZN4uipc7backend4cuda68GLOBALNee_mollifier_partition_kernelENS0_9cuda_tool11CBufferView
+    OK      26 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_calculate_block_offsets_k1_kernelENS0_9c
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_calculate_block_offsets_k1_kernelENS0_9c
+    OK      66 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_fused_compact_keys_k2_kernelENS0_9cuda_t
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_fused_compact_keys_k2_kernelENS0_9cuda_t
+    OK      34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_fused_flag_upper_k1_kernelENS0_9cuda_too
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_fused_flag_upper_k1_kernelENS0_9cuda_too
+    OK      34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_make_unique_block_warp_reduction_k1_kern
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_make_unique_block_warp_reduction_k1_kern
+    OK      34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_make_unique_indices_k1_kernelENS0_9cuda_
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_make_unique_indices_k1_kernelENS0_9cuda_
+    OK      34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_make_unique_segment_warp_reduction_k1_ke
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_make_unique_block_warp_reduction_k1_kern
+    OK      26 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_make_unique_vector_indices_k1_kernelENS0
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_make_unique_vector_indices_k1_kernelENS0
+    OK      42 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k
+    OK      58 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k
+    OK      42 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_radix_sort_indices_and_blocks_k1_kernelE
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k
+    OK      58 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_radix_sort_indices_and_blocks_k2_kernelE
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_radix_sort_indices_and_blocks_in_place_k
+    OK      34 instr  ANONZN4uipc7backend4cuda70GLOBALNmatrix_converter_sym2ge_k1_kernelENS0_9cuda_tool10BufferV
+          ->  ANONZN4uipc7backend4cuda68GLOBALNmatrix_converter_sym2ge_k1_kernelENS0_9cuda_tool10BufferV
