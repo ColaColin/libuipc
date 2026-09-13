@@ -1,0 +1,33 @@
+### deformation amplitude 0.02
+samples usable                              : 200000 / 200000
+(1) max |(H_full - H_gn) - E'*hess(theta)| / max|H_full| : 4.047e-16
+(2) max |H_gn - H_gn^T|                     : 0.000e+00 (exact symmetry)
+    min eig(H_gn) / max|eig(H_gn)|          : -6.080e-16
+    samples with eig(H_gn) < -1e-12*max     : 0
+(3) exact H indefinite in                   : 200000 / 200000 = 100.0% of samples
+    mean |negative| share of sum|eig(H_full)| : 0.0271
+    ||H_full - H_gn|| / ||H_full||  mean 0.0588  max 1.3676
+    mean rank of the PSD-projected exact Hessian : 4.00  (Gauss-Newton rank is 1)
+    |theta - theta_bar| (rad)  mean 0.0792  max 6.2820   [deformation amplitude 0.02]
+### deformation amplitude 0.1
+samples usable                              : 200000 / 200000
+(1) max |(H_full - H_gn) - E'*hess(theta)| / max|H_full| : 3.982e-16
+(2) max |H_gn - H_gn^T|                     : 0.000e+00 (exact symmetry)
+    min eig(H_gn) / max|eig(H_gn)|          : -7.109e-16
+    samples with eig(H_gn) < -1e-12*max     : 0
+(3) exact H indefinite in                   : 200000 / 200000 = 100.0% of samples
+    mean |negative| share of sum|eig(H_full)| : 0.1118
+    ||H_full - H_gn|| / ||H_full||  mean 0.2418  max 1.3225
+    mean rank of the PSD-projected exact Hessian : 4.00  (Gauss-Newton rank is 1)
+    |theta - theta_bar| (rad)  mean 0.3755  max 6.2804   [deformation amplitude 0.10]
+### deformation amplitude 0.6
+samples usable                              : 200000 / 200000
+(1) max |(H_full - H_gn) - E'*hess(theta)| / max|H_full| : 3.776e-16
+(2) max |H_gn - H_gn^T|                     : 0.000e+00 (exact symmetry)
+    min eig(H_gn) / max|eig(H_gn)|          : -7.057e-16
+    samples with eig(H_gn) < -1e-12*max     : 0
+(3) exact H indefinite in                   : 200000 / 200000 = 100.0% of samples
+    mean |negative| share of sum|eig(H_full)| : 0.3010
+    ||H_full - H_gn|| / ||H_full||  mean 0.6719  max 1.2968
+    mean rank of the PSD-projected exact Hessian : 4.00  (Gauss-Newton rank is 1)
+    |theta - theta_bar| (rad)  mean 1.5908  max 6.2813   [deformation amplitude 0.60]

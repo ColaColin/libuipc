@@ -1,0 +1,27 @@
+Static resource usage, sm_75, device-linked
+(cuobjdump -res-usage on build-perf/Release/bin/libuipc_backend_cuda.so),
+DiscreteShellBending G/H instantiations.
+
+Proj: 0 = dense 12x12 eigen-solve, 1 = K16 blocked translation-free 9x9 (the
+shipped exact path), 2 = K7 dense 12x9 basis, 3 = s02 Gauss-Newton (no
+eigen-solve, no dihedral_angle_hessian). Solver: 0 = Eigen
+SelfAdjointEigenSolver, 1 = s19 tridiagonal QL.
+
+variant            REG  STACK(B)  cmem[2]
+Proj2 Solver0     255      6688      288
+Proj1 Solver0     255      3472      392
+Proj0 Solver0     255      6976      240
+Proj2 Solver1     255      3840      288
+Proj0 Solver1     255      3328      240
+Proj3 Solver1     208      1248      232
+Proj1 Solver1     255      3104      392
+
+SASS instruction counts for the same instantiations (cuobjdump -sass, whole .so):
+variant            total    FP64  LDL+STL  branch
+Proj0 Solver0      16840    4182     3654    1682
+Proj0 Solver1      11720    4012     2357    1139
+Proj1 Solver0      14896    5398     2481    1357
+Proj1 Solver1      10664    4350     1730     920
+Proj2 Solver0      17560    7179     3162    1360
+Proj2 Solver1      13040    6158     2439     920
+Proj3 Solver1       2464     379      355     136

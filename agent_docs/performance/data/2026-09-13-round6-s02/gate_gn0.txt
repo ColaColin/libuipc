@@ -1,0 +1,3 @@
+=== sim_case + backend_cuda with UIPC_DSB_GAUSS_NEWTON=0 (rollback path)
+All tests passed (448 assertions in 23 test cases)
+All tests passed (14213 assertions in 95 test cases)

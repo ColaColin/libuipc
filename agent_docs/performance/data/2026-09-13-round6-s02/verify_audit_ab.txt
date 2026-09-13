@@ -1,0 +1,35 @@
+tumbler-garments --verify audit, 3 full 180-frame runs per arm, same build
+check                                                        exact (GN=0)                gauss-newton (GN=1)
+verify_all_finite                                                    True                               True
+verify_r_max                                0.29864 [0.2986,0.29869]           0.298679 [0.29864,0.29874]
+verify_r_limit                             0.302273 [0.30227,0.30227]          0.302273 [0.30227,0.30227]
+verify_contained_radial                                              True                               True
+verify_abs_z_max                           0.184765 [0.16771,0.19875]          0.183133 [0.16658,0.19801]
+verify_z_limit                             0.202273 [0.20227,0.20227]          0.202273 [0.20227,0.20227]
+verify_contained_axial                                               True                               True
+verify_lifter_depth_max                 -0.00104234 [-0.0011954,-0.0007536  -0.00116867 [-0.0012674,-0.0010816]
+verify_area_ratio_min                      0.781624 [0.70729,0.85515]          0.825328 [0.80907,0.84293]
+verify_area_ratio_max                       1.24026 [1.1931,1.2793]             1.28786 [1.2282,1.3602]
+verify_tri_height_min                    0.00350631 [0.0032908,0.003805]     0.00371444 [0.0036469,0.0038032]
+verify_max_speed                            2.73412 [2.4774,3.0684]             2.64988 [2.4249,3.0172]
+verify_drum_track_err_deg_max             0.0460261 [0.039572,0.058934]         1.20592 [0.039572,2.1507]
+verify_drum_track_err_deg_final        -0.000505133 [-0.00077434,-0.000326  5.83425e-05 [-0.0001935,0.00046751]
+verify_drum_turn_deg                        719.999 [720,720]                       720 [720,720]
+verify_drum_commanded_deg                       720 [720,720]                       720 [720,720]
+verify_mean_disp_mm                         16.9088 [16.677,17.235]             16.7575 [16.493,17.236]
+verify_mean_disp_mm_last_quarter            15.8051 [14.717,16.886]             16.1598 [15.313,16.986]
+verify_newton_min                           3.33333 [3,4]                       3.33333 [3,4]
+verify_newton_max                           19.3333 [18,21]                     18.3333 [17,20]
+verify_newton_mean                          8.27222 [8.1278,8.4056]             8.36852 [8.1778,8.65]
+verify_newton_first_quarter                 8.28889 [8.0889,8.4222]             8.02222 [7.9333,8.1111]
+verify_newton_last_quarter                  8.26667 [7.7333,8.6889]             8.23704 [7.7778,9]
+verify_pcg_min                              16.6667 [15,20]                     18.3333 [15,20]
+verify_pcg_max                              1573.33 [1275,1785]                 1478.33 [1170,1975]
+verify_pcg_mean                             280.157 [275.83,285.86]             278.389 [268,290.97]
+verify_pcg_first_quarter                    255.963 [243.22,276.67]             229.852 [226.44,235]
+verify_pcg_last_quarter                     275.259 [247.33,330]                279.815 [244.78,326.67]
+verify_gpu_mem_proc_max_mib                 1793.33 [1478,2266]                 1278.67 [1238,1316]
+verify_not_converged_frames                       0 [0,0]                             0 [0,0]
+verify_ok                                                            True                               True
+
+verify_ok all runs: True True

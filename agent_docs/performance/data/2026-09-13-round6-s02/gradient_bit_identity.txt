@@ -1,0 +1,32 @@
+Device-side both-paths comparison of the hinge GRADIENT (PERF_METHOD §2.3).
+
+UIPC_DSB_GN_VERIFY=1 (shipped, zero cost when off) makes
+DiscreteShellBending::do_compute_gradient_hessian launch the *real* shipped
+kernel <Proj=1, Solver=1> first, snapshot the gradient doublets it wrote
+(values + indices) into a device shadow buffer, then launch <Proj=3, Solver=1>
+over the same inputs, then compare every 32-bit word on device and accumulate
+the mismatch count. This is the repo's own SpreadVerifier machinery (round 5,
+s24); the live state after the pair is the Gauss-Newton launch's, so the run
+continues on the shipped path while it is being checked.
+
+This is a comparison of the two shipped kernel BINARIES on real simulation
+inputs -- not a source-level "same expressions" argument, which PERF_METHOD
+§2.3 explicitly rejects.
+
+  scene / binary                          32-bit words compared   mismatching
+  cube-wall-cloth, 20 frames                        22,471,680             0
+  cube-wall-cloth, 10 frames                         9,192,960             0
+  tumbler-garments, 10 frames                       66,917,312             0
+  stiff-gipc-case2, 10 frames                       10,554,880             0
+  uipc_test_sim_case (all 95 cases)                  7,475,972             0
+  ------------------------------------------------------------------------
+  total                                            116,612,804             0
+
+The ENERGY is bit-identical for a stronger reason: it is a different kernel
+(DiscreteShellBending_do_compute_energy_kernel), this step does not touch it,
+and its SASS instruction stream hashes identically to main's -- see
+sass_identity.txt.
+
+mas-bunny and rigid-wrecking-balls print nothing because the hinge kernel never
+launches in them (scene_executes_kernel.txt) -- they are untargeted-regression
+controls only, never evidence of a win.
