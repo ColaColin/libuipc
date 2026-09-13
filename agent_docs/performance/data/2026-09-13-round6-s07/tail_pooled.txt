@@ -1,0 +1,26 @@
+cube-wall-cloth, POOLED n=50 per arm (n=10 sweep + n=40 sweep), Newton totals
+
+   arm   n     mean     sd   min   p50   p90   max   >526  >530   delta%   Welch p
+    p0  50   508.90  12.17   490   508   520   577      1     1    +0.00  p=1
+ pnull  50   510.88   8.21   497   510   518   550      1     1    +0.39  p=0.348
+    p1  50   508.08   9.44   494   507   518   555      1     1    -0.16  p=0.71
+    p5  50   507.74   5.20   497   508   516   519      0     0    -0.23  p=0.542
+    p6  50   506.96   7.11   495   505   518   525      0     0    -0.38  p=0.338
+
+runs above 530 (the 'tail event' s03 flagged), listed:
+       p0: 1/50  [577]
+    pnull: 1/50  [550]
+       p1: 1/50  [555]
+       p5: 0/50  []
+       p6: 0/50  []
+
+exact-path arms pooled (p0+pnull, n=100): tail events = 2
+approximating arms pooled (p1+p6, n=100): tail events = 1
+exact-closed-form arm (p5, n=50): tail events = 0
+Fisher exact (exact-path vs approximating-path tail rate): SignificanceResult(statistic=np.float64(2.020408163265306), pvalue=1.0)
+
+Levene test on Newton spread, each arm vs p0:
+    pnull: LeveneResult(statistic=np.float64(0.8919224767765731), pvalue=np.float64(0.3472794690320455))
+       p1: LeveneResult(statistic=np.float64(0.2401674261281247), pvalue=np.float64(0.6251805696416092))
+       p5: LeveneResult(statistic=np.float64(3.741237549938325), pvalue=np.float64(0.055969459284301463))
+       p6: LeveneResult(statistic=np.float64(0.6492633729606295), pvalue=np.float64(0.4223270273418073))

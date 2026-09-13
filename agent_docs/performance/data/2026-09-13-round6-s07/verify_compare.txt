@@ -1,0 +1,28 @@
+arm UIPC_CONTACT_RANK1=0: 8 completed runs
+arm UIPC_CONTACT_RANK1=1: 8 completed runs
+arm UIPC_CONTACT_RANK1=5: 8 completed runs
+
+key                                                        p0 exact                     p1 PE+PP                   p5 PP only
+verify_ok                                                  8/8 true                     8/8 true                     8/8 true
+verify_all_finite                                          8/8 true                     8/8 true                     8/8 true
+verify_contained_radial                                    8/8 true                     8/8 true                     8/8 true
+verify_contained_axial                                     8/8 true                     8/8 true                     8/8 true
+verify_r_max                              0.29864 [0.29854,0.29882]    0.29864 [0.29853,0.29878]    0.29864 [0.29858,0.29872]
+verify_z_abs_max                                                n/a                          n/a                          n/a
+verify_lifter_depth_max                -0.00095693 [-0.0012842,0.00056627] -0.0011372 [-0.0013469,-0.00083198] -0.0011384 [-0.0012682,-0.00087971]
+verify_tri_height_min                  0.0037328 [0.0032081,0.0039638] 0.0036903 [0.0034739,0.0039093] 0.0037296 [0.0034885,0.0038603]
+verify_area_ratio_min                     0.81271 [0.69511,0.86286]    0.80279 [0.68241,0.83588]    0.80405 [0.74209,0.84979]
+verify_area_ratio_max                        1.3243 [1.1973,1.5631]        1.4912 [1.197,2.0292]         1.276 [1.175,1.3671]
+verify_max_speed                             2.8054 [2.2296,3.4027]       2.9357 [2.3151,4.0691]       2.8388 [2.5807,2.9958]
+verify_cc_min_dist                     0.0024844 [0.0022846,0.0025872] 0.0024162 [0.0021949,0.0025332] 0.0024298 [0.0022428,0.0025435]
+verify_bore_gap_min                    0.00077723 [0.00055018,0.00087342] 0.00085348 [0.00073715,0.0009772] 0.0008132 [0.0007255,0.00091291]
+verify_drum_track_err_deg_max             0.29414 [0.039572,2.0761]    0.36997 [0.039572,1.5501]    0.18555 [0.039572,1.2074]
+verify_ccd_toi_min                        0.45514 [0.16624,0.79469]    0.65988 [0.39146,0.85732]    0.60176 [0.42607,0.85321]
+verify_ccd_toi_clamped_frames                            8.5 [4,14]                   8.0 [2,14]                   8.6 [3,12]
+verify_ls_alpha_min                       0.45514 [0.16624,0.79469]    0.59592 [0.39146,0.85732]     0.5767 [0.22554,0.85321]
+verify_hit_newton_limit_frames                            0.0 [0,0]                    0.0 [0,0]                    0.0 [0,0]
+verify_hit_ls_limit_frames                                0.0 [0,0]                    0.0 [0,0]                    0.0 [0,0]
+verify_not_converged_frames                               0.0 [0,0]                    0.0 [0,0]                    0.0 [0,0]
+verify_newton_total                              1476.4 [1440,1562]           1460.5 [1418,1539]           1466.2 [1427,1499]
+verify_pcg_total                              47211.2 [43460,51660]        45660.6 [41170,50825]        46751.2 [42520,50665]
+verify_mean_disp_mm_last_quarter             15.545 [11.941,17.118]       17.045 [14.565,20.117]       16.013 [13.553,17.775]

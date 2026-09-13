@@ -1,0 +1,65 @@
+== c2 p0  (3 full runs)
+   part1    :     992.7 us/launch [985.3,999.7]  launches 1659
+   part2    :     810.7 us/launch [801.1,820.7]  launches 1659
+   friction :     282.1 us/launch [280.6,283.5]  launches 1654
+   scene    :   42598.1 ms GPU kernel time
+== c2 p1  (3 full runs)
+   part1    :     967.6 us/launch [964.5,972.9]  launches 1668
+   part2    :     435.0 us/launch [427.1,444.8]  launches 1668
+   friction :     282.8 us/launch [280.3,287.5]  launches 1662
+   scene    :   42235.0 ms GPU kernel time
+== c2 p5  (3 full runs)
+   part1    :     996.5 us/launch [988.9,1004.5]  launches 1660
+   part2    :     806.5 us/launch [790.8,816.0]  launches 1660
+   friction :     282.5 us/launch [281.2,284.3]  launches 1655
+   scene    :   42634.0 ms GPU kernel time
+== c2 p6  (3 full runs)
+   part1    :     963.2 us/launch [955.7,970.0]  launches 1661
+   part2    :     467.6 us/launch [453.2,477.3]  launches 1661
+   friction :     281.0 us/launch [278.6,284.3]  launches 1655
+   scene    :   42086.6 ms GPU kernel time
+
+-- p1 vs p0  (per launch, and per family total)
+   part1             :     992.7 ->     967.6    -2.53 %
+   part2             :     810.7 ->     435.0   -46.34 %
+   friction          :     282.1 ->     282.8    +0.24 %
+   TOTAL             :   42598.1 ->   42235.0    -0.85 %   (family total ms)
+   other             :    9449.0 ->    9516.3    +0.71 %   (family total ms)
+   BVH/CCD           :    8661.9 ->    8699.8    +0.44 %   (family total ms)
+   precond           :    7712.4 ->    7788.1    +0.98 %   (family total ms)
+   spmv              :    7607.3 ->    7685.3    +1.02 %   (family total ms)
+   contact assemble  :    3645.0 ->    2994.4   -17.85 %   (family total ms)
+   cub/thrust        :    3573.8 ->    3589.4    +0.44 %   (family total ms)
+   energy            :    1078.1 ->    1084.0    +0.55 %   (family total ms)
+   membrane          :     534.2 ->     537.9    +0.68 %   (family total ms)
+   bending           :     336.3 ->     339.8    +1.05 %   (family total ms)
+
+-- p5 vs p0  (per launch, and per family total)
+   part1             :     992.7 ->     996.5    +0.38 %
+   part2             :     810.7 ->     806.5    -0.51 %
+   friction          :     282.1 ->     282.5    +0.11 %
+   TOTAL             :   42598.1 ->   42634.0    +0.08 %   (family total ms)
+   other             :    9449.0 ->    9454.4    +0.06 %   (family total ms)
+   BVH/CCD           :    8661.9 ->    8697.8    +0.41 %   (family total ms)
+   precond           :    7712.4 ->    7711.2    -0.02 %   (family total ms)
+   spmv              :    7607.3 ->    7598.5    -0.12 %   (family total ms)
+   contact assemble  :    3645.0 ->    3648.2    +0.09 %   (family total ms)
+   cub/thrust        :    3573.8 ->    3577.1    +0.09 %   (family total ms)
+   energy            :    1078.1 ->    1076.9    -0.11 %   (family total ms)
+   membrane          :     534.2 ->     534.5    +0.04 %   (family total ms)
+   bending           :     336.3 ->     335.4    -0.28 %   (family total ms)
+
+-- p6 vs p0  (per launch, and per family total)
+   part1             :     992.7 ->     963.2    -2.97 %
+   part2             :     810.7 ->     467.6   -42.32 %
+   friction          :     282.1 ->     281.0    -0.39 %
+   TOTAL             :   42598.1 ->   42086.6    -1.20 %   (family total ms)
+   other             :    9449.0 ->    9473.2    +0.26 %   (family total ms)
+   BVH/CCD           :    8661.9 ->    8681.6    +0.23 %   (family total ms)
+   precond           :    7712.4 ->    7743.2    +0.40 %   (family total ms)
+   spmv              :    7607.3 ->    7646.8    +0.52 %   (family total ms)
+   contact assemble  :    3645.0 ->    3024.4   -17.03 %   (family total ms)
+   cub/thrust        :    3573.8 ->    3575.0    +0.03 %   (family total ms)
+   energy            :    1078.1 ->    1074.7    -0.32 %   (family total ms)
+   membrane          :     534.2 ->     533.9    -0.06 %   (family total ms)
+   bending           :     336.3 ->     333.9    -0.72 %   (family total ms)

@@ -1,0 +1,9 @@
+base functions 67, head functions 71, common 67
+identical SASS streams: 67 / 67   differing: 0
+functions only in head (new instantiations): 4
+     27034 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi5EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     27530 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi0ELb1ELb1ELb1ELi6EEEvNS0_9cuda_tool11Dense2DBaseILb1
+     10730 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi5EEEvNS0_9cuda_tool11Dense2DBaseILb1
+      6410 instr  ANONZN4uipc7backend4cuda70GLOBALNdo_assemble_kernelILb0ELi2ELb0ELb0ELb1ELi6EEEvNS0_9cuda_tool11Dense2DBaseILb1
+
+body-hash rename match: 0/0 base-only functions found byte-identical in head

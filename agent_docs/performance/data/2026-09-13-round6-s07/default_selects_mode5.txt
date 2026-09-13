@@ -1,0 +1,9 @@
+do_assemble_kernel instantiations launched with NO env var set (the new default):
+   inst   380  avg   2156.9 us   <(bool)0, (int)1, (bool)1, (bool)1, (bool)0, (int)0>
+   inst   380  avg   1399.1 us   <(bool)0, (int)2, (bool)0, (bool)0, (bool)1, (int)5>
+   inst   374  avg    656.7 us   <(bool)0>
+
+with UIPC_CONTACT_RANK1=0 (the rollback):
+   inst   374  avg   2143.0 us   <(bool)0, (int)1, (bool)1, (bool)1, (bool)0, (int)0>
+   inst   374  avg   1423.8 us   <(bool)0, (int)2, (bool)0, (bool)0, (bool)1, (int)0>
+   inst   368  avg    645.4 us   <(bool)0>

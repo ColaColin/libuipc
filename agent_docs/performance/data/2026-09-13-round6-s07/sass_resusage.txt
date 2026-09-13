@@ -1,0 +1,6 @@
+instantiation                                          REG  STACK  SHARED  LOCAL
+part2 <Part=2,Spd2=1> Proj=0 (exact, today default)    255      0       0      0
+part2 Proj=6 (PE only)                                 154      0       0      0
+part2 Proj=5 (PP only)  <- s07 ships this              252      0       0      0
+part2 Proj=1 (PE+PP rank-1)                            154      0       0      0
+part1 <Part=1> Proj=0 (exact; untouched by s07)        255      0       0      0
