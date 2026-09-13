@@ -7,6 +7,7 @@
 #include <collision_detection/simplex_trajectory_filter.h>
 #include <array>
 #include <vector>
+#include <cstdint>
 
 namespace uipc::backend::cuda
 {
@@ -105,6 +106,48 @@ class InfoStacklessBVHSimplexTrajectoryFilter final : public SimplexTrajectoryFi
         // (distance::CCDStatCounter; spelled out so this header does not
         //  have to pull in ccd.h ahead of the distance declarations it needs)
         cuda_tool::DeviceBuffer<unsigned long long> ccd_stat_buffer;
+
+        // perf/round6 (s06): the candidate compaction. `filter_toi` already
+        // evaluates, for every candidate, the exact distance and the motion
+        // bound that decide whether the pair can be an active contact
+        // anywhere on the swept step; it writes that verdict into
+        // `keep_flags` and a cub stream compaction drops the ~91 % that
+        // cannot, so `filter_active` -- which re-reads the SAME candidate
+        // array once per line-search trial while
+        // `collision_detection/dcd_candidate_reuse` (default 1) is on --
+        // runs over the survivors only.
+        //
+        // The compaction is ORDER PRESERVING (cub::DeviceSelect::Flagged), and
+        // the dropped pairs are exactly the ones `filter_active` would have
+        // marked invalid, so the selected active sets it produces are
+        // identical sequences to the old path's. The raw
+        // `candidate_*_pairs` and `tois` arrays are NOT touched, so every
+        // consumer that indexes by candidate position -- the AL-IPC
+        // `GlobalActiveSetManager`, the reuse-verify snapshots, the
+        // candidate dump -- sees exactly what it saw before.
+        bool ccd_compact        = true;   // env UIPC_CCD_COMPACT=0 = old path
+        bool ccd_compact_verify = false;  // env UIPC_CCD_COMPACT_VERIFY=1
+        cuda_tool::DeviceBuffer<uint8_t>  keep_flags;  // PP, PE, PT, EE
+        cuda_tool::DeviceBuffer<Vector2i> compact_AllP_CodimP_pairs;
+        cuda_tool::DeviceBuffer<Vector2i> compact_CodimP_AllE_pairs;
+        cuda_tool::DeviceBuffer<Vector2i> compact_AllP_AllT_pairs;
+        cuda_tool::DeviceBuffer<Vector2i> compact_AllE_AllE_pairs;
+        cuda_tool::DeviceBuffer<IndexT>   compact_counts;  // 4
+        // valid only between a filter_toi and the next detect
+        bool                  compact_ready = false;
+        std::array<IndexT, 4> compact_sizes{};
+        // UIPC_CCD_COMPACT_VERIFY bookkeeping
+        SizeT compact_verify_calls      = 0;
+        SizeT compact_verify_mismatches = 0;
+        SizeT compact_verify_pairs      = 0;
+        SizeT compact_verify_dropped    = 0;
+        SizeT compact_verify_active     = 0;
+        SizeT compact_contents_calls      = 0;
+        SizeT compact_contents_mismatches = 0;
+        // DIAGNOSTIC (UIPC_CCD_COMPACT_VERIFY): check on the host that each
+        // compacted array is exactly the ordered subsequence of the raw array
+        // selected by `keep_flags`.
+        void compact_verify_contents();
     };
 
     virtual cuda_tool::CBufferView<Vector2i> candidate_PTs() const noexcept override;

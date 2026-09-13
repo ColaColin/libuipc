@@ -208,7 +208,7 @@ UIPC_GENERIC bool point_point_ccd_broadphase(const Eigen::Vector<T, 3>& p0,
     }
 }
 
-template <typename T, bool EarlyOut, bool Stats>
+template <typename T, bool EarlyOut, bool Stats, bool DcdCull>
 UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
                                      Eigen::Vector<T, 3> t0,
                                      Eigen::Vector<T, 3> t1,
@@ -221,7 +221,9 @@ UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
                                      T                   thickness,
                                      int                 max_iter,
                                      T&                  toc,
-                                     CCDStatCounter*     stats)
+                                     CCDStatCounter*     stats,
+                                     T                   d_hat,
+                                     uint8_t*            dcd_keep)
 {
     Eigen::Vector<T, 3> mov = (dt0 + dt1 + dt2 + dp) / 4;
     dt0 -= mov;
@@ -233,12 +235,29 @@ UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
 
     if(maxDispMag <= T(0))
     {
+        if constexpr(DcdCull)
+            *dcd_keep = 1;  // no relative motion: no verdict, keep the pair
         return false;
     }
 
     T    dist2_cur;
     auto flag = point_triangle_distance_flag(p, t0, t1, t2);
     point_triangle_distance2(flag, p, t0, t1, t2, dist2_cur);
+
+    // perf/round6 (s06) UIPC_CCD_COMPACT: the DCD-inactivity verdict, on
+    // the `dist2_cur` and `maxDispMag` this function has already
+    // computed. `filter_active` keeps a pair iff d < thickness + d_hat;
+    // d(t) >= d0 - t*maxDispMag >= d0 - maxDispMag for every t in [0, 1]
+    // of the swept step the line search samples, so d0 > thickness +
+    // d_hat + maxDispMag proves the pair inactive over the whole step.
+    // Compared in squares (both sides non-negative) so it costs no sqrt.
+    // The 1e-9 relative slack makes the strict inequality safe against
+    // the double-precision error of either quantity.
+    if constexpr(DcdCull)
+    {
+        const T dcd_lim = (thickness + d_hat + maxDispMag) * (T(1) + T(1e-9));
+        *dcd_keep       = (dist2_cur > dcd_lim * dcd_lim) ? 0 : 1;
+    }
     T dist_cur = sqrt(dist2_cur);
     T gap = eta * (dist2_cur - thickness * thickness) / (dist_cur + thickness);
     T toc_prev = toc;
@@ -303,7 +322,7 @@ UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
     return true;
 }
 
-template <typename T, bool EarlyOut, bool Stats>
+template <typename T, bool EarlyOut, bool Stats, bool DcdCull>
 UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
                                 Eigen::Vector<T, 3> ea1,
                                 Eigen::Vector<T, 3> eb0,
@@ -316,7 +335,9 @@ UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
                                 T                   thickness,
                                 int                 max_iter,
                                 T&                  toc,
-                                CCDStatCounter*     stats)
+                                CCDStatCounter*     stats,
+                                T                   d_hat,
+                                uint8_t*            dcd_keep)
 {
     Eigen::Vector<T, 3> mov = (dea0 + dea1 + deb0 + deb1) / 4;
     dea0 -= mov;
@@ -325,14 +346,35 @@ UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
     deb1 -= mov;
     T maxDispMag = sqrt(std::max(dea0.squaredNorm(), dea1.squaredNorm()))
                    + sqrt(std::max(deb0.squaredNorm(), deb1.squaredNorm()));
+
     if(maxDispMag == 0)
     {
+        if constexpr(DcdCull)
+            *dcd_keep = 1;  // no relative motion: no verdict, keep the pair
         return false;
     }
 
     T    dist2_cur;
     auto flag = edge_edge_distance_flag(ea0, ea1, eb0, eb1);
     edge_edge_distance2(flag, ea0, ea1, eb0, eb1, dist2_cur);
+
+    // perf/round6 (s06) UIPC_CCD_COMPACT: the DCD-inactivity verdict, on
+    // the `dist2_cur` and `maxDispMag` this function has already
+    // computed. `filter_active` keeps a pair iff d < thickness + d_hat;
+    // d(t) >= d0 - t*maxDispMag >= d0 - maxDispMag for every t in [0, 1]
+    // of the swept step the line search samples, so d0 > thickness +
+    // d_hat + maxDispMag proves the pair inactive over the whole step.
+    // Compared in squares (both sides non-negative) so it costs no sqrt
+    // and reads the FIRST `dist2_cur` -- the one the degenerate
+    // fall-back below would overwrite with a LARGER endpoint distance.
+    // The 1e-9 relative slack makes the strict inequality safe against
+    // the double-precision error of either quantity.
+    if constexpr(DcdCull)
+    {
+        const T dcd_lim = (thickness + d_hat + maxDispMag) * (T(1) + T(1e-9));
+        *dcd_keep       = (dist2_cur > dcd_lim * dcd_lim) ? 0 : 1;
+    }
+
     T dFunc = dist2_cur - thickness * thickness;
     if(dFunc <= 0)
     {
@@ -420,7 +462,7 @@ UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
     return true;
 }
 
-template <typename T, bool EarlyOut, bool Stats>
+template <typename T, bool EarlyOut, bool Stats, bool DcdCull>
 UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
                                  Eigen::Vector<T, 3> e0,
                                  Eigen::Vector<T, 3> e1,
@@ -431,21 +473,41 @@ UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
                                  T                   thickness,
                                  int                 max_iter,
                                  T&                  toc,
-                                 CCDStatCounter*     stats)
+                                 CCDStatCounter*     stats,
+                                 T                   d_hat,
+                                 uint8_t*            dcd_keep)
 {
     Eigen::Vector<T, 3> mov = (dp + de0 + de1) / 3;
     de0 -= mov;
     de1 -= mov;
     dp -= mov;
     T maxDispMag = dp.norm() + sqrt(std::max(de0.squaredNorm(), de1.squaredNorm()));
+
     if(maxDispMag == 0)
     {
+        if constexpr(DcdCull)
+            *dcd_keep = 1;  // no relative motion: no verdict, keep the pair
         return false;
     }
 
     T    dist2_cur;
     auto flag = point_edge_distance_flag(p, e0, e1);
     point_edge_distance2(flag, p, e0, e1, dist2_cur);
+
+    // perf/round6 (s06) UIPC_CCD_COMPACT: the DCD-inactivity verdict, on
+    // the `dist2_cur` and `maxDispMag` this function has already
+    // computed. `filter_active` keeps a pair iff d < thickness + d_hat;
+    // d(t) >= d0 - t*maxDispMag >= d0 - maxDispMag for every t in [0, 1]
+    // of the swept step the line search samples, so d0 > thickness +
+    // d_hat + maxDispMag proves the pair inactive over the whole step.
+    // Compared in squares (both sides non-negative) so it costs no sqrt.
+    // The 1e-9 relative slack makes the strict inequality safe against
+    // the double-precision error of either quantity.
+    if constexpr(DcdCull)
+    {
+        const T dcd_lim = (thickness + d_hat + maxDispMag) * (T(1) + T(1e-9));
+        *dcd_keep       = (dist2_cur > dcd_lim * dcd_lim) ? 0 : 1;
+    }
     T dist_cur = sqrt(dist2_cur);
     T gap = eta * (dist2_cur - thickness * thickness) / (dist_cur + thickness);
     T toc_prev = toc;
@@ -509,7 +571,7 @@ UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
     return true;
 }
 
-template <typename T, bool EarlyOut, bool Stats>
+template <typename T, bool EarlyOut, bool Stats, bool DcdCull>
 UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
                                   Eigen::Vector<T, 3> p1,
                                   Eigen::Vector<T, 3> dp0,
@@ -518,20 +580,40 @@ UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
                                   T                   thickness,
                                   int                 max_iter,
                                   T&                  toc,
-                                  CCDStatCounter*     stats)
+                                  CCDStatCounter*     stats,
+                                  T                   d_hat,
+                                  uint8_t*            dcd_keep)
 {
     Eigen::Vector<T, 3> mov = (dp0 + dp1) / 2;
     dp1 -= mov;
     dp0 -= mov;
     T maxDispMag = dp0.norm() + dp1.norm();
+
     if(maxDispMag == 0)
     {
+        if constexpr(DcdCull)
+            *dcd_keep = 1;  // no relative motion: no verdict, keep the pair
         return false;
     }
 
     T    dist2_cur;
     auto flag = point_point_distance_flag(p0, p1);
     point_point_distance2(flag, p0, p1, dist2_cur);
+
+    // perf/round6 (s06) UIPC_CCD_COMPACT: the DCD-inactivity verdict, on
+    // the `dist2_cur` and `maxDispMag` this function has already
+    // computed. `filter_active` keeps a pair iff d < thickness + d_hat;
+    // d(t) >= d0 - t*maxDispMag >= d0 - maxDispMag for every t in [0, 1]
+    // of the swept step the line search samples, so d0 > thickness +
+    // d_hat + maxDispMag proves the pair inactive over the whole step.
+    // Compared in squares (both sides non-negative) so it costs no sqrt.
+    // The 1e-9 relative slack makes the strict inequality safe against
+    // the double-precision error of either quantity.
+    if constexpr(DcdCull)
+    {
+        const T dcd_lim = (thickness + d_hat + maxDispMag) * (T(1) + T(1e-9));
+        *dcd_keep       = (dist2_cur > dcd_lim * dcd_lim) ? 0 : 1;
+    }
     T dist_cur = sqrt(dist2_cur);
     T gap = eta * (dist2_cur - thickness * thickness) / (dist_cur + thickness);
     T toc_prev = toc;

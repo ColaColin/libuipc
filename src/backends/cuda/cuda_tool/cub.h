@@ -182,8 +182,10 @@ class DeviceSelect
             m_stream);
         return *this;
     }
-    template <typename T>
-    DeviceSelect& Flagged(const T* in, const int* flags, T* out, int* num_selected, int n)
+    // FlagT is deduced; `int` flags keep working, and a 1-byte flag array
+    // (perf/round6 s06) cuts the compaction's flag traffic 4x.
+    template <typename T, typename FlagT = int>
+    DeviceSelect& Flagged(const T* in, const FlagT* flags, T* out, int* num_selected, int n)
     {
         details::run_with_temp_storage(
             [&](void* t, size_t& b, cudaStream_t s) {

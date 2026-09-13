@@ -1005,7 +1005,17 @@ namespace
     // ACCD diagnosis counters (UIPC_CCD_STATS=1). Both are template
     // parameters so the shipped instantiation carries neither a branch nor
     // an extra kernel argument register for them.
-    template <bool EarlyOut, bool Stats>
+    // perf/round6 (s06): Compact additionally writes, per candidate, whether
+    // the pair is provably OUT of the contact activation window over the
+    // WHOLE swept step -- the verdict the ACCD can hand out for free because
+    // it has already computed the distance and the motion bound. The
+    // `keep` pointer is the LAST kernel parameter, so the `Compact = false`
+    // instantiation keeps every other parameter at its old constant-bank
+    // offset -- its SASS is byte-identical to main's. The verdict is stored
+    // by the ACCD itself, at the point where it already holds the distance,
+    // so nothing new is live across its loop (registers stay 218 / 184 and
+    // the launch geometry with them). UIPC_CCD_COMPACT=0 = the old path.
+    template <bool EarlyOut, bool Stats, bool Compact>
     __global__ void InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel(
         cuda_tool::BufferView<Float>     PP_tois,
         cuda_tool::CBufferView<Vector2i> PCodimP_pairs,
@@ -1018,7 +1028,8 @@ namespace
         Float                            eta,
         Float                            alpha,
         int                              n,
-        distance::CCDStatCounter*        stats)
+        distance::CCDStatCounter*        stats,
+        uint8_t*                         keep)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -1042,13 +1053,18 @@ namespace
 
         if(faraway)
         {
+            // the swept AABBs are more than `d_hat + thickness` apart on some
+            // axis over the WHOLE step, so the pair is inactive everywhere
+            // on it -- and `large_enough_toi` is already its toi.
+            if constexpr(Compact)
+                keep[i] = 0;
             PP_tois(i) = toi;
             return;
         }
 
         bool hit =
-            distance::point_point_ccd<Float, EarlyOut, Stats>(
-                VP0, VP1, dVP0, dVP1, eta, thickness, max_iter, toi, stats);
+            distance::point_point_ccd<Float, EarlyOut, Stats, Compact>(
+                VP0, VP1, dVP0, dVP1, eta, thickness, max_iter, toi, stats, d_hat, Compact ? keep + i : nullptr);
 
         if(!hit)
             toi = large_enough_toi;
@@ -1061,7 +1077,17 @@ namespace
     // ACCD diagnosis counters (UIPC_CCD_STATS=1). Both are template
     // parameters so the shipped instantiation carries neither a branch nor
     // an extra kernel argument register for them.
-    template <bool EarlyOut, bool Stats>
+    // perf/round6 (s06): Compact additionally writes, per candidate, whether
+    // the pair is provably OUT of the contact activation window over the
+    // WHOLE swept step -- the verdict the ACCD can hand out for free because
+    // it has already computed the distance and the motion bound. The
+    // `keep` pointer is the LAST kernel parameter, so the `Compact = false`
+    // instantiation keeps every other parameter at its old constant-bank
+    // offset -- its SASS is byte-identical to main's. The verdict is stored
+    // by the ACCD itself, at the point where it already holds the distance,
+    // so nothing new is live across its loop (registers stay 218 / 184 and
+    // the launch geometry with them). UIPC_CCD_COMPACT=0 = the old path.
+    template <bool EarlyOut, bool Stats, bool Compact>
     __global__ void InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel(
         cuda_tool::BufferView<Float>     PE_tois,
         cuda_tool::CBufferView<Vector2i> CodimP_AllE_pairs,
@@ -1074,7 +1100,8 @@ namespace
         Float                            eta,
         Float                            alpha,
         int                              n,
-        distance::CCDStatCounter*        stats)
+        distance::CCDStatCounter*        stats,
+        uint8_t*                         keep)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -1102,12 +1129,14 @@ namespace
 
         if(faraway)
         {
+            if constexpr(Compact)
+                keep[i] = 0;
             PE_tois(i) = toi;
             return;
         }
 
-        bool hit = distance::point_edge_ccd<Float, EarlyOut, Stats>(
-            VP, EP0, EP1, dVP, dEP0, dEP1, eta, thickness, max_iter, toi, stats);
+        bool hit = distance::point_edge_ccd<Float, EarlyOut, Stats, Compact>(
+            VP, EP0, EP1, dVP, dEP0, dEP1, eta, thickness, max_iter, toi, stats, d_hat, Compact ? keep + i : nullptr);
 
         if(!hit)
             toi = large_enough_toi;
@@ -1120,7 +1149,17 @@ namespace
     // ACCD diagnosis counters (UIPC_CCD_STATS=1). Both are template
     // parameters so the shipped instantiation carries neither a branch nor
     // an extra kernel argument register for them.
-    template <bool EarlyOut, bool Stats>
+    // perf/round6 (s06): Compact additionally writes, per candidate, whether
+    // the pair is provably OUT of the contact activation window over the
+    // WHOLE swept step -- the verdict the ACCD can hand out for free because
+    // it has already computed the distance and the motion bound. The
+    // `keep` pointer is the LAST kernel parameter, so the `Compact = false`
+    // instantiation keeps every other parameter at its old constant-bank
+    // offset -- its SASS is byte-identical to main's. The verdict is stored
+    // by the ACCD itself, at the point where it already holds the distance,
+    // so nothing new is live across its loop (registers stay 218 / 184 and
+    // the launch geometry with them). UIPC_CCD_COMPACT=0 = the old path.
+    template <bool EarlyOut, bool Stats, bool Compact>
     __global__ void InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel(
         cuda_tool::BufferView<Float>     PT_tois,
         cuda_tool::CBufferView<Vector2i> PT_pairs,
@@ -1133,7 +1172,8 @@ namespace
         Float                            eta,
         Float                            alpha,
         int                              n,
-        distance::CCDStatCounter*        stats)
+        distance::CCDStatCounter*        stats,
+        uint8_t*                         keep)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -1164,12 +1204,14 @@ namespace
 
         if(faraway)
         {
+            if constexpr(Compact)
+                keep[i] = 0;
             PT_tois(i) = toi;
             return;
         }
 
-        bool hit = distance::point_triangle_ccd<Float, EarlyOut, Stats>(
-            VP, FP0, FP1, FP2, dVP, dFP0, dFP1, dFP2, eta, thickness, max_iter, toi, stats);
+        bool hit = distance::point_triangle_ccd<Float, EarlyOut, Stats, Compact>(
+            VP, FP0, FP1, FP2, dVP, dFP0, dFP1, dFP2, eta, thickness, max_iter, toi, stats, d_hat, Compact ? keep + i : nullptr);
 
         if(!hit)
             toi = large_enough_toi;
@@ -1182,7 +1224,17 @@ namespace
     // ACCD diagnosis counters (UIPC_CCD_STATS=1). Both are template
     // parameters so the shipped instantiation carries neither a branch nor
     // an extra kernel argument register for them.
-    template <bool EarlyOut, bool Stats>
+    // perf/round6 (s06): Compact additionally writes, per candidate, whether
+    // the pair is provably OUT of the contact activation window over the
+    // WHOLE swept step -- the verdict the ACCD can hand out for free because
+    // it has already computed the distance and the motion bound. The
+    // `keep` pointer is the LAST kernel parameter, so the `Compact = false`
+    // instantiation keeps every other parameter at its old constant-bank
+    // offset -- its SASS is byte-identical to main's. The verdict is stored
+    // by the ACCD itself, at the point where it already holds the distance,
+    // so nothing new is live across its loop (registers stay 218 / 184 and
+    // the launch geometry with them). UIPC_CCD_COMPACT=0 = the old path.
+    template <bool EarlyOut, bool Stats, bool Compact>
     __global__ void InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel(
         cuda_tool::BufferView<Float>     EE_tois,
         cuda_tool::CBufferView<Vector2i> EE_pairs,
@@ -1194,7 +1246,8 @@ namespace
         Float                            eta,
         Float                            alpha,
         int                              n,
-        distance::CCDStatCounter*        stats)
+        distance::CCDStatCounter*        stats,
+        uint8_t*                         keep)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -1228,12 +1281,14 @@ namespace
 
         if(faraway)
         {
+            if constexpr(Compact)
+                keep[i] = 0;
             EE_tois(i) = toi;
             return;
         }
 
-        bool hit = distance::edge_edge_ccd<Float, EarlyOut, Stats>(
-            EP0, EP1, EP2, EP3, dEP0, dEP1, dEP2, dEP3, eta, thickness, max_iter, toi, stats);
+        bool hit = distance::edge_edge_ccd<Float, EarlyOut, Stats, Compact>(
+            EP0, EP1, EP2, EP3, dEP0, dEP1, dEP2, dEP3, eta, thickness, max_iter, toi, stats, d_hat, Compact ? keep + i : nullptr);
 
         if(!hit)
             toi = large_enough_toi;
@@ -1273,6 +1328,73 @@ void InfoStacklessBVHSimplexTrajectoryFilter::do_build(BuildInfo&)
     m_impl.ccd_stats           = ccd_stats_env && ccd_stats_env[0] == '1';
     m_impl.ccd_stat_buffer.resize(4 * CCD_STAT_SLOTS);
     m_impl.ccd_stat_buffer.fill(0);
+
+    // perf/round6 (s06): the candidate compaction for filter_active
+    const char* compact_env = std::getenv("UIPC_CCD_COMPACT");
+    m_impl.ccd_compact      = !(compact_env && compact_env[0] == '0');
+    const char* compact_verify_env = std::getenv("UIPC_CCD_COMPACT_VERIFY");
+    m_impl.ccd_compact_verify = compact_verify_env && compact_verify_env[0] == '1';
+    m_impl.compact_counts.resize(4);
+}
+
+// DIAGNOSTIC (UIPC_CCD_COMPACT_VERIFY, s06): the compacted array must be the
+// ordered subsequence of the raw array picked out by `keep_flags` -- exactly,
+// including its length and the order of its elements. Blocking readbacks;
+// diagnostic path only.
+void InfoStacklessBVHSimplexTrajectoryFilter::Impl::compact_verify_contents()
+{
+    const ThisBVH::QueryBuffer* srcs[4] = {&candidate_AllP_CodimP_pairs,
+                                           &candidate_CodimP_AllE_pairs,
+                                           &candidate_AllP_AllT_pairs,
+                                           &candidate_AllE_AllE_pairs};
+    const cuda_tool::DeviceBuffer<Vector2i>* dsts[4] = {&compact_AllP_CodimP_pairs,
+                                                        &compact_CodimP_AllE_pairs,
+                                                        &compact_AllP_AllT_pairs,
+                                                        &compact_AllE_AllE_pairs};
+
+    std::vector<uint8_t> flags;
+    keep_flags.copy_to(flags);
+
+    SizeT flag_offset = 0;
+    ++compact_contents_calls;
+    for(int k = 0; k < 4; ++k)
+    {
+        SizeT n = srcs[k]->size();
+        if(n > 0)
+        {
+            std::vector<Vector2i> raw(n);
+            cudaMemcpy(raw.data(), srcs[k]->view().data(), n * sizeof(Vector2i), cudaMemcpyDeviceToHost);
+            std::vector<Vector2i> got;
+            dsts[k]->copy_to(got);
+
+            std::vector<Vector2i> want;
+            want.reserve(got.size());
+            for(SizeT i = 0; i < n; ++i)
+                if(flags[flag_offset + i] != 0)
+                    want.push_back(raw[i]);
+
+            bool ok = want.size() == got.size();
+            for(SizeT i = 0; ok && i < want.size(); ++i)
+                ok = (want[i] == got[i]);
+            if(!ok)
+            {
+                ++compact_contents_mismatches;
+                logger::warn(
+                    "[ccd_compact_verify] contents mismatch on array {}: raw={} flagged={} compacted={}",
+                    k,
+                    n,
+                    want.size(),
+                    got.size());
+            }
+        }
+        flag_offset += n;
+    }
+    if(compact_contents_calls % 200 == 0)
+    {
+        logger::warn("[ccd_compact_verify] contents checks={} MISMATCHES={}",
+                     compact_contents_calls,
+                     compact_contents_mismatches);
+    }
 }
 
 void InfoStacklessBVHSimplexTrajectoryFilter::do_detect(DetectInfo& info)
@@ -1319,6 +1441,11 @@ cuda_tool::CBufferView<Float> InfoStacklessBVHSimplexTrajectoryFilter::toi_EEs()
 
 void InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(DetectInfo& info)
 {
+    // perf/round6 (s06): a new detection replaces the candidate arrays, so
+    // any compacted view of the previous ones is stale from here until the
+    // filter_toi that follows.
+    compact_ready = false;
+
     auto alpha                = info.alpha();
     auto Ps                   = info.positions();
     auto dxs                  = info.displacements();
@@ -1821,10 +1948,43 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
 
     auto positions = info.positions();
 
-    SizeT N_PCoimP  = candidate_AllP_CodimP_pairs.size();
-    SizeT N_CodimPE = candidate_CodimP_AllE_pairs.size();
-    SizeT N_PTs     = candidate_AllP_AllT_pairs.size();
-    SizeT N_EEs     = candidate_AllE_AllE_pairs.size();
+    // perf/round6 (s06): when the preceding filter_toi compacted the
+    // candidate arrays, run over the survivors. The dropped pairs are
+    // provably outside the activation window at EVERY point of the swept
+    // step the line search samples, so each of them would have written only
+    // invalid markers here; dropping them leaves the four selected active
+    // sets as the identical sequences the old path produced.
+    // UIPC_CCD_COMPACT=0 (or a filter_active with no filter_toi before it,
+    // i.e. the frame's first DCD detection) takes the raw arrays.
+    const bool use_compact = ccd_compact && compact_ready;
+
+    const auto& c_PCoimP = compact_AllP_CodimP_pairs;
+    const auto& c_CodimPE = compact_CodimP_AllE_pairs;
+    const auto& c_PTs     = compact_AllP_AllT_pairs;
+    const auto& c_EEs     = compact_AllE_AllE_pairs;
+
+    CBufferView<Vector2i> PCoimP_pairs =
+        use_compact ? c_PCoimP.view() : candidate_AllP_CodimP_pairs.view();
+    CBufferView<Vector2i> CodimPE_pairs =
+        use_compact ? c_CodimPE.view() : candidate_CodimP_AllE_pairs.view();
+    CBufferView<Vector2i> PT_pairs =
+        use_compact ? c_PTs.view() : candidate_AllP_AllT_pairs.view();
+    CBufferView<Vector2i> EE_pairs =
+        use_compact ? c_EEs.view() : candidate_AllE_AllE_pairs.view();
+
+    // The whole pass, as a callable over the four candidate views, so
+    // UIPC_CCD_COMPACT_VERIFY can run it twice -- once over the raw arrays,
+    // once over the compacted ones -- and compare.
+    std::array<IndexT, 4> last_counts{};
+    auto run = [&](cuda_tool::CBufferView<Vector2i> PCoimP_pairs,
+                   cuda_tool::CBufferView<Vector2i> CodimPE_pairs,
+                   cuda_tool::CBufferView<Vector2i> PT_pairs,
+                   cuda_tool::CBufferView<Vector2i> EE_pairs)
+    {
+    SizeT N_PCoimP  = PCoimP_pairs.size();
+    SizeT N_CodimPE = CodimPE_pairs.size();
+    SizeT N_PTs     = PT_pairs.size();
+    SizeT N_EEs     = EE_pairs.size();
 
     temp_PPs.resize_discard(N_PCoimP + N_CodimPE + N_PTs + N_EEs);
     temp_PEs.resize_discard(N_CodimPE + N_PTs + N_EEs);
@@ -1840,11 +2000,11 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
     {
         auto PP_view = temp_PPs.view(temp_PP_offset, N_PCoimP);
 
-        int n = static_cast<int>(candidate_AllP_CodimP_pairs.size());
+        int n = static_cast<int>(N_PCoimP);
         auto k = InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k1_kernel;
         k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
             positions,
-            candidate_AllP_CodimP_pairs.view(),
+            PCoimP_pairs,
             info.surf_vertices(),
             info.codim_vertices(),
             info.thicknesses(),
@@ -1860,11 +2020,11 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
         auto PP_view = temp_PPs.view(temp_PP_offset, N_CodimPE);
         auto PE_view = temp_PEs.view(temp_PE_offset, N_CodimPE);
 
-        int n = static_cast<int>(candidate_CodimP_AllE_pairs.size());
+        int n = static_cast<int>(N_CodimPE);
         auto k = InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k2_kernel;
         k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
             positions,
-            candidate_CodimP_AllE_pairs.view(),
+            CodimPE_pairs,
             info.codim_vertices(),
             info.surf_edges(),
             info.thicknesses(),
@@ -1882,13 +2042,13 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
         auto PP_view = temp_PPs.view(temp_PP_offset, N_PTs);
         auto PE_view = temp_PEs.view(temp_PE_offset, N_PTs);
 
-        int n = static_cast<int>(candidate_AllP_AllT_pairs.size());
+        int n = static_cast<int>(N_PTs);
         if(n > 0)
         {
             auto k = InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k3_kernel;
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 positions,
-                candidate_AllP_AllT_pairs.view(),
+                PT_pairs,
                 info.surf_vertices(),
                 info.surf_triangles(),
                 info.thicknesses(),
@@ -1907,14 +2067,14 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
         auto PP_view = temp_PPs.view(temp_PP_offset, N_EEs);
         auto PE_view = temp_PEs.view(temp_PE_offset, N_EEs);
 
-        int n = static_cast<int>(candidate_AllE_AllE_pairs.size());
+        int n = static_cast<int>(N_EEs);
         if(n > 0)
         {
             auto k = InfoStacklessBVHSimplexTrajectoryFilter_filter_active_k4_kernel;
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 positions,
                 info.rest_positions(),
-                candidate_AllE_AllE_pairs.view(),
+                EE_pairs,
                 info.surf_edges(),
                 info.thicknesses(),
                 PP_view,
@@ -1976,6 +2136,70 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
         PEs.resize_discard(PE_count);
         PTs.resize_discard(PT_count);
         EEs.resize_discard(EE_count);
+
+        last_counts = {PP_count, PE_count, PT_count, EE_count};
+    }
+    };  // end of `run`
+
+    // DIAGNOSTIC (env UIPC_CCD_COMPACT_VERIFY=1, s06): run the pass over the
+    // RAW candidate arrays first, then over the compacted ones, and compare
+    // the four active-set sizes. The compacted array is an order-preserving
+    // SUBSEQUENCE of the raw one (cub::DeviceSelect::Flagged, checked
+    // element-wise by compact_verify_contents()), so the compacted active set
+    // is the subsequence of the raw active set restricted to surviving
+    // candidates: the two are equal as sequences IF AND ONLY IF the four
+    // counts agree. Equal counts on every launch is therefore a complete
+    // proof that no active pair was dropped -- at the real line-search
+    // positions, on the real population.
+    if(use_compact && ccd_compact_verify)
+    {
+        run(candidate_AllP_CodimP_pairs.view(),
+            candidate_CodimP_AllE_pairs.view(),
+            candidate_AllP_AllT_pairs.view(),
+            candidate_AllE_AllE_pairs.view());
+        auto ref = last_counts;
+
+        run(PCoimP_pairs, CodimPE_pairs, PT_pairs, EE_pairs);
+
+        ++compact_verify_calls;
+        compact_verify_pairs += candidate_AllP_CodimP_pairs.size()
+                                + candidate_CodimP_AllE_pairs.size()
+                                + candidate_AllP_AllT_pairs.size()
+                                + candidate_AllE_AllE_pairs.size();
+        compact_verify_dropped +=
+            (candidate_AllP_CodimP_pairs.size() - PCoimP_pairs.size())
+            + (candidate_CodimP_AllE_pairs.size() - CodimPE_pairs.size())
+            + (candidate_AllP_AllT_pairs.size() - PT_pairs.size())
+            + (candidate_AllE_AllE_pairs.size() - EE_pairs.size());
+        for(int k = 0; k < 4; ++k)
+        {
+            compact_verify_active += ref[k];
+            if(ref[k] != last_counts[k])
+            {
+                ++compact_verify_mismatches;
+                logger::warn(
+                    "[ccd_compact_verify] active-set size {} differs: raw={} compacted={} (call {})",
+                    k,
+                    ref[k],
+                    last_counts[k],
+                    compact_verify_calls);
+            }
+        }
+        if(compact_verify_calls % 200 == 0)
+        {
+            logger::warn(
+                "[ccd_compact_verify] calls={} candidates={} dropped={} ({:.2f} %) active_pairs={} MISMATCHES={}",
+                compact_verify_calls,
+                compact_verify_pairs,
+                compact_verify_dropped,
+                100.0 * (double)compact_verify_dropped / (double)std::max<SizeT>(compact_verify_pairs, 1),
+                compact_verify_active,
+                compact_verify_mismatches);
+        }
+    }
+    else
+    {
+        run(PCoimP_pairs, CodimPE_pairs, PT_pairs, EE_pairs);
     }
 
     info.PPs(PPs);
@@ -2028,6 +2252,38 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(FilterActiveIn
     }
 }
 
+// perf/round6 (s06): the three compile-time flags of the CCD narrow phase
+// (s04's EarlyOut, s04's Stats, s06's Compact) select an instantiation each,
+// so the shipped kernel carries no branch and no extra register for any of
+// them. Spelled as a macro because a function template cannot take a
+// function template as a template argument.
+#define UIPC_S06_TOI_DISPATCH(kname)                                            \
+    do                                                                          \
+    {                                                                           \
+        if(cp)                                                                  \
+        {                                                                       \
+            if(eo && st)                                                        \
+                launch(kname<true, true, true>);                                \
+            else if(eo)                                                         \
+                launch(kname<true, false, true>);                               \
+            else if(st)                                                         \
+                launch(kname<false, true, true>);                               \
+            else                                                                \
+                launch(kname<false, false, true>);                              \
+        }                                                                       \
+        else                                                                    \
+        {                                                                       \
+            if(eo && st)                                                        \
+                launch(kname<true, true, false>);                               \
+            else if(eo)                                                         \
+                launch(kname<true, false, false>);                              \
+            else if(st)                                                         \
+                launch(kname<false, true, false>);                              \
+            else                                                                \
+                launch(kname<false, false, false>);                             \
+        }                                                                       \
+    } while(0)
+
 void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& info)
 {
     using namespace cuda_tool;
@@ -2049,6 +2305,25 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
     offset += candidate_AllE_AllE_pairs.size();
 
     UIPC_ASSERT(offset == toi_size, "size mismatch");
+
+    // perf/round6 (s06): one keep flag per candidate, laid out exactly like
+    // `tois`. Written by every thread of every filter_toi kernel on both of
+    // its exits, so the array is fully defined for the compaction below.
+    const bool cp = ccd_compact;
+    compact_ready = false;
+    uint8_t *PP_keep = nullptr, *PE_keep = nullptr, *PT_keep = nullptr, *EE_keep = nullptr;
+    if(cp)
+    {
+        keep_flags.resize_discard(toi_size);
+        auto koff = 0;
+        PP_keep   = keep_flags.data() + koff;
+        koff += candidate_AllP_CodimP_pairs.size();
+        PE_keep = keep_flags.data() + koff;
+        koff += candidate_CodimP_AllE_pairs.size();
+        PT_keep = keep_flags.data() + koff;
+        koff += candidate_AllP_AllT_pairs.size();
+        EE_keep = keep_flags.data() + koff;
+    }
 
     // AllP and CodimP
     {
@@ -2073,16 +2348,10 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
                 info.toi_safety_margin(),
                 info.alpha(),
                 n,
-                stats);
+                stats,
+                PP_keep);
             };
-            if(eo && st)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel<true, true>);
-            else if(eo)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel<true, false>);
-            else if(st)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel<false, true>);
-            else
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel<false, false>);
+            UIPC_S06_TOI_DISPATCH(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel);
         }
     }
 
@@ -2109,16 +2378,10 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
                 info.toi_safety_margin(),
                 info.alpha(),
                 n,
-                stats);
+                stats,
+                PE_keep);
             };
-            if(eo && st)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel<true, true>);
-            else if(eo)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel<true, false>);
-            else if(st)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel<false, true>);
-            else
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel<false, false>);
+            UIPC_S06_TOI_DISPATCH(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel);
         }
     }
 
@@ -2145,16 +2408,10 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
                 info.toi_safety_margin(),
                 info.alpha(),
                 n,
-                stats);
+                stats,
+                PT_keep);
             };
-            if(eo && st)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel<true, true>);
-            else if(eo)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel<true, false>);
-            else if(st)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel<false, true>);
-            else
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel<false, false>);
+            UIPC_S06_TOI_DISPATCH(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel);
         }
     }
 
@@ -2180,17 +2437,58 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
                 info.toi_safety_margin(),
                 info.alpha(),
                 n,
-                stats);
+                stats,
+                EE_keep);
             };
-            if(eo && st)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<true, true>);
-            else if(eo)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<true, false>);
-            else if(st)
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<false, true>);
-            else
-                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<false, false>);
+            UIPC_S06_TOI_DISPATCH(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel);
         }
+    }
+
+    // perf/round6 (s06): order-preserving stream compaction of the four
+    // candidate arrays, keyed on the flags the kernels above just wrote.
+    // cub::DeviceSelect::Flagged preserves the relative order of the selected
+    // items, and every dropped pair is one `filter_active` would have written
+    // its invalid marker for, so the active sets its own DeviceSelect::If
+    // produces downstream are the SAME SEQUENCES as on the old path.
+    // The raw candidate arrays and `tois` are untouched.
+    if(cp)
+    {
+        bool selected[4] = {false, false, false, false};
+        auto compact_one = [&](const ThisBVH::QueryBuffer&       src,
+                               cuda_tool::DeviceBuffer<Vector2i>& dst,
+                               const uint8_t*                     flags,
+                               int                                slot)
+        {
+            int m = static_cast<int>(src.size());
+            dst.resize_discard(m);
+            if(m == 0)
+                return;
+            DeviceSelect().Flagged(
+                src.view().data(), flags, dst.data(), compact_counts.data() + slot, m);
+            selected[slot] = true;
+        };
+
+        compact_one(candidate_AllP_CodimP_pairs, compact_AllP_CodimP_pairs, PP_keep, 0);
+        compact_one(candidate_CodimP_AllE_pairs, compact_CodimP_AllE_pairs, PE_keep, 1);
+        compact_one(candidate_AllP_AllT_pairs, compact_AllP_AllT_pairs, PT_keep, 2);
+        compact_one(candidate_AllE_AllE_pairs, compact_AllE_AllE_pairs, EE_keep, 3);
+
+        // One batched D2H for the four counts. It lands immediately before
+        // GlobalTrajectoryFilter::filter_toi's own blocking read of the per
+        // filter toi, so it costs no additional pipeline drain.
+        std::array<IndexT, 4> h{};
+        compact_counts.copy_to(h.data());
+        for(int k = 0; k < 4; ++k)
+            compact_sizes[k] = selected[k] ? h[k] : 0;
+
+        compact_AllP_CodimP_pairs.resize_discard(compact_sizes[0]);
+        compact_CodimP_AllE_pairs.resize_discard(compact_sizes[1]);
+        compact_AllP_AllT_pairs.resize_discard(compact_sizes[2]);
+        compact_AllE_AllE_pairs.resize_discard(compact_sizes[3]);
+        compact_ready = true;
+
+        if(ccd_compact_verify)
+            compact_verify_contents();
     }
 
     if(tois.size())
@@ -2233,4 +2531,6 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
         }
     }
 }
+
+#undef UIPC_S06_TOI_DISPATCH
 }  // namespace uipc::backend::cuda
