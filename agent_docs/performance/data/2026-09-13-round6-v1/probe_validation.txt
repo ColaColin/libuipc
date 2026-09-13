@@ -1,0 +1,33 @@
+three-arm runs (30): 30 runs, 44276 cross-checks, 0 violations
+tight-tolerance runs: 10 runs, 14756 cross-checks, 0 violations
+
+The contact-pair probe and how it was validated (PERF_METHOD 2.7)
+----------------------------------------------------------------
+The active contact-pair count comes from the engine's own `logger::info` line in
+SimplexTrajectoryFilter::do_filter_active (WB_LOG=Info), one line per Newton
+iteration:
+
+    SimplexTrajectoryFilter PTs: <a>, EEs: <b>, PEs: <c>, PPs: <d>
+
+No engine source was changed to obtain it.  It is validated against a *second,
+independent* code path in the same log -- the contact reporter's own triplet
+counts, emitted by IPCSimplexNormalContact when it hands its gradient and
+Hessian blocks to the global linear system:
+
+    <IPCSimplexNormalContact> DyTopo Grad3 count: <G>, DyTopo Hess3x3 count: <H>
+
+The two must satisfy exactly
+
+    G = 4*PT + 4*EE + 3*PE + 2*PP        (one 3-vector per stencil vertex)
+    H = 10*PT + 10*EE + 6*PE + 3*PP      (upper-triangular 3x3 block storage)
+
+Every parsed run checks this identity on every Newton iteration and fails the
+parse loudly on any mismatch.  A further consistency check that costs nothing:
+the number of pair lines in a run equals that run's total Newton-iteration
+count from the benchmark's frame_stats, run for run.
+
+Known limits of the probe: it counts the *active* set after do_filter_active,
+so it excludes the broad-phase candidate set and the vertex-half-plane pairs
+(the tumbler's bore end caps, which report PHs: 0 for the whole run because the
+garments never reach them).  It is a count, not a contact force.
+

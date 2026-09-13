@@ -1,0 +1,37 @@
+Env-switch audit, round-6 head 7316bbc5 -- kernel-level evidence, not wall time
+==============================================================================
+Method: nsys `cuda_gpu_kern_sum` over a 12-frame run per arm, reading the *demangled
+template arguments of the kernels actually launched*.  A switch that selects a different
+instantiation must change the name list; one that is inert must not.
+Raw: envaudit/*.nsys-rep and *_cuda_gpu_kern_sum.csv.
+
+s02  UIPC_DSB_GAUSS_NEWTON            tumbler-garments
+  unset (shipped default)  -> DiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>
+  =0                       -> DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>
+  Proj = 3 is the Gauss-Newton rank-1 Hessian, Proj = 1 the exact Hessian followed by the
+  s14/s19 PSD projection.  The switch really does select the old path, and the energy
+  kernel (`do_compute_energy_kernel`, untemplated) is the same in both.  **The A arm of
+  this whole validation pass is therefore the old path, proved at kernel level.**
+
+s03  UIPC_CONTACT_RANK1               tumbler-garments   -- must be INERT by default
+  unset (shipped default)  -> do_assemble_kernel<0,1,1,1,0,**0**>  and  <0,2,0,0,1,**0**>
+  =1                       -> do_assemble_kernel<0,1,1,1,0,**1**>  (+ the part-2 twin)
+  The last template parameter is s03's `Proj`.  At the default it is **0 = the exact
+  contact path** in both contact-assemble instantiations the scene launches.  s03 is
+  genuinely inert on the shipped default, confirmed on the binary and consistent with the
+  source (`int m_proj = 0` and a dispatch that only fires for m_proj in 1..4).
+
+s01  UIPC_DSB_OCC                     cube-wall-cloth
+  unset  -> DiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>, 33 launches
+  =1     -> DiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>, 33 launches
+  Identical, because **the switch does not exist on this head**: `grep -rn UIPC_DSB_OCC src/`
+  returns nothing.  s01 was rejected and its branch was never merged, which is what the
+  ledger means by "kept in the branch default off" -- not "shipped default off".  Worth
+  stating plainly so a later reader does not go looking for it on main.
+
+s02  UIPC_DSB_GN_VERIFY -- the round's own numerics probe, re-run on the *composed* head
+  (PERF_METHOD 5, "compose the round's verification probes and run them together"):
+    tumbler-garments, 10 frames : 60 833 920 output words compared, **0 mismatching**
+    cube-wall-cloth,  10 frames :  9 192 960 output words compared, **0 mismatching**
+  The probe still works after s03 merged, and s02's gradient bit-identity still holds at
+  this head.  Round 5's validation pass found a probe broken by a later step; this one is not.

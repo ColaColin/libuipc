@@ -1,0 +1,39 @@
+compute-sanitizer, round-6 head 7316bbc5 (build-perf) against a baseline binary
+===============================================================================
+Baseline = /workspace/deps/uipc-valbase-env, the round-5 validation pass's own base
+install, built from `perf-round5-base` = 890482c2 -- i.e. a binary *older* than
+perf-round6-base. Its source tree has since been removed; the installed backend
+libraries are what is run.  Every "pre-existing" claim below is reproduced on that
+binary rather than argued (PERF_METHOD 5).
+
+| tool | tumbler-garments (head) | cube-wall-cloth (head) | cube-wall-cloth (BASE) |
+|---|---|---|---|
+| memcheck, 6 frames  | **0 errors** | **0 errors** | **0 errors** |
+| initcheck, 4 frames | 5418 errors | **3483 errors** | **3483 errors** |
+| racecheck, 2 frames | 47 warnings, **0 errors** | **41 warnings, 0 errors** | **41 warnings, 0 errors** |
+
+* **memcheck is clean on both scenes.**  Nothing round 6 added reads or writes out of
+  bounds on either the tumbler or cube-wall-cloth.
+* **initcheck**: every one of the 100 displayed findings, on both revisions and both
+  scenes, is a 4-byte uninitialised `__global__` read inside
+  `cub::DeviceScanKernel`, reached from `DeviceScan::ExclusiveSum` in
+  `GlobalDyTopoEffectManager::Impl::_distribute`.  The cube-wall-cloth count is
+  **identical to the digit on head and base (3483 / 3483)**.  This is the defect
+  round 5's validation pass already diagnosed and recorded (the `N == 0` case:
+  `loose_resize(selected_hessian, N+1)` sizes the buffer to 1 and the `if(n > 0)`
+  guard skips the kernel that writes it, so `ExclusiveSum` scans one never-written
+  int).  `global_dytopo_effect_manager.cu` is not in round 6's diff.
+* **racecheck**: 0 errors everywhere; every warning is in a `MASPreconditionerEngine_*`
+  kernel.  The per-kernel breakdown on cube-wall-cloth is **identical on head and
+  base**: build_multi_level_R 50, prefix_sum_Lx 12, build_connect_mask_Lx 8,
+  next_level_cluster 6, build_level1 4, prepare_prefix_sum_L0 2.  The tumbler adds
+  10 more in build_multi_level_R and nothing new in kind.
+  `finite_element/mas_preconditioner_engine.cu` is not in round 6's diff, and **no
+  kernel round 6 touched appears in any hazard** -- in particular neither
+  `DiscreteShellBending_do_compute_gradient_hessian_kernel` (s01, s02) nor
+  `do_assemble_kernel` (s03).
+
+Limits: 6 / 4 / 2 frames is a short window.  Sanitized runs are 100-1000x slower, so a
+full 180-frame tumbler run under racecheck is hours; these windows do not cover the
+dense-pile steady state that starts around frame 15, and they do not cover
+`uipc_test_sim_case`.
