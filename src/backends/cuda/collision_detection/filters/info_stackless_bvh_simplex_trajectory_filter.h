@@ -94,6 +94,17 @@ class InfoStacklessBVHSimplexTrajectoryFilter final : public SimplexTrajectoryFi
         ****************************************************/
 
         cuda_tool::DeviceBuffer<Float> tois;  // PP, PE, PT, EE
+
+        // perf/round6 (s04): the ACCD first-pass early exit and its
+        // diagnosis counters. `ccd_early_out` selects a template
+        // instantiation, not a branch inside the kernel.
+        bool  ccd_early_out = true;   // env UIPC_CCD_EARLY_OUT=0 = old path
+        bool  ccd_stats     = false;  // env UIPC_CCD_STATS=1
+        SizeT ccd_stats_calls = 0;
+        // 4 pair types x CCD_STAT_SLOTS (calls, early exits, loop passes, hits)
+        // (distance::CCDStatCounter; spelled out so this header does not
+        //  have to pull in ccd.h ahead of the distance declarations it needs)
+        cuda_tool::DeviceBuffer<unsigned long long> ccd_stat_buffer;
     };
 
     virtual cuda_tool::CBufferView<Vector2i> candidate_PTs() const noexcept override;

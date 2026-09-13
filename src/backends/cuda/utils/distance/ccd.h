@@ -5,6 +5,12 @@
 //ref: https://github.com/ipc-sim/Codim-IPC/tree/main/Library/Math/Distance
 namespace uipc::backend::cuda::distance
 {
+// perf/round6 (s04): optional device-side diagnosis counters for the ACCD
+// loop (env UIPC_CCD_STATS=1 in the trajectory filter). Slots:
+//   0 = calls, 1 = first-pass early exits, 2 = loop passes, 3 = hits.
+// Compiled out entirely unless the Stats template argument is true.
+using CCDStatCounter = unsigned long long;
+
 template <typename T>
 UIPC_GENERIC bool point_edge_cd_broadphase(const Eigen::Vector<T, 3>& x0,
                                            const Eigen::Vector<T, 3>& x1,
@@ -70,7 +76,7 @@ UIPC_GENERIC bool point_point_ccd_broadphase(const Eigen::Vector<T, 3>& p0,
                                              const Eigen::Vector<T, 3>& dp1,
                                              T                          dist);
 
-template <typename T>
+template <typename T, bool EarlyOut = false, bool Stats = false>
 UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
                                      Eigen::Vector<T, 3> t0,
                                      Eigen::Vector<T, 3> t1,
@@ -82,9 +88,10 @@ UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
                                      T                   eta,
                                      T                   thickness,
                                      int                 max_iter,
-                                     T&                  toc);
+                                     T&                  toc,
+                                     CCDStatCounter*     stats = nullptr);
 
-template <typename T>
+template <typename T, bool EarlyOut = false, bool Stats = false>
 UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
                                 Eigen::Vector<T, 3> ea1,
                                 Eigen::Vector<T, 3> eb0,
@@ -96,9 +103,10 @@ UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
                                 T                   eta,
                                 T                   thickness,
                                 int                 max_iter,
-                                T&                  toc);
+                                T&                  toc,
+                                CCDStatCounter*     stats = nullptr);
 
-template <typename T>
+template <typename T, bool EarlyOut = false, bool Stats = false>
 UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
                                  Eigen::Vector<T, 3> e0,
                                  Eigen::Vector<T, 3> e1,
@@ -108,8 +116,9 @@ UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
                                  T                   eta,
                                  T                   thickness,
                                  int                 max_iter,
-                                 T&                  toc);
-template <typename T>
+                                 T&                  toc,
+                                 CCDStatCounter*     stats = nullptr);
+template <typename T, bool EarlyOut = false, bool Stats = false>
 UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
                                   Eigen::Vector<T, 3> p1,
                                   Eigen::Vector<T, 3> dp0,
@@ -117,7 +126,8 @@ UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
                                   T                   eta,
                                   T                   thickness,
                                   int                 max_iter,
-                                  T&                  toc);
+                                  T&                  toc,
+                                  CCDStatCounter*     stats = nullptr);
 }  // namespace uipc::backend::cuda::distance
 
 #include "details/ccd.inl"

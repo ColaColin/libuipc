@@ -1,6 +1,20 @@
 //ref: https://github.com/ipc-sim/Codim-IPC/tree/main/Library/Math/Distance
 namespace uipc::backend::cuda::distance
 {
+// perf/round6 (s04): the diagnosis counter bump. These functions are
+// __host__ __device__, so the atomic must be compiled only for the device
+// pass; the whole call is discarded by `if constexpr(Stats)` on the shipped
+// path, which is why the default instantiation is unaffected.
+UIPC_GENERIC UIPC_INLINE void ccd_stat_add(CCDStatCounter* stats, int slot)
+{
+#ifdef __CUDA_ARCH__
+    atomicAdd(stats + slot, 1ull);
+#else
+    (void)stats;
+    (void)slot;
+#endif
+}
+
 template <typename T>
 UIPC_GENERIC bool point_edge_cd_broadphase(const Eigen::Vector<T, 3>& x0,
                                            const Eigen::Vector<T, 3>& x1,
@@ -194,7 +208,7 @@ UIPC_GENERIC bool point_point_ccd_broadphase(const Eigen::Vector<T, 3>& p0,
     }
 }
 
-template <typename T>
+template <typename T, bool EarlyOut, bool Stats>
 UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
                                      Eigen::Vector<T, 3> t0,
                                      Eigen::Vector<T, 3> t1,
@@ -206,7 +220,8 @@ UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
                                      T                   eta,
                                      T                   thickness,
                                      int                 max_iter,
-                                     T&                  toc)
+                                     T&                  toc,
+                                     CCDStatCounter*     stats)
 {
     Eigen::Vector<T, 3> mov = (dt0 + dt1 + dt2 + dp) / 4;
     dt0 -= mov;
@@ -228,8 +243,12 @@ UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
     T gap = eta * (dist2_cur - thickness * thickness) / (dist_cur + thickness);
     T toc_prev = toc;
     toc        = 0;
+    if constexpr(Stats)
+        ccd_stat_add(stats, 0);
     while(true)
     {
+        if constexpr(Stats)
+            ccd_stat_add(stats, 2);
         if(max_iter >= 0)
         {
             if(--max_iter < 0)
@@ -238,6 +257,27 @@ UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
 
         T tocLowerBound = (1 - eta) * (dist2_cur - thickness * thickness)
                           / ((dist_cur + thickness) * maxDispMag);
+
+        // perf/round6 (s04) UIPC_CCD_EARLY_OUT: on the FIRST pass `toc` is 0,
+        // so the gap-convergence `break` below is disabled by its own
+        // `if(toc && ...)` guard and the ONLY reachable exit of this pass is
+        // `toc += tocLowerBound; if(toc > toc_prev) return false;`. When that
+        // test already holds, the advance and the full distance
+        // re-evaluation between here and it are dead work: their results are
+        // read by nothing that can change the outcome. Taking the exit here
+        // returns the same `false` with the same `toc` (0 + x == x exactly),
+        // so this is an EXACT transformation of the old path, not a looser
+        // filter -- it cannot drop a pair the old path would have kept.
+        if constexpr(EarlyOut)
+        {
+            if(toc == T(0) && tocLowerBound > toc_prev)
+            {
+                toc = tocLowerBound;
+                if constexpr(Stats)
+                    ccd_stat_add(stats, 1);
+                return false;
+            }
+        }
 
         p += tocLowerBound * dp;
         t0 += tocLowerBound * dt0;
@@ -258,10 +298,12 @@ UIPC_GENERIC bool point_triangle_ccd(Eigen::Vector<T, 3> p,
         }
     }
 
+    if constexpr(Stats)
+        ccd_stat_add(stats, 3);
     return true;
 }
 
-template <typename T>
+template <typename T, bool EarlyOut, bool Stats>
 UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
                                 Eigen::Vector<T, 3> ea1,
                                 Eigen::Vector<T, 3> eb0,
@@ -273,7 +315,8 @@ UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
                                 T                   eta,
                                 T                   thickness,
                                 int                 max_iter,
-                                T&                  toc)
+                                T&                  toc,
+                                CCDStatCounter*     stats)
 {
     Eigen::Vector<T, 3> mov = (dea0 + dea1 + deb0 + deb1) / 4;
     dea0 -= mov;
@@ -306,8 +349,12 @@ UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
     T gap      = eta * dFunc / (dist_cur + thickness);
     T toc_prev = toc;
     toc        = 0;
+    if constexpr(Stats)
+        ccd_stat_add(stats, 0);
     while(true)
     {
+        if constexpr(Stats)
+            ccd_stat_add(stats, 2);
         if(max_iter >= 0)
         {
             if(--max_iter < 0)
@@ -315,6 +362,27 @@ UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
         }
 
         T tocLowerBound = (1 - eta) * dFunc / ((dist_cur + thickness) * maxDispMag);
+
+        // perf/round6 (s04) UIPC_CCD_EARLY_OUT: on the FIRST pass `toc` is 0,
+        // so the gap-convergence `break` below is disabled by its own
+        // `if(toc && ...)` guard and the ONLY reachable exit of this pass is
+        // `toc += tocLowerBound; if(toc > toc_prev) return false;`. When that
+        // test already holds, the advance and the full distance
+        // re-evaluation between here and it are dead work: their results are
+        // read by nothing that can change the outcome. Taking the exit here
+        // returns the same `false` with the same `toc` (0 + x == x exactly),
+        // so this is an EXACT transformation of the old path, not a looser
+        // filter -- it cannot drop a pair the old path would have kept.
+        if constexpr(EarlyOut)
+        {
+            if(toc == T(0) && tocLowerBound > toc_prev)
+            {
+                toc = tocLowerBound;
+                if constexpr(Stats)
+                    ccd_stat_add(stats, 1);
+                return false;
+            }
+        }
 
         ea0 += tocLowerBound * dea0;
         ea1 += tocLowerBound * dea1;
@@ -347,10 +415,12 @@ UIPC_GENERIC bool edge_edge_ccd(Eigen::Vector<T, 3> ea0,
         }
     }
 
+    if constexpr(Stats)
+        ccd_stat_add(stats, 3);
     return true;
 }
 
-template <typename T>
+template <typename T, bool EarlyOut, bool Stats>
 UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
                                  Eigen::Vector<T, 3> e0,
                                  Eigen::Vector<T, 3> e1,
@@ -360,7 +430,8 @@ UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
                                  T                   eta,
                                  T                   thickness,
                                  int                 max_iter,
-                                 T&                  toc)
+                                 T&                  toc,
+                                 CCDStatCounter*     stats)
 {
     Eigen::Vector<T, 3> mov = (dp + de0 + de1) / 3;
     de0 -= mov;
@@ -379,8 +450,12 @@ UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
     T gap = eta * (dist2_cur - thickness * thickness) / (dist_cur + thickness);
     T toc_prev = toc;
     toc        = 0;
+    if constexpr(Stats)
+        ccd_stat_add(stats, 0);
     while(true)
     {
+        if constexpr(Stats)
+            ccd_stat_add(stats, 2);
         if(max_iter >= 0)
         {
             if(--max_iter < 0)
@@ -389,6 +464,27 @@ UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
 
         T tocLowerBound = (1 - eta) * (dist2_cur - thickness * thickness)
                           / ((dist_cur + thickness) * maxDispMag);
+
+        // perf/round6 (s04) UIPC_CCD_EARLY_OUT: on the FIRST pass `toc` is 0,
+        // so the gap-convergence `break` below is disabled by its own
+        // `if(toc && ...)` guard and the ONLY reachable exit of this pass is
+        // `toc += tocLowerBound; if(toc > toc_prev) return false;`. When that
+        // test already holds, the advance and the full distance
+        // re-evaluation between here and it are dead work: their results are
+        // read by nothing that can change the outcome. Taking the exit here
+        // returns the same `false` with the same `toc` (0 + x == x exactly),
+        // so this is an EXACT transformation of the old path, not a looser
+        // filter -- it cannot drop a pair the old path would have kept.
+        if constexpr(EarlyOut)
+        {
+            if(toc == T(0) && tocLowerBound > toc_prev)
+            {
+                toc = tocLowerBound;
+                if constexpr(Stats)
+                    ccd_stat_add(stats, 1);
+                return false;
+            }
+        }
 
         p += tocLowerBound * dp;
         e0 += tocLowerBound * de0;
@@ -408,10 +504,12 @@ UIPC_GENERIC bool point_edge_ccd(Eigen::Vector<T, 3> p,
         }
     }
 
+    if constexpr(Stats)
+        ccd_stat_add(stats, 3);
     return true;
 }
 
-template <typename T>
+template <typename T, bool EarlyOut, bool Stats>
 UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
                                   Eigen::Vector<T, 3> p1,
                                   Eigen::Vector<T, 3> dp0,
@@ -419,7 +517,8 @@ UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
                                   T                   eta,
                                   T                   thickness,
                                   int                 max_iter,
-                                  T&                  toc)
+                                  T&                  toc,
+                                  CCDStatCounter*     stats)
 {
     Eigen::Vector<T, 3> mov = (dp0 + dp1) / 2;
     dp1 -= mov;
@@ -437,8 +536,12 @@ UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
     T gap = eta * (dist2_cur - thickness * thickness) / (dist_cur + thickness);
     T toc_prev = toc;
     toc        = 0;
+    if constexpr(Stats)
+        ccd_stat_add(stats, 0);
     while(true)
     {
+        if constexpr(Stats)
+            ccd_stat_add(stats, 2);
         if(max_iter >= 0)
         {
             if(--max_iter < 0)
@@ -447,6 +550,27 @@ UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
 
         T tocLowerBound = (1 - eta) * (dist2_cur - thickness * thickness)
                           / ((dist_cur + thickness) * maxDispMag);
+
+        // perf/round6 (s04) UIPC_CCD_EARLY_OUT: on the FIRST pass `toc` is 0,
+        // so the gap-convergence `break` below is disabled by its own
+        // `if(toc && ...)` guard and the ONLY reachable exit of this pass is
+        // `toc += tocLowerBound; if(toc > toc_prev) return false;`. When that
+        // test already holds, the advance and the full distance
+        // re-evaluation between here and it are dead work: their results are
+        // read by nothing that can change the outcome. Taking the exit here
+        // returns the same `false` with the same `toc` (0 + x == x exactly),
+        // so this is an EXACT transformation of the old path, not a looser
+        // filter -- it cannot drop a pair the old path would have kept.
+        if constexpr(EarlyOut)
+        {
+            if(toc == T(0) && tocLowerBound > toc_prev)
+            {
+                toc = tocLowerBound;
+                if constexpr(Stats)
+                    ccd_stat_add(stats, 1);
+                return false;
+            }
+        }
 
         p0 += tocLowerBound * dp0;
         p1 += tocLowerBound * dp1;
@@ -465,6 +589,8 @@ UIPC_GENERIC bool point_point_ccd(Eigen::Vector<T, 3> p0,
         }
     }
 
+    if constexpr(Stats)
+        ccd_stat_add(stats, 3);
     return true;
 }
 }  // namespace uipc::backend::cuda::distance

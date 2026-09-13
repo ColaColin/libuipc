@@ -28,6 +28,15 @@ namespace
 
     constexpr Float large_enough_toi = 1.1;
 
+}  // namespace
+
+// perf/round6 (s04): slots per pair type in the ACCD diagnosis buffer:
+// 0 calls, 1 first-pass early exits, 2 loop passes, 3 converged hits.
+constexpr int CCD_STAT_SLOTS = 4;
+
+namespace
+{
+
     /****************************************************
     *                   Broad Phase
     ****************************************************/
@@ -991,6 +1000,12 @@ namespace
     *                   Filter TOI
     ****************************************************/
 
+    // perf/round6 (s04): EarlyOut selects the ACCD first-pass early exit
+    // (UIPC_CCD_EARLY_OUT=0 restores the old path); Stats accumulates the
+    // ACCD diagnosis counters (UIPC_CCD_STATS=1). Both are template
+    // parameters so the shipped instantiation carries neither a branch nor
+    // an extra kernel argument register for them.
+    template <bool EarlyOut, bool Stats>
     __global__ void InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel(
         cuda_tool::BufferView<Float>     PP_tois,
         cuda_tool::CBufferView<Vector2i> PCodimP_pairs,
@@ -1002,7 +1017,8 @@ namespace
         cuda_tool::CBufferView<Float>    d_hats,
         Float                            eta,
         Float                            alpha,
-        int                              n)
+        int                              n,
+        distance::CCDStatCounter*        stats)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -1031,7 +1047,8 @@ namespace
         }
 
         bool hit =
-            distance::point_point_ccd(VP0, VP1, dVP0, dVP1, eta, thickness, max_iter, toi);
+            distance::point_point_ccd<Float, EarlyOut, Stats>(
+                VP0, VP1, dVP0, dVP1, eta, thickness, max_iter, toi, stats);
 
         if(!hit)
             toi = large_enough_toi;
@@ -1039,6 +1056,12 @@ namespace
         PP_tois(i) = toi;
     }
 
+    // perf/round6 (s04): EarlyOut selects the ACCD first-pass early exit
+    // (UIPC_CCD_EARLY_OUT=0 restores the old path); Stats accumulates the
+    // ACCD diagnosis counters (UIPC_CCD_STATS=1). Both are template
+    // parameters so the shipped instantiation carries neither a branch nor
+    // an extra kernel argument register for them.
+    template <bool EarlyOut, bool Stats>
     __global__ void InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel(
         cuda_tool::BufferView<Float>     PE_tois,
         cuda_tool::CBufferView<Vector2i> CodimP_AllE_pairs,
@@ -1050,7 +1073,8 @@ namespace
         cuda_tool::CBufferView<Float>    d_hats,
         Float                            eta,
         Float                            alpha,
-        int                              n)
+        int                              n,
+        distance::CCDStatCounter*        stats)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -1082,8 +1106,8 @@ namespace
             return;
         }
 
-        bool hit = distance::point_edge_ccd(
-            VP, EP0, EP1, dVP, dEP0, dEP1, eta, thickness, max_iter, toi);
+        bool hit = distance::point_edge_ccd<Float, EarlyOut, Stats>(
+            VP, EP0, EP1, dVP, dEP0, dEP1, eta, thickness, max_iter, toi, stats);
 
         if(!hit)
             toi = large_enough_toi;
@@ -1091,6 +1115,12 @@ namespace
         PE_tois(i) = toi;
     }
 
+    // perf/round6 (s04): EarlyOut selects the ACCD first-pass early exit
+    // (UIPC_CCD_EARLY_OUT=0 restores the old path); Stats accumulates the
+    // ACCD diagnosis counters (UIPC_CCD_STATS=1). Both are template
+    // parameters so the shipped instantiation carries neither a branch nor
+    // an extra kernel argument register for them.
+    template <bool EarlyOut, bool Stats>
     __global__ void InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel(
         cuda_tool::BufferView<Float>     PT_tois,
         cuda_tool::CBufferView<Vector2i> PT_pairs,
@@ -1102,7 +1132,8 @@ namespace
         cuda_tool::CBufferView<Float>    d_hats,
         Float                            eta,
         Float                            alpha,
-        int                              n)
+        int                              n,
+        distance::CCDStatCounter*        stats)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -1137,8 +1168,8 @@ namespace
             return;
         }
 
-        bool hit = distance::point_triangle_ccd(
-            VP, FP0, FP1, FP2, dVP, dFP0, dFP1, dFP2, eta, thickness, max_iter, toi);
+        bool hit = distance::point_triangle_ccd<Float, EarlyOut, Stats>(
+            VP, FP0, FP1, FP2, dVP, dFP0, dFP1, dFP2, eta, thickness, max_iter, toi, stats);
 
         if(!hit)
             toi = large_enough_toi;
@@ -1146,6 +1177,12 @@ namespace
         PT_tois(i) = toi;
     }
 
+    // perf/round6 (s04): EarlyOut selects the ACCD first-pass early exit
+    // (UIPC_CCD_EARLY_OUT=0 restores the old path); Stats accumulates the
+    // ACCD diagnosis counters (UIPC_CCD_STATS=1). Both are template
+    // parameters so the shipped instantiation carries neither a branch nor
+    // an extra kernel argument register for them.
+    template <bool EarlyOut, bool Stats>
     __global__ void InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel(
         cuda_tool::BufferView<Float>     EE_tois,
         cuda_tool::CBufferView<Vector2i> EE_pairs,
@@ -1156,7 +1193,8 @@ namespace
         cuda_tool::CBufferView<Float>    d_hats,
         Float                            eta,
         Float                            alpha,
-        int                              n)
+        int                              n,
+        distance::CCDStatCounter*        stats)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -1194,8 +1232,8 @@ namespace
             return;
         }
 
-        bool hit = distance::edge_edge_ccd(
-            EP0, EP1, EP2, EP3, dEP0, dEP1, dEP2, dEP3, eta, thickness, max_iter, toi);
+        bool hit = distance::edge_edge_ccd<Float, EarlyOut, Stats>(
+            EP0, EP1, EP2, EP3, dEP0, dEP1, dEP2, dEP3, eta, thickness, max_iter, toi, stats);
 
         if(!hit)
             toi = large_enough_toi;
@@ -1227,6 +1265,14 @@ void InfoStacklessBVHSimplexTrajectoryFilter::do_build(BuildInfo&)
     m_impl.bvh_self_cull_verify = cull_verify_env && cull_verify_env[0] == '1';
     const char* two_phase_verify_env = std::getenv("UIPC_BVH_TWO_PHASE_VERIFY");
     m_impl.bvh_two_phase_verify = two_phase_verify_env && two_phase_verify_env[0] == '1';
+
+    // perf/round6 (s04): ACCD first-pass early exit + its diagnosis counters
+    const char* ccd_early_env  = std::getenv("UIPC_CCD_EARLY_OUT");
+    m_impl.ccd_early_out       = !(ccd_early_env && ccd_early_env[0] == '0');
+    const char* ccd_stats_env  = std::getenv("UIPC_CCD_STATS");
+    m_impl.ccd_stats           = ccd_stats_env && ccd_stats_env[0] == '1';
+    m_impl.ccd_stat_buffer.resize(4 * CCD_STAT_SLOTS);
+    m_impl.ccd_stat_buffer.fill(0);
 }
 
 void InfoStacklessBVHSimplexTrajectoryFilter::do_detect(DetectInfo& info)
@@ -2009,8 +2055,13 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
         int n = static_cast<int>(candidate_AllP_CodimP_pairs.size());
         if(n > 0)
         {
-            auto k = InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel;
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            const bool eo = ccd_early_out;
+            const bool st = ccd_stats;
+            distance::CCDStatCounter* stats =
+                st ? ccd_stat_buffer.data() + 0 * CCD_STAT_SLOTS : nullptr;
+            auto launch = [&](auto k)
+            {
+                k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 PP_tois,
                 candidate_AllP_CodimP_pairs.view(),
                 info.codim_vertices(),
@@ -2021,7 +2072,17 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
                 info.d_hats(),
                 info.toi_safety_margin(),
                 info.alpha(),
-                n);
+                n,
+                stats);
+            };
+            if(eo && st)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel<true, true>);
+            else if(eo)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel<true, false>);
+            else if(st)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel<false, true>);
+            else
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k1_kernel<false, false>);
         }
     }
 
@@ -2030,8 +2091,13 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
         int n = static_cast<int>(candidate_CodimP_AllE_pairs.size());
         if(n > 0)
         {
-            auto k = InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel;
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            const bool eo = ccd_early_out;
+            const bool st = ccd_stats;
+            distance::CCDStatCounter* stats =
+                st ? ccd_stat_buffer.data() + 1 * CCD_STAT_SLOTS : nullptr;
+            auto launch = [&](auto k)
+            {
+                k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 PE_tois,
                 candidate_CodimP_AllE_pairs.view(),
                 info.codim_vertices(),
@@ -2042,7 +2108,17 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
                 info.d_hats(),
                 info.toi_safety_margin(),
                 info.alpha(),
-                n);
+                n,
+                stats);
+            };
+            if(eo && st)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel<true, true>);
+            else if(eo)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel<true, false>);
+            else if(st)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel<false, true>);
+            else
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k2_kernel<false, false>);
         }
     }
 
@@ -2051,8 +2127,13 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
         int n = static_cast<int>(candidate_AllP_AllT_pairs.size());
         if(n > 0)
         {
-            auto k = InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel;
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            const bool eo = ccd_early_out;
+            const bool st = ccd_stats;
+            distance::CCDStatCounter* stats =
+                st ? ccd_stat_buffer.data() + 2 * CCD_STAT_SLOTS : nullptr;
+            auto launch = [&](auto k)
+            {
+                k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 PT_tois,
                 candidate_AllP_AllT_pairs.view(),
                 info.surf_vertices(),
@@ -2063,7 +2144,17 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
                 info.d_hats(),
                 info.toi_safety_margin(),
                 info.alpha(),
-                n);
+                n,
+                stats);
+            };
+            if(eo && st)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel<true, true>);
+            else if(eo)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel<true, false>);
+            else if(st)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel<false, true>);
+            else
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k3_kernel<false, false>);
         }
     }
 
@@ -2072,8 +2163,13 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
         int n = static_cast<int>(candidate_AllE_AllE_pairs.size());
         if(n > 0)
         {
-            auto k = InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel;
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            const bool eo = ccd_early_out;
+            const bool st = ccd_stats;
+            distance::CCDStatCounter* stats =
+                st ? ccd_stat_buffer.data() + 3 * CCD_STAT_SLOTS : nullptr;
+            auto launch = [&](auto k)
+            {
+                k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 EE_tois,
                 candidate_AllE_AllE_pairs.view(),
                 info.surf_edges(),
@@ -2083,7 +2179,17 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
                 info.d_hats(),
                 info.toi_safety_margin(),
                 info.alpha(),
-                n);
+                n,
+                stats);
+            };
+            if(eo && st)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<true, true>);
+            else if(eo)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<true, false>);
+            else if(st)
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<false, true>);
+            else
+                launch(InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<false, false>);
         }
     }
 
@@ -2094,6 +2200,37 @@ void InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(FilterTOIInfo& in
     else
     {
         info.toi().fill(large_enough_toi);
+    }
+
+    // DIAGNOSTIC (env UIPC_CCD_STATS=1, s04): how much of the ACCD narrow
+    // phase is spent on pairs that cannot collide within the step. Blocking
+    // readback, diagnostic path only.
+    if(ccd_stats)
+    {
+        ++ccd_stats_calls;
+        if(ccd_stats_calls % 200 == 0)
+        {
+            std::array<distance::CCDStatCounter, 4 * CCD_STAT_SLOTS> h{};
+            ccd_stat_buffer.view().copy_to(h.data());
+            const char* names[4] = {"PP", "PE", "PT", "EE"};
+            for(int t = 0; t < 4; ++t)
+            {
+                auto* r = h.data() + t * CCD_STAT_SLOTS;
+                if(r[0] == 0)
+                    continue;
+                logger::warn(
+                    "CCD stats [{} calls] {}: accd_calls={} first_pass_exits={} ({:.2f} %) loop_passes={} ({:.3f}/call) converged_hits={} ({:.4f} %)",
+                    ccd_stats_calls,
+                    names[t],
+                    r[0],
+                    r[1],
+                    100.0 * (double)r[1] / (double)r[0],
+                    r[2],
+                    (double)r[2] / (double)r[0],
+                    r[3],
+                    100.0 * (double)r[3] / (double)r[0]);
+            }
+        }
     }
 }
 }  // namespace uipc::backend::cuda
