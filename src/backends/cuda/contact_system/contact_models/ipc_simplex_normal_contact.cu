@@ -330,10 +330,28 @@ namespace
     //   4 = a diagnosis-only stage stub: the exact Hessian written
     //       *unprojected*. It is not a valid simulation path; it exists to
     //       measure the projection's share of the kernel.
+    // round-6 (s07): s03's mode 1 bundles two branches whose numerics are not
+    // comparable, so the PE:PP split gets its own two modes.
+    //   5 = the closed form for the **PP branch only**. For point-point the
+    //       closed form is not an approximation at all: `hess(D) = 2K` with
+    //       `K = [[I,-I],[-I,I]]`, `grad(D) = 2[u;-u]` spans the only
+    //       eigendirection of `H` with a positive eigenvalue (the other two
+    //       directions of range(K) have eigenvalue `4 B' <= 0` and are
+    //       projected away, and ker(K) is annihilated by both terms), and
+    //       `c |grad D|^2 = 8 B'' D + 4 B'` is that eigenvalue exactly. So
+    //       `Proj = 5` reproduces the shipped 6x6 projection up to rounding
+    //       -- measured at 4.8e-16 mean / 1.5e-15 max relative Frobenius
+    //       error by s03 -- and carries **none** of mode 1's approximation.
+    //   6 = the closed form for the **PE branch only** (the complement of 5
+    //       within mode 1). PE keeps rank 2 of 9, so this one *is* an
+    //       approximation; it exists to attribute mode 1's cost and its
+    //       iteration-count drift to the branch that causes them.
     // A template parameter, not a runtime flag, so one instantiation does not
     // carry another's stack frame (the s14 lesson). `UIPC_CONTACT_RANK1`
-    // selects it; **the default is 0** -- round 6 measured 1 and 2 and did not
-    // adopt either by default, see the round record.
+    // selects it; **the default is 5** (s07) -- the only mode that is exact up
+    // to rounding. `UIPC_CONTACT_RANK1=0` restores the eigen-solve on every
+    // branch. Round 6 measured 1, 2, 3 and 6 and adopted none of them by
+    // default, see the round record.
     template <bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql = false, bool Spd2 = false, int Proj = 0>
     __global__ void do_assemble_kernel(cuda_tool::CDense2D<ContactCoeff> table,
                                        cuda_tool::CBufferView<IndexT> contact_ids,
@@ -370,7 +388,9 @@ namespace
         // round-6 (s03): which branches take the rank-1 Hessian, and with
         // which coefficient (1 = B'' + B'/(2D), 3 = plain Gauss-Newton B'').
         constexpr bool Rank1_PTEE = (Proj == 2 || Proj == 3);
-        constexpr bool Rank1_PEPP = (Proj == 1 || Proj == 2 || Proj == 3);
+        // round-6 (s07): PE and PP are separable -- 5 = PP only, 6 = PE only.
+        constexpr bool Rank1_PE = (Proj == 1 || Proj == 2 || Proj == 3 || Proj == 6);
+        constexpr bool Rank1_PP = (Proj == 1 || Proj == 2 || Proj == 3 || Proj == 5);
         constexpr int  Rank1Coeff = (Proj == 3) ? 3 : 1;
         constexpr bool StageStub  = (Proj == 4);
 
@@ -576,7 +596,7 @@ namespace
                 else
                 {
                     Matrix9x9 H;
-                    if constexpr(Rank1_PEPP)
+                    if constexpr(Rank1_PE)
                     {
                         PE_barrier_gradient_hessian_gn<Rank1Coeff>(
                             G, H, flag, kt2, d_hat, thickness, P, E0, E1);
@@ -619,7 +639,7 @@ namespace
                 else
                 {
                     Matrix6x6 H;
-                    if constexpr(Rank1_PEPP)
+                    if constexpr(Rank1_PP)
                     {
                         PP_barrier_gradient_hessian_gn<Rank1Coeff>(G, H, flag, kt2, d_hat, thickness, P0, P1);
                     }
@@ -677,11 +697,21 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // (UIPC_CONTACT_SPD2=0 restores Eigen + the explicit basis Q)
     bool                            m_spd2             = true;
     // round-6 (s03): the normal-contact Hessian mode, see `do_assemble_kernel`.
-    // **Default 0** = the exact Hessian + the reduced PSD projection of every
-    // round up to 5. `UIPC_CONTACT_RANK1=1` opts in to the closed-form rank-1
-    // Hessian for PE + PP, `=2` for all four branches, `=3` to the plain
-    // Gauss-Newton coefficient, `=4` to the no-projection stage stub.
-    int                             m_proj             = 0;
+    // round-6 (s07): **the default is now 5** -- the closed-form rank-1
+    // Hessian on the **PP branch only**, which is the shipped 6x6 projection
+    // up to rounding (exact by the eigendecomposition argument in
+    // `do_assemble_kernel`, measured at 4.8e-16 mean / 1.5e-15 max relative
+    // Frobenius error over 140 470 randomised samples against the real device
+    // functions). `UIPC_CONTACT_RANK1=0` restores the exact eigen-solve on
+    // every branch -- that is the A/B instrument and the rollback.
+    // `=1` adds the PE branch (a real approximation: PE keeps rank 2 of 9, so
+    // the closed form drops one direction of curvature). s07 measured the
+    // Newton drift that held `=1` back and it is NOT real -- but `=1` also
+    // moves the tumbler's membrane-stretch extreme, so it stays opt-in; see
+    // the round record. `=2` all four branches, `=3` the plain Gauss-Newton
+    // coefficient, `=4` the no-projection stage stub, `=6` the PE branch
+    // alone.
+    int                             m_proj             = 5;
     IndexT                          m_ee_partition_min = 64;
     cuda_tool::DeviceBuffer<IndexT> m_ee_perm;
     cuda_tool::DeviceBuffer<IndexT> m_ee_counters;
@@ -708,7 +738,7 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         if(const char* e = std::getenv("UIPC_CONTACT_RANK1"))
         {
             m_proj = std::atoi(e);
-            if(m_proj < 0 || m_proj > 4)
+            if(m_proj < 0 || m_proj > 6)
                 m_proj = 0;
         }
 
@@ -941,6 +971,15 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 UIPC_S03_DISPATCH(2)
                 UIPC_S03_DISPATCH(3)
                 UIPC_S03_DISPATCH(4)
+                // round-6 (s07): the PE:PP split. Only part 2 (and the fused
+                // part 0) has a PE or a PP branch at all, so part 1 compiles
+                // these two down to the same code as `Proj = 0` -- the guard
+                // below keeps it from emitting a second identical kernel.
+                if constexpr(Part != 1)
+                {
+                    UIPC_S03_DISPATCH(5)
+                    UIPC_S03_DISPATCH(6)
+                }
 #undef UIPC_S03_DISPATCH
             }
             launch_k.template operator()<GradientOnly, Part, EEReducedRange, SpdTql, Spd2, 0>(
