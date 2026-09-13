@@ -1,0 +1,24 @@
+c0: 3 full runs
+c1: 3 full runs
+
+kernel                              us/launch old  us/launch new     delta   launches old/new
+CCD narrow EE (filter_toi_k4)               338.1          113.4   -66.48 %   508/379   [335.3,340.5] vs [111.3,114.7]
+CCD narrow PT (filter_toi_k3)               171.8           81.5   -52.58 %   508/379   [170.2,174.1] vs [79.9,82.6]
+DCD narrow EE (filter_active_k4)            173.6           65.3   -62.37 %   593/450   [172.5,174.3] vs [64.3,65.9]
+DCD narrow PT (filter_active_k3)            104.4           55.6   -46.73 %   593/450   [104.1,104.7] vs [54.6,56.1]
+BVH traversal self                          436.9          548.5   +25.55 %   611/618   [435.6,439.2] vs [542.4,551.7]
+BVH traversal other                         177.8          205.0   +15.28 %   612/616   [177.1,178.5] vs [203.2,207.4]
+BVH pairFilter self                         222.1          564.6  +154.17 %   611/618   [221.7,222.8] vs [560.5,570.0]
+BVH pairFilter other                        104.5          305.1  +191.92 %   612/616   [104.1,105.0] vs [302.6,307.4]
+
+family (total ms)                             old            new     delta
+TOTAL                                      6253.2         6425.3    +2.75 %
+contact assemble                           1557.4         1587.1    +1.91 %
+BVH/CCD                                    1183.6         1303.9   +10.17 %
+other                                      1003.2         1012.1    +0.88 %
+precond                                     864.6          869.5    +0.57 %
+spmv                                        627.5          628.2    +0.12 %
+cub/thrust                                  507.5          511.4    +0.78 %
+energy                                      244.3          245.0    +0.29 %
+membrane                                    164.1          165.6    +0.89 %
+bending                                     101.0          102.5    +1.46 %

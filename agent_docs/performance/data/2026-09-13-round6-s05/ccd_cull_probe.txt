@@ -1,0 +1,5 @@
+EE: samples=1000000 adversarial=500277 culled=326272 (32.63 %) hits_all=201301 (20.13 %) | VIOL_A(toi)=0 VIOL_B(active)=0 VIOL_B'(penetrate)=0
+PT: samples=1000000 adversarial=499293 culled=292942 (29.29 %) hits_all=275156 (27.52 %) | VIOL_A(toi)=0 VIOL_B(active)=0 VIOL_B'(penetrate)=0
+PE: samples=1000000 adversarial=499310 culled=355180 (35.52 %) hits_all=125896 (12.59 %) | VIOL_A(toi)=0 VIOL_B(active)=0 VIOL_B'(penetrate)=0
+PP: samples=1000000 adversarial=499805 culled=342679 (34.27 %) hits_all=196001 (19.60 %) | VIOL_A(toi)=0 VIOL_B(active)=0 VIOL_B'(penetrate)=0
+RESULT: every culled pair is provably inert (0 violations)

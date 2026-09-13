@@ -1,0 +1,23 @@
+[    8.7s] warmup       old: 67.054 ms/frame (discarded)
+[   17.5s] warmup       new: 67.684 ms/frame (discarded)
+[   26.3s] rep 1      old: 67.094 ms/frame  Newton 465  PCG 35180
+[   35.1s] rep 1      new: 67.928 ms/frame  Newton 465  PCG 35210
+[   43.9s] rep 2      new: 67.862 ms/frame  Newton 465  PCG 35225
+[   52.6s] rep 2      old: 67.125 ms/frame  Newton 465  PCG 35205
+[   61.3s] rep 3      old: 67.053 ms/frame  Newton 465  PCG 35225
+[   70.1s] rep 3      new: 67.931 ms/frame  Newton 465  PCG 35225
+[   78.9s] rep 4      new: 67.791 ms/frame  Newton 465  PCG 35200
+[   87.7s] rep 4      old: 67.012 ms/frame  Newton 465  PCG 35225
+[   96.5s] rep 5      old: 66.914 ms/frame  Newton 465  PCG 35190
+[  105.3s] rep 5      new: 67.748 ms/frame  Newton 465  PCG 35215
+
+=== s05b  mas-bunny  n=5 per arm ===
+       mean_ms: old    67.0395 [66.9143, 67.1253]   new    67.8521 [67.7485, 67.9315]     +1.21%  DISJOINT  t=-15.70 p=2.71e-07
+     median_ms: old    73.8249 [73.6717, 73.9366]   new    74.6514 [74.5061, 74.7651]     +1.12%  DISJOINT
+ ms_per_newton: old    14.4171 [14.3902, 14.4355]   new    14.5918 [14.5696, 14.6089]     +1.21%  DISJOINT  t=-15.70 p=2.71e-07
+    ms_per_pcg: old     0.1904 [0.1902, 0.1907]   new     0.1927 [0.1924, 0.1929]     +1.18%  DISJOINT  t=-15.15 p=4.69e-07
+        newton: old   465.0000 [465.0000, 465.0000]   new   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+           pcg: old 35205.0000 [35180.0000, 35225.0000]   new 35215.0000 [35200.0000, 35225.0000]     +0.03%  overlapping
+   line_search: old   465.0000 [465.0000, 465.0000]   new   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+
+raw runs + summary: /workspace/output/round6/s05/ab

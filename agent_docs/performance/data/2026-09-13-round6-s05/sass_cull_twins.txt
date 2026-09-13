@@ -1,0 +1,19 @@
+base-only kernels (renamed by the new `Cull` template parameter) matched
+against head by SASS body hash:
+
+  BYTE-IDENTICAL     402 instr   InfoStacklessBVH_stacklessSelf_kernelILb0ELb1ENS2_56InfoStacklessBVHSi
+  BYTE-IDENTICAL     562 instr   InfoStacklessBVH_pairFilter_kernelILb0ENS2_63InfoStacklessBVHSimplexTr
+  BYTE-IDENTICAL     962 instr   InfoStacklessBVH_stacklessOther_kernelILb0ENS2_56InfoStacklessBVHSimpl
+  BYTE-IDENTICAL    1034 instr   InfoStacklessBVH_stacklessOther_kernelILb1ENS2_56InfoStacklessBVHSimpl
+  BYTE-IDENTICAL    1210 instr   InfoStacklessBVH_pairFilter_kernelILb0ENS2_63InfoStacklessBVHSimplexTr
+  BYTE-IDENTICAL    1450 instr   InfoStacklessBVH_stacklessOther_kernelILb0ENS2_56InfoStacklessBVHSimpl
+  BYTE-IDENTICAL    1530 instr   InfoStacklessBVH_stacklessOther_kernelILb1ENS2_56InfoStacklessBVHSimpl
+  BYTE-IDENTICAL    1714 instr   InfoStacklessBVH_pairFilter_kernelILb0ENS2_61InfoStacklessBVHSimplexTr
+  BYTE-IDENTICAL    1986 instr   InfoStacklessBVH_stacklessOther_kernelILb0ENS2_56InfoStacklessBVHSimpl
+  BYTE-IDENTICAL    2026 instr   InfoStacklessBVH_stacklessOther_kernelILb1ENS2_56InfoStacklessBVHSimpl
+  BYTE-IDENTICAL    2234 instr   InfoStacklessBVH_pairFilter_kernelILb1ENS2_61InfoStacklessBVHSimplexTr
+  BYTE-IDENTICAL    2490 instr   InfoStacklessBVH_stacklessSelf_kernelILb0ELb0ENS2_56InfoStacklessBVHSi
+  BYTE-IDENTICAL    2554 instr   InfoStacklessBVH_stacklessSelf_kernelILb1ELb0ENS2_56InfoStacklessBVHSi
+
+matched 13 / 13 base-only kernels byte-for-byte in head
+head-only kernels left over (the Cull=true twins): 13

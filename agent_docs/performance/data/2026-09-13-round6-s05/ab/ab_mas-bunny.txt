@@ -1,0 +1,21 @@
+[    8.7s] warmup       old: 67.006 ms/frame (discarded)
+[   17.5s] warmup       new: 67.768 ms/frame (discarded)
+[   26.2s] rep 1      old: 66.951 ms/frame  Newton 465  PCG 35175
+[   35.0s] rep 1      new: 67.807 ms/frame  Newton 465  PCG 35205
+[   43.8s] rep 2      new: 67.742 ms/frame  Newton 465  PCG 35250
+[   52.6s] rep 2      old: 67.140 ms/frame  Newton 465  PCG 35190
+[   61.3s] rep 3      old: 67.082 ms/frame  Newton 465  PCG 35235
+[   70.1s] rep 3      new: 67.692 ms/frame  Newton 465  PCG 35215
+
+=== s05  mas-bunny  n=3 per arm ===
+       mean_ms: old    67.0575 [66.9505, 67.1402]   new    67.7468 [67.6919, 67.8066]     +1.03%  DISJOINT  t=-10.58 p=0.00126
+     median_ms: old    73.5959 [73.5139, 73.6669]   new    74.7803 [74.5781, 74.8971]     +1.61%  DISJOINT
+ ms_per_newton: old    14.4210 [14.3980, 14.4388]   new    14.5692 [14.5574, 14.5821]     +1.03%  DISJOINT  t=-10.58 p=0.00126
+    ms_per_pcg: old     0.1905 [0.1903, 0.1908]   new     0.1923 [0.1922, 0.1926]     +0.96%  DISJOINT  t=-9.21 p=0.000788
+        newton: old   465.0000 [465.0000, 465.0000]   new   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+           pcg: old 35200.0000 [35175.0000, 35235.0000]   new 35223.3333 [35205.0000, 35250.0000]     +0.07%  overlapping
+   line_search: old   465.0000 [465.0000, 465.0000]   new   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+
+!! effect is 1.03% at n=3. Below ~2% use n>=5 (PERF_METHOD §2.4).
+
+raw runs + summary: /workspace/output/round6/s05/ab
