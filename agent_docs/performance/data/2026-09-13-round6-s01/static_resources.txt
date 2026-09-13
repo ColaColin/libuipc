@@ -1,0 +1,27 @@
+Static resource usage, sm_75, device-linked (cuobjdump -res-usage on
+build-perf/Release/bin/libuipc_backend_cuda.so), DiscreteShellBending G/H instantiations.
+Proj: 0 = dense 12x12 eigen-solve, 1 = K16 blocked translation-free 9x9 (shipped),
+2 = K7 dense 12x9 basis. Solver: 0 = Eigen SelfAdjointEigenSolver, 1 = s19 tridiagonal QL.
+
+main (84b4417b) and this branch produce IDENTICAL numbers for all six pre-existing
+instantiations -- the macro-expanded body leaves the old path byte-for-byte unchanged.
+
+variant                         REG   STACK(B)
+Proj2 Solver0                   255       6688
+Proj1 Solver0                   255       3472
+Proj0 Solver0                   255       6976
+Proj2 Solver1                   255       3840
+Proj1 Solver1                   255       3104
+Proj1 Solver1 _occ4             128       4608
+Proj1 Solver1 _occ3             168       3952
+Proj0 Solver1                   255       3328
+
+ptxas -v, whole-program compile of the same TU (spill traffic, which the device-linked
+listing above does not report):
+  Proj1 Solver1 unbounded : 255 reg, 3552 B frame, 1168 B spill st / 1168 B spill ld
+  Proj1 Solver1 occ3      : 168 reg, 4592 B frame, 3472 B spill st / 3680 B spill ld
+  Proj1 Solver1 occ4      : 128 reg, 4864 B frame, 5316 B spill st / 6164 B spill ld
+
+sm_75 occupancy at the shipped launch geometry (block = 32 threads on cube-wall-cloth,
+64 on tumbler-garments; 65536 registers and 32 warp slots per SM, 40 SMs):
+  255 reg -> 8 warps/SM     168 reg -> 12 warps/SM     128 reg -> 16 warps/SM
