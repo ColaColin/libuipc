@@ -1,0 +1,25 @@
+[   24.7s] warmup       old: 131.514 ms/frame (discarded)
+[   49.1s] warmup       new: 129.629 ms/frame (discarded)
+[   73.0s] rep 1      old: 126.750 ms/frame  Newton 1513  PCG 50800
+[   97.8s] rep 1      new: 132.308 ms/frame  Newton 1445  PCG 45755
+[  121.0s] rep 2      new: 123.010 ms/frame  Newton 1373  PCG 40345
+[  143.4s] rep 2      old: 118.355 ms/frame  Newton 1443  PCG 43410
+[  167.1s] rep 3      old: 125.656 ms/frame  Newton 1486  PCG 45800
+[  191.1s] rep 3      new: 127.328 ms/frame  Newton 1511  PCG 49155
+[  216.2s] rep 4      new: 133.465 ms/frame  Newton 1493  PCG 52925
+[  243.3s] rep 4      old: 145.070 ms/frame  Newton 1479  PCG 49190
+[  269.6s] rep 5      old: 140.026 ms/frame  Newton 1521  PCG 48255
+[  291.3s] rep 5      new: 114.447 ms/frame  Newton 1439  PCG 44850
+
+=== s04  tumbler-garments  n=5 per arm ===
+       mean_ms: old   131.1713 [118.3545, 145.0701]   new   126.1116 [114.4466, 133.4647]     -3.86%  overlapping  t=+0.84 p=0.428
+     median_ms: old   120.3470 [109.7560, 135.0681]   new   117.1256 [107.9989, 122.7131]     -2.68%  overlapping
+ ms_per_newton: old    15.8581 [14.7636, 17.6556]   new    15.6365 [14.3158, 16.4813]     -1.40%  overlapping  t=+0.33 p=0.751
+    ms_per_pcg: old     0.4974 [0.4491, 0.5309]   new     0.4898 [0.4539, 0.5488]     -1.53%  overlapping  t=+0.32 p=0.758
+        newton: old  1488.4000 [1443.0000, 1521.0000]   new  1452.2000 [1373.0000, 1511.0000]     -2.43%  overlapping
+           pcg: old 47491.0000 [43410.0000, 50800.0000]   new 46606.0000 [40345.0000, 52925.0000]     -1.86%  overlapping
+   line_search: old  1747.6000 [1669.0000, 1840.0000]   new  1704.4000 [1593.0000, 1802.0000]     -2.47%  overlapping
+
+!! newton moved 2.43% against a 3.86% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+raw runs + summary: /workspace/output/round6/s04/ab_tumbler-garments

@@ -1,0 +1,27 @@
+[    4.2s] warmup       old: 28.200 ms/frame (discarded)
+[    8.3s] warmup       new: 27.765 ms/frame (discarded)
+[   12.4s] rep 1      old: 27.646 ms/frame  Newton 460  PCG 12845
+[   16.5s] rep 1      new: 27.507 ms/frame  Newton 466  PCG 12810
+[   20.6s] rep 2      new: 27.521 ms/frame  Newton 465  PCG 12720
+[   24.7s] rep 2      old: 28.061 ms/frame  Newton 462  PCG 12630
+[   29.0s] rep 3      old: 29.095 ms/frame  Newton 480  PCG 12995
+[   33.1s] rep 3      new: 27.990 ms/frame  Newton 477  PCG 13015
+[   37.2s] rep 4      new: 27.949 ms/frame  Newton 481  PCG 12840
+[   41.3s] rep 4      old: 27.592 ms/frame  Newton 464  PCG 12740
+[   45.5s] rep 5      old: 28.150 ms/frame  Newton 478  PCG 12980
+[   49.6s] rep 5      new: 28.237 ms/frame  Newton 475  PCG 13265
+
+=== s04  rigid-wrecking-balls  n=5 per arm ===
+       mean_ms: old    28.1087 [27.5924, 29.0948]   new    27.8410 [27.5070, 28.2374]     -0.95%  overlapping  t=+0.88 p=0.414
+     median_ms: old    24.4179 [23.6525, 24.9369]   new    24.2429 [23.9590, 24.5803]     -0.72%  overlapping
+ ms_per_newton: old     7.1954 [7.0669, 7.2886]   new     7.0667 [6.9728, 7.1337]     -1.79%  overlapping  t=+2.56 p=0.0379
+    ms_per_pcg: old     0.2627 [0.2583, 0.2687]   new     0.2584 [0.2554, 0.2612]     -1.65%  overlapping  t=+1.91 p=0.108
+        newton: old   468.8000 [460.0000, 480.0000]   new   472.8000 [465.0000, 481.0000]     +0.85%  overlapping
+           pcg: old 12838.0000 [12630.0000, 12995.0000]   new 12930.0000 [12720.0000, 13265.0000]     +0.72%  overlapping
+   line_search: old   480.0000 [471.0000, 494.0000]   new   485.0000 [475.0000, 495.0000]     +1.04%  overlapping
+
+!! newton moved 0.85% against a 0.95% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+!! pcg moved 0.72% against a 0.95% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+raw runs + summary: /workspace/output/round6/s04/ab_rigid-wrecking-balls

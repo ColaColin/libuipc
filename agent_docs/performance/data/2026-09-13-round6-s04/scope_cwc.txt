@@ -1,0 +1,32 @@
+eo0: 3 full runs
+eo1: 3 full runs
+
+kernel                              us/launch old  us/launch new     delta   launches old/new
+CCD narrow EE (filter_toi_k4)               465.4          337.9   -27.40 %   512/512   [458.0,476.9] vs [334.1,341.7]
+CCD narrow PT (filter_toi_k3)               253.5          171.2   -32.49 %   512/512   [250.0,258.8] vs [169.9,173.3]
+DCD narrow EE (filter_active_k4)            173.0          174.4    +0.80 %   598/597   [169.7,178.0] vs [172.6,176.0]
+DCD narrow PT (filter_active_k3)            104.3          104.9    +0.59 %   598/597   [102.5,106.4] vs [104.7,105.1]
+BVH traversal self                          436.5          436.7    +0.04 %   615/615   [435.4,437.5] vs [433.5,439.2]
+BVH traversal other                         178.0          178.9    +0.48 %   616/616   [177.7,178.6] vs [178.1,180.2]
+BVH pairFilter self                         222.3          222.8    +0.21 %   615/615   [221.0,223.5] vs [222.5,223.0]
+BVH pairFilter other                        104.6          104.6    -0.01 %   616/616   [103.8,105.1] vs [104.4,104.8]
+
+family (total ms)                             old            new     delta
+TOTAL                                      6397.5         6306.3    -1.43 %
+contact assemble                           1565.0         1578.1    +0.84 %
+BVH/CCD                                    1297.5         1192.4    -8.11 %
+other                                      1009.1         1009.9    +0.08 %
+precond                                     872.5          870.3    -0.25 %
+spmv                                        629.9          626.9    -0.47 %
+cub/thrust                                  510.5          513.5    +0.58 %
+energy                                      245.8          248.2    +0.97 %
+membrane                                    165.4          165.1    -0.15 %
+bending                                     101.8          101.9    +0.09 %
+
+ratio (same run)                                old        new     delta
+filter_toi_k4 / stacklessSelf                1.0661     0.7738   -27.42 %  DISJOINT
+filter_toi_k4 / pairFilter_kernel<(bool)1     2.0933     1.5166   -27.55 %  DISJOINT
+filter_toi_k4 / filter_active_k4             2.6903     1.9375   -27.98 %  DISJOINT
+filter_toi_k3 / stacklessSelf                0.5808     0.3920   -32.51 %  DISJOINT
+filter_toi_k3 / pairFilter_kernel<(bool)1     1.1404     0.7683   -32.63 %  DISJOINT
+filter_toi_k3 / filter_active_k4             1.4658     0.9816   -33.03 %  DISJOINT

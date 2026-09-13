@@ -1,0 +1,23 @@
+[   47.1s] warmup       old: 173.572 ms/frame (discarded)
+[   93.5s] warmup       new: 171.094 ms/frame (discarded)
+[  140.7s] rep 1      old: 173.695 ms/frame  Newton 1661  PCG 63790
+[  187.2s] rep 1      new: 171.120 ms/frame  Newton 1660  PCG 64065
+[  234.0s] rep 2      new: 171.816 ms/frame  Newton 1667  PCG 64075
+[  281.3s] rep 2      old: 174.341 ms/frame  Newton 1665  PCG 63920
+[  328.4s] rep 3      old: 173.726 ms/frame  Newton 1664  PCG 64220
+[  374.9s] rep 3      new: 171.121 ms/frame  Newton 1658  PCG 63895
+[  421.8s] rep 4      new: 172.364 ms/frame  Newton 1661  PCG 65090
+[  469.1s] rep 4      old: 174.384 ms/frame  Newton 1656  PCG 64390
+[  516.6s] rep 5      old: 175.072 ms/frame  Newton 1659  PCG 65385
+[  563.3s] rep 5      new: 171.931 ms/frame  Newton 1664  PCG 64460
+
+=== s04  stiff-gipc-case2  n=5 per arm ===
+       mean_ms: old   174.2436 [173.6951, 175.0719]   new   171.6704 [171.1199, 172.3639]     -1.48%  DISJOINT  t=+7.34 p=8.17e-05
+     median_ms: old   174.8192 [172.7206, 176.3804]   new   173.9866 [173.1041, 174.5634]     -0.48%  overlapping
+ ms_per_newton: old    26.2259 [26.1007, 26.3821]   new    25.8229 [25.7673, 25.9428]     -1.54%  DISJOINT  t=+6.37 p=0.000515
+    ms_per_pcg: old     0.6771 [0.6694, 0.6819]   new     0.6673 [0.6620, 0.6704]     -1.44%  overlapping  t=+3.71 p=0.00763
+        newton: old  1661.0000 [1656.0000, 1665.0000]   new  1662.0000 [1658.0000, 1667.0000]     +0.06%  overlapping
+           pcg: old 64341.0000 [63790.0000, 65385.0000]   new 64317.0000 [63895.0000, 65090.0000]     -0.04%  overlapping
+   line_search: old  1795.2000 [1791.0000, 1807.0000]   new  1790.8000 [1783.0000, 1802.0000]     -0.25%  overlapping
+
+raw runs + summary: /workspace/output/round6/s04/ab_stiff-gipc-case2

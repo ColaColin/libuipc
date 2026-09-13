@@ -1,0 +1,39 @@
+arm UIPC_CCD_EARLY_OUT=0: 6 runs
+arm UIPC_CCD_EARLY_OUT=1: 6 runs
+
+key                                                               eo0 (old)                          eo1 (new)
+verify_ok                                                       1 1 1 1 1 1                        1 1 1 1 1 1
+verify_all_finite                                               1 1 1 1 1 1                        1 1 1 1 1 1
+verify_contained_radial                                         1 1 1 1 1 1                        1 1 1 1 1 1
+verify_contained_axial                                          1 1 1 1 1 1                        1 1 1 1 1 1
+verify_r_max                                      0.29866 [0.29858,0.29877]          0.29857 [0.29853,0.29863]
+verify_z_abs_max                                                        n/a                                n/a
+verify_lifter_depth_max                  -0.0011761 [-0.0012338,-0.0010652] -0.0012713 [-0.0013505,-0.0011179]
+verify_tri_height_min                       0.0036993 [0.0034395,0.0039705]    0.0033792 [0.0027216,0.0039352]
+verify_area_ratio_min                               0.841 [0.81333,0.87748]          0.75544 [0.59796,0.87498]
+verify_area_ratio_max                                1.2946 [1.2104,1.4179]             1.3437 [1.2364,1.6971]
+verify_max_speed                                     2.8658 [2.4985,3.3001]             2.8259 [2.6641,2.9852]
+verify_cc_min_dist                          0.0024784 [0.0023567,0.0026302]    0.0025049 [0.0023373,0.0026211]
+verify_bore_gap_min                      0.00079269 [0.00064865,0.00086978] 0.00086157 [0.00080279,0.00092739]
+verify_drum_track_err_deg_max                     0.39043 [0.039572,2.1447]        0.084477 [0.039572,0.26831]
+verify_ccd_toi_min                                0.51674 [0.32971,0.65173]          0.47139 [0.36952,0.65889]
+verify_ccd_toi_clamped_frames                                    9.8 [5,15]                         9.2 [6,14]
+verify_ls_alpha_min                               0.51674 [0.32971,0.65173]            0.443 [0.26626,0.65889]
+verify_hit_newton_limit_frames                                    0.0 [0,0]                          0.0 [0,0]
+verify_hit_ls_limit_frames                                        0.0 [0,0]                          0.0 [0,0]
+verify_not_converged_frames                                       0.0 [0,0]                          0.0 [0,0]
+verify_newton_total                                      1478.2 [1434,1527]                 1477.3 [1456,1504]
+verify_pcg_total                                      48125.0 [43805,55130]              49142.5 [46155,52885]
+verify_mean_disp_mm_last_quarter                     17.005 [13.525,20.054]             15.622 [10.681,18.487]
+verify_eo0_r1.txt: tri_h_min= 3.439mm area_min=0.8195 area_max=1.3065 cc_min=2.463mm bore=0.753mm ok=True
+verify_eo0_r2.txt: tri_h_min= 3.668mm area_min=0.8423 area_max=1.3297 cc_min=2.357mm bore=0.649mm ok=True
+verify_eo0_r3.txt: tri_h_min= 3.625mm area_min=0.8379 area_max=1.2720 cc_min=2.630mm bore=0.849mm ok=True
+verify_eo0_r4.txt: tri_h_min= 3.899mm area_min=0.8555 area_max=1.4179 cc_min=2.428mm bore=0.834mm ok=True
+verify_eo0_r5.txt: tri_h_min= 3.594mm area_min=0.8133 area_max=1.2313 cc_min=2.509mm bore=0.870mm ok=True
+verify_eo0_r6.txt: tri_h_min= 3.971mm area_min=0.8775 area_max=1.2104 cc_min=2.483mm bore=0.802mm ok=True
+verify_eo1_r1.txt: tri_h_min= 2.868mm area_min=0.6654 area_max=1.2588 cc_min=2.477mm bore=0.857mm ok=True
+verify_eo1_r2.txt: tri_h_min= 3.684mm area_min=0.8298 area_max=1.2364 cc_min=2.505mm bore=0.803mm ok=True
+verify_eo1_r3.txt: tri_h_min= 3.579mm area_min=0.7877 area_max=1.2571 cc_min=2.590mm bore=0.927mm ok=True
+verify_eo1_r4.txt: tri_h_min= 2.722mm area_min=0.5980 area_max=1.2909 cc_min=2.621mm bore=0.815mm ok=True
+verify_eo1_r5.txt: tri_h_min= 3.935mm area_min=0.8750 area_max=1.3217 cc_min=2.499mm bore=0.873mm ok=True
+verify_eo1_r6.txt: tri_h_min= 3.487mm area_min=0.7768 area_max=1.6971 cc_min=2.337mm bore=0.894mm ok=True

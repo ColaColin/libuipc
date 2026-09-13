@@ -1,0 +1,18 @@
+TOTAL GPU kernel ms 24201.9
+
+BVH/CCD                                 9141.8 ms   37.77 %
+contact assemble                        5080.2 ms   20.99 %
+precond                                 2419.1 ms   10.00 %
+other                                   2414.2 ms    9.98 %
+cub/thrust                              1664.4 ms    6.88 %
+spmv                                    1580.0 ms    6.53 %
+membrane                                 707.9 ms    2.92 %
+energy                                   614.8 ms    2.54 %
+bending                                  579.8 ms    2.40 %
+
+--- BVH/CCD split ---
+CCD narrow (filter_toi k3+k4)           3247.5 ms   13.42 %
+BVH traversal (stacklessSelf/Other)     2031.5 ms    8.39 %
+BVH leaf filter (pairFilter)            1994.9 ms    8.24 %
+DCD narrow (filter_active k3+k4)        1438.6 ms    5.94 %
+BVH build/refit + rest                   429.2 ms    1.77 %

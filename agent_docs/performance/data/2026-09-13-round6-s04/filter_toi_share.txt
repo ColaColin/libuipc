@@ -1,0 +1,4 @@
+cube-wall-cloth          total   6540.3 ms   BVH/CCD 20.27 %   filter_toi   381.1 ms =  5.83 %   k4 launches 518
+rigid-wrecking-balls     total   3800.8 ms   BVH/CCD 25.60 %   filter_toi   219.5 ms =  5.78 %   k4 launches 477
+stiff-gipc-case2         total  44377.0 ms   BVH/CCD 23.67 %   filter_toi  2775.0 ms =  6.25 %   k4 launches 1663
+mas-bunny                total   6556.2 ms   BVH/CCD  8.72 %   filter_toi    85.5 ms =  1.30 %   k4 launches 465

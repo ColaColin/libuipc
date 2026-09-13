@@ -1,0 +1,27 @@
+[    7.4s] warmup       old: 61.290 ms/frame (discarded)
+[   15.0s] warmup       new: 62.520 ms/frame (discarded)
+[   22.6s] rep 1      old: 63.790 ms/frame  Newton 514  PCG 20110
+[   30.1s] rep 1      new: 62.612 ms/frame  Newton 512  PCG 20240
+[   38.2s] rep 2      new: 67.954 ms/frame  Newton 558  PCG 21095
+[   45.7s] rep 2      old: 62.341 ms/frame  Newton 509  PCG 20025
+[   53.3s] rep 3      old: 62.075 ms/frame  Newton 506  PCG 19910
+[   60.9s] rep 3      new: 62.846 ms/frame  Newton 515  PCG 20125
+[   68.4s] rep 4      new: 61.962 ms/frame  Newton 511  PCG 20140
+[   76.0s] rep 4      old: 63.176 ms/frame  Newton 509  PCG 20195
+[   83.6s] rep 5      old: 62.502 ms/frame  Newton 508  PCG 19810
+[   90.9s] rep 5      new: 60.520 ms/frame  Newton 505  PCG 19525
+
+=== s04  cube-wall-cloth  n=5 per arm ===
+       mean_ms: old    62.7766 [62.0748, 63.7896]   new    63.1788 [60.5199, 67.9541]     +0.64%  overlapping  t=-0.31 p=0.771
+     median_ms: old    54.9717 [54.0643, 56.3361]   new    55.7439 [53.2100, 64.2564]     +1.40%  overlapping
+ ms_per_newton: old    12.3282 [12.2478, 12.4118]   new    12.1440 [11.9841, 12.2288]     -1.49%  DISJOINT  t=+3.30 p=0.0115
+    ms_per_pcg: old     0.3137 [0.3113, 0.3172]   new     0.3123 [0.3077, 0.3221]     -0.46%  overlapping  t=+0.52 p=0.626
+        newton: old   509.2000 [506.0000, 514.0000]   new   520.2000 [505.0000, 558.0000]     +2.16%  overlapping
+           pcg: old 20010.0000 [19810.0000, 20195.0000]   new 20225.0000 [19525.0000, 21095.0000]     +1.07%  overlapping
+   line_search: old   530.6000 [526.0000, 535.0000]   new   542.0000 [523.0000, 586.0000]     +2.15%  overlapping
+
+!! newton moved 2.16% against a 0.64% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+!! pcg moved 1.07% against a 0.64% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+raw runs + summary: /workspace/output/round6/s04/ab_cube-wall-cloth

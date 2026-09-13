@@ -1,0 +1,7 @@
+# UIPC_CCD_STATS=1 UIPC_CCD_EARLY_OUT=0, tumbler-garments, 60 frames
+# slots: accd_calls, first_pass_exits, loop_passes, converged_hits
+# (converged_hits counts only the gap-convergence exit, not the max_iter one)
+CCD stats [200 calls] PT: accd_calls=35467306 first_pass_exits=0 (0.00 %) loop_passes=35863023 (1.011/call) converged_hits=77900 (0.2196 %)
+CCD stats [200 calls] EE: accd_calls=104278257 first_pass_exits=0 (0.00 %) loop_passes=105334366 (1.010/call) converged_hits=222664 (0.2135 %)
+CCD stats [400 calls] PT: accd_calls=96673289 first_pass_exits=0 (0.00 %) loop_passes=100165240 (1.036/call) converged_hits=371542 (0.3843 %)
+CCD stats [400 calls] EE: accd_calls=275236843 first_pass_exits=0 (0.00 %) loop_passes=284906068 (1.035/call) converged_hits=1040933 (0.3782 %)
