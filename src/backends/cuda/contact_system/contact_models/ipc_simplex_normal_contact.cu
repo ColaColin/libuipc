@@ -393,6 +393,18 @@ namespace
         constexpr bool Rank1_PP = (Proj == 1 || Proj == 2 || Proj == 3 || Proj == 5);
         constexpr int  Rank1Coeff = (Proj == 3) ? 3 : 1;
         constexpr bool StageStub  = (Proj == 4);
+        // round-6 (s08): part 1's own axis, carried on the same template
+        // parameter so no existing instantiation changes.
+        //   7 = diagnosis-only stage stub: the PT and un-mollified-EE reduced
+        //       projections are skipped (the mollified 9x9 is kept), to
+        //       attribute part 1's projection cost between the two. Not a
+        //       valid simulation path.
+        //   8 = s31's basis-free reduction on the M = 4 branch those two take
+        //       in 100 % of the measured pairs: same subspace, same 5x5
+        //       eigen-solve, no 12x5 basis Q and no 12x12 Hs / Hspd temporary.
+        //       Same projection up to rounding.
+        constexpr bool Stub1     = (Proj == 7);
+        constexpr int  Spd1Basis = (Proj == 8) ? 1 : 0;
 
         constexpr int SpdSolver = SpdTql ? 1 : 0;
         constexpr int Spd2Solver = Spd2 ? 1 : 0;
@@ -444,8 +456,8 @@ namespace
                     {
                         PT_barrier_gradient_hessian(
                             G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
-                        if constexpr(!StageStub)
-                            PT_barrier_make_spd<SpdSolver>(H, flag, P, T0, T1, T2);
+                        if constexpr(!StageStub && !Stub1)
+                            PT_barrier_make_spd<SpdSolver, Spd1Basis>(H, flag, P, T0, T1, T2);
                     }
                     DoubletVectorAssembler DVA{PT_Gs};
                     DVA.segment<4>(i * 4).write(PT, G);
@@ -538,7 +550,9 @@ namespace
                             warp_reduced = !__any_sync(__activemask(), mollified);
                         if(warp_reduced)
                         {
-                            EE_barrier_make_spd<SpdSolver>(H, flag, E0, E1, E2, E3);
+                            if constexpr(!Stub1)
+                                EE_barrier_make_spd<SpdSolver, Spd1Basis>(
+                                    H, flag, E0, E1, E2, E3);
                         }
                         // perf/kernels (K10): the mollified EE barrier depends
                         // on relative positions only, so H annihilates rigid
@@ -712,6 +726,21 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // coefficient, `=4` the no-projection stage stub, `=6` the PE branch
     // alone.
     int                             m_proj             = 5;
+    // round-6 (s08): contact part 1's (PT + un-mollified EE) reduced PSD
+    // projection on s31's basis-free form, extended from M <= 3 to the M = 4
+    // branch those two pair types take in 100 % of the measured pairs.
+    // 0 = the dense-Q path of `barrier_range_basis` (every round up to 6) --
+    //     this is the rollback and the A/B instrument,
+    // 1 = basis-free; **the default**. Same projection up to rounding: the
+    //     two forms carry the same 5-dimensional subspace in two different
+    //     orthonormal bases, and clamping eigenvalues commutes with an
+    //     orthogonal change of basis, so only rounding separates them
+    //     (measured 1.3e-15 mean / 6.3e-15 max relative Frobenius error over
+    //     1.14 M randomised dim-4 samples against the real device functions).
+    // 2 = the diagnosis-only stage stub that skips those two projections
+    //     entirely (not a valid simulation path; it measures their share).
+    // `UIPC_CONTACT_SPD1_BASIS` selects it.
+    int                             m_spd1_basis       = 1;
     IndexT                          m_ee_partition_min = 64;
     cuda_tool::DeviceBuffer<IndexT> m_ee_perm;
     cuda_tool::DeviceBuffer<IndexT> m_ee_counters;
@@ -735,6 +764,12 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             m_spd_tql = !(e[0] == '0');
         if(const char* e = std::getenv("UIPC_CONTACT_SPD2"))
             m_spd2 = !(e[0] == '0');
+        if(const char* e = std::getenv("UIPC_CONTACT_SPD1_BASIS"))
+        {
+            m_spd1_basis = std::atoi(e);
+            if(m_spd1_basis < 0 || m_spd1_basis > 2)
+                m_spd1_basis = 0;
+        }
         if(const char* e = std::getenv("UIPC_CONTACT_RANK1"))
         {
             m_proj = std::atoi(e);
@@ -959,6 +994,27 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 || (Part == 0 && EEReducedRange && SpdTql && Spd2);
             if constexpr(!GradientOnly && Rank1Shipped)
             {
+                // round-6 (s08): part 1's projection axis. `Proj` 0, 1, 5
+                // and 6 are all the same code *for part 1* (5 and 6 are not
+                // dispatched here at all, and 1's PE/PP branches are compiled
+                // out by `Part != 1`), so the basis-free form composes with
+                // every exact mode. Modes 2 and 3 replace part 1's projection
+                // by a rank-1 Hessian and 4 removes it, so there is nothing
+                // to reduce: those fall back and keep their own meaning
+                // rather than silently combining two changes.
+                if constexpr(Part == 1)
+                {
+                    if(m_spd1_basis != 0 && m_proj != 2 && m_proj != 3 && m_proj != 4)
+                    {
+                        if(m_spd1_basis == 1)
+                            launch_k.template operator()<GradientOnly, Part, EEReducedRange, SpdTql, Spd2, 8>(
+                                ee_offset, pe_offset, pp_offset, n, s);
+                        else
+                            launch_k.template operator()<GradientOnly, Part, EEReducedRange, SpdTql, Spd2, 7>(
+                                ee_offset, pe_offset, pp_offset, n, s);
+                        return;
+                    }
+                }
 #define UIPC_S03_DISPATCH(V)                                                        \
                 if(m_proj == V)                                                     \
                 {                                                                   \
