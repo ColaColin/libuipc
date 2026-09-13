@@ -315,7 +315,26 @@ namespace
     // parameter, not a runtime flag, so one stack frame per instantiation
     // (s14). Part 1 (PT + EE) is on the `SpdTql` axis above and passes
     // `Spd2 = false`.
-    template <bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql = false, bool Spd2 = false>
+    // round-6 (s03): `Proj` picks how the normal-contact Hessian is built.
+    //   0 = every round up to 5: the exact Hessian
+    //       `B''(D) grad(D) grad(D)^T + B'(D) hess(D)` followed by the reduced
+    //       PSD projection (K10 / s16 / s25 / s31).
+    //   1 = the closed-form rank-1 Hessian `c grad(D) grad(D)^T`,
+    //       `c = B'' + B'/(2D)`, for the **PE and PP** branches only. It
+    //       reproduces the projection those branches ship today to a mean
+    //       relative Frobenius error of 1e-4 (PP: 5e-16, i.e. exactly) with no
+    //       `hess(D)` and no eigen-solve -- see `barrier_rank1_hessian`.
+    //   2 = the same closed form for **all four** branches (PT, EE, PE, PP).
+    //   3 = the plain Gauss-Newton coefficient `c = B''` on all four branches:
+    //       also PSD, but it over-stiffens contact by a measured factor 1.74.
+    //   4 = a diagnosis-only stage stub: the exact Hessian written
+    //       *unprojected*. It is not a valid simulation path; it exists to
+    //       measure the projection's share of the kernel.
+    // A template parameter, not a runtime flag, so one instantiation does not
+    // carry another's stack frame (the s14 lesson). `UIPC_CONTACT_RANK1`
+    // selects it; **the default is 0** -- round 6 measured 1 and 2 and did not
+    // adopt either by default, see the round record.
+    template <bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql = false, bool Spd2 = false, int Proj = 0>
     __global__ void do_assemble_kernel(cuda_tool::CDense2D<ContactCoeff> table,
                                        cuda_tool::CBufferView<IndexT> contact_ids,
                                        cuda_tool::CBufferView<Vector3> Ps,
@@ -347,6 +366,13 @@ namespace
             return;
 
         using namespace sym::codim_ipc_simplex_contact;
+
+        // round-6 (s03): which branches take the rank-1 Hessian, and with
+        // which coefficient (1 = B'' + B'/(2D), 3 = plain Gauss-Newton B'').
+        constexpr bool Rank1_PTEE = (Proj == 2 || Proj == 3);
+        constexpr bool Rank1_PEPP = (Proj == 1 || Proj == 2 || Proj == 3);
+        constexpr int  Rank1Coeff = (Proj == 3) ? 3 : 1;
+        constexpr bool StageStub  = (Proj == 4);
 
         constexpr int SpdSolver = SpdTql ? 1 : 0;
         constexpr int Spd2Solver = Spd2 ? 1 : 0;
@@ -389,9 +415,18 @@ namespace
                 else
                 {
                     Matrix12x12 H;
-                    PT_barrier_gradient_hessian(
-                        G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
-                    PT_barrier_make_spd<SpdSolver>(H, flag, P, T0, T1, T2);
+                    if constexpr(Rank1_PTEE)
+                    {
+                        PT_barrier_gradient_hessian_gn<Rank1Coeff>(
+                            G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
+                    }
+                    else
+                    {
+                        PT_barrier_gradient_hessian(
+                            G, H, flag, kt2, d_hat, thickness, P, T0, T1, T2);
+                        if constexpr(!StageStub)
+                            PT_barrier_make_spd<SpdSolver>(H, flag, P, T0, T1, T2);
+                    }
                     DoubletVectorAssembler DVA{PT_Gs};
                     DVA.segment<4>(i * 4).write(PT, G);
                     TripletMatrixAssembler TMA{PT_Hs};
@@ -443,8 +478,12 @@ namespace
                 {
                     Matrix12x12 H;
                     bool        mollified = true;
-                    mollified_EE_barrier_gradient_hessian<EEReducedRange>(
-                        G, H, mollified, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
+                    if constexpr(Rank1_PTEE)
+                        mollified_EE_barrier_gradient_hessian_gn<Rank1Coeff>(
+                            G, H, mollified, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
+                    else
+                        mollified_EE_barrier_gradient_hessian<EEReducedRange>(
+                            G, H, mollified, flag, kt2, d_hat, thickness, t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, E0, E1, E2, E3);
                     // round-4 (s16): when the mollifier is inactive the EE
                     // Hessian is a plain flagged-distance barrier Hessian, so
                     // the exact rank-(m+1) reduced projection of 1da12a82
@@ -457,30 +496,49 @@ namespace
                     // measured at +20 to +25 % on the wrecking balls and
                     // cube-wall against a warp-uniform -20 %.
                     bool warp_reduced = false;
-                    if constexpr(EEReducedRange)
-                        warp_reduced = !__any_sync(__activemask(), mollified);
-                    if(warp_reduced)
+                    if constexpr(Rank1_PTEE)
                     {
-                        EE_barrier_make_spd<SpdSolver>(H, flag, E0, E1, E2, E3);
+                        // round-6 (s03): the rank-1 Hessian is PSD by
+                        // construction. Only the *mollified* lanes built an
+                        // exact indefinite Hessian, and the K10 9x9 projection
+                        // is valid for every EE pair, so a warp that holds one
+                        // still runs it for all of its lanes -- exactly the
+                        // warp-uniform rule of s16, with the un-mollified case
+                        // now needing no projection at all.
+                        if(__any_sync(__activemask(), mollified))
+                            make_spd_translation_free_4x3_blocked<1>(H);
                     }
-                    // perf/kernels (K10): the mollified EE barrier depends on
-                    // relative positions only, so H annihilates rigid
-                    // translations and the PSD projection reduces to the
-                    // 9x9 translation-free subspace (same projection up to
-                    // rounding, as K7 for the hinge)
-                    else if(ee_reduced_spd)
+                    else if constexpr(StageStub)
                     {
-                        // round-5 (s25): K16's blocked assembly of the same
-                        // translation-free 9x9 projection -- constant Helmert
-                        // weights on 3x3 blocks instead of a 12x9 basis matrix
-                        // and its Q^T H Q / Q Hr Q^T temporaries
-                        if constexpr(SpdTql)
-                            make_spd_translation_free_4x3_blocked<SpdSolver>(H);
-                        else
-                            make_spd_translation_free_4x3<SpdSolver>(H);
+                        // stage stub: no projection at all (diagnosis only)
                     }
                     else
-                        make_spd<12, SpdSolver>(H);
+                    {
+                        if constexpr(EEReducedRange)
+                            warp_reduced = !__any_sync(__activemask(), mollified);
+                        if(warp_reduced)
+                        {
+                            EE_barrier_make_spd<SpdSolver>(H, flag, E0, E1, E2, E3);
+                        }
+                        // perf/kernels (K10): the mollified EE barrier depends
+                        // on relative positions only, so H annihilates rigid
+                        // translations and the PSD projection reduces to the
+                        // 9x9 translation-free subspace (same projection up to
+                        // rounding, as K7 for the hinge)
+                        else if(ee_reduced_spd)
+                        {
+                            // round-5 (s25): K16's blocked assembly of the same
+                            // translation-free 9x9 projection -- constant
+                            // Helmert weights on 3x3 blocks instead of a 12x9
+                            // basis matrix and its Q^T H Q / Q Hr Q^T temporaries
+                            if constexpr(SpdTql)
+                                make_spd_translation_free_4x3_blocked<SpdSolver>(H);
+                            else
+                                make_spd_translation_free_4x3<SpdSolver>(H);
+                        }
+                        else
+                            make_spd<12, SpdSolver>(H);
+                    }
                     DoubletVectorAssembler DVA{EE_Gs};
                     DVA.segment<4>(i * 4).write(EE, G);
                     TripletMatrixAssembler TMA{EE_Hs};
@@ -518,8 +576,17 @@ namespace
                 else
                 {
                     Matrix9x9 H;
-                    PE_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, E0, E1);
-                    PE_barrier_make_spd<Spd2Solver, Spd2Basis>(H, flag, P, E0, E1);
+                    if constexpr(Rank1_PEPP)
+                    {
+                        PE_barrier_gradient_hessian_gn<Rank1Coeff>(
+                            G, H, flag, kt2, d_hat, thickness, P, E0, E1);
+                    }
+                    else
+                    {
+                        PE_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P, E0, E1);
+                        if constexpr(!StageStub)
+                            PE_barrier_make_spd<Spd2Solver, Spd2Basis>(H, flag, P, E0, E1);
+                    }
                     DoubletVectorAssembler DVA{PE_Gs};
                     DVA.segment<3>(i * 3).write(PE, G);
                     TripletMatrixAssembler TMA{PE_Hs};
@@ -552,8 +619,16 @@ namespace
                 else
                 {
                     Matrix6x6 H;
-                    PP_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P0, P1);
-                    PP_barrier_make_spd<Spd2Solver, Spd2Basis>(H, flag, P0, P1);
+                    if constexpr(Rank1_PEPP)
+                    {
+                        PP_barrier_gradient_hessian_gn<Rank1Coeff>(G, H, flag, kt2, d_hat, thickness, P0, P1);
+                    }
+                    else
+                    {
+                        PP_barrier_gradient_hessian(G, H, flag, kt2, d_hat, thickness, P0, P1);
+                        if constexpr(!StageStub)
+                            PP_barrier_make_spd<Spd2Solver, Spd2Basis>(H, flag, P0, P1);
+                    }
                     DoubletVectorAssembler DVA{PP_Gs};
                     DVA.segment<2>(i * 2).write(PP, G);
                     TripletMatrixAssembler TMA{PP_Hs};
@@ -601,6 +676,12 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // tridiagonal-QL solver and s31's basis-free range reduction
     // (UIPC_CONTACT_SPD2=0 restores Eigen + the explicit basis Q)
     bool                            m_spd2             = true;
+    // round-6 (s03): the normal-contact Hessian mode, see `do_assemble_kernel`.
+    // **Default 0** = the exact Hessian + the reduced PSD projection of every
+    // round up to 5. `UIPC_CONTACT_RANK1=1` opts in to the closed-form rank-1
+    // Hessian for PE + PP, `=2` for all four branches, `=3` to the plain
+    // Gauss-Newton coefficient, `=4` to the no-projection stage stub.
+    int                             m_proj             = 0;
     IndexT                          m_ee_partition_min = 64;
     cuda_tool::DeviceBuffer<IndexT> m_ee_perm;
     cuda_tool::DeviceBuffer<IndexT> m_ee_counters;
@@ -624,6 +705,13 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             m_spd_tql = !(e[0] == '0');
         if(const char* e = std::getenv("UIPC_CONTACT_SPD2"))
             m_spd2 = !(e[0] == '0');
+        if(const char* e = std::getenv("UIPC_CONTACT_RANK1"))
+        {
+            m_proj = std::atoi(e);
+            if(m_proj < 0 || m_proj > 4)
+                m_proj = 0;
+        }
+
         if(m_split == 2)
         {
             CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream, cudaStreamNonBlocking));
@@ -778,14 +866,14 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
         // output slot. Two launches on the same stream would serialise the
         // rare, individually expensive PT/EE Hessians behind the bulk, so
         // Part 1 runs on a side stream (fork/join with events).
-        auto launch_t = [&]<bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql, bool Spd2>(
+        auto launch_k = [&]<bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql, bool Spd2, int Proj>(
                             IndexT       ee_offset,
                             IndexT       pe_offset,
                             IndexT       pp_offset,
                             IndexT       n,
                             cudaStream_t s)
         {
-            auto k = do_assemble_kernel<GradientOnly, Part, EEReducedRange, SpdTql, Spd2>;
+            auto k = do_assemble_kernel<GradientOnly, Part, EEReducedRange, SpdTql, Spd2, Proj>;
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, s>>>(
                 info.contact_tabular().viewer(),
                 info.contact_element_ids().viewer(),
@@ -812,6 +900,51 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 pp_offset,
                 m_ee_reduced_spd,
                 n);
+        };
+
+        // round-6 (s03): the Gauss-Newton / stage-stub axis. Gradient-only
+        // launches have no Hessian at all, so they are only ever instantiated
+        // with Proj = 0.
+        auto launch_t = [&]<bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql, bool Spd2>(
+                            IndexT       ee_offset,
+                            IndexT       pe_offset,
+                            IndexT       pp_offset,
+                            IndexT       n,
+                            cudaStream_t s)
+        {
+            // round-6 (s03): the rank-1 modes are only instantiated for the
+            // *shipped* combination of the older projection switches -- part 1
+            // at <EEReducedRange, SpdTql, !Spd2>, part 2 at <!EEReducedRange,
+            // !SpdTql, Spd2> and the fused part 0 with all three on. Every
+            // other combination exists only to serve `UIPC_EE_REDUCED_RANGE`,
+            // `UIPC_CONTACT_SPD_TQL` and `UIPC_CONTACT_SPD2`, and multiplying
+            // them by five more `Proj` values would more than double this
+            // translation unit's object size and its compile time for
+            // instantiations nothing launches. **Combining `UIPC_CONTACT_RANK1`
+            // with any of those three switches therefore falls back to the
+            // exact path**, which is the conservative direction.
+            constexpr bool Rank1Shipped =
+                (Part == 1 && EEReducedRange && SpdTql && !Spd2)
+                || (Part == 2 && !EEReducedRange && !SpdTql && Spd2)
+                || (Part == 0 && EEReducedRange && SpdTql && Spd2);
+            if constexpr(!GradientOnly && Rank1Shipped)
+            {
+#define UIPC_S03_DISPATCH(V)                                                        \
+                if(m_proj == V)                                                     \
+                {                                                                   \
+                    launch_k.template operator()<GradientOnly, Part, EEReducedRange, \
+                                                 SpdTql, Spd2, V>(                  \
+                        ee_offset, pe_offset, pp_offset, n, s);                     \
+                    return;                                                         \
+                }
+                UIPC_S03_DISPATCH(1)
+                UIPC_S03_DISPATCH(2)
+                UIPC_S03_DISPATCH(3)
+                UIPC_S03_DISPATCH(4)
+#undef UIPC_S03_DISPATCH
+            }
+            launch_k.template operator()<GradientOnly, Part, EEReducedRange, SpdTql, Spd2, 0>(
+                ee_offset, pe_offset, pp_offset, n, s);
         };
 
         // round-4 (s16): the reduced-range EE projection is a template

@@ -55,6 +55,82 @@ namespace sym::codim_ipc_simplex_contact
     }
 
 
+    // round-6 (s03): the IPC barrier's PSD-projected Hessian in closed form.
+    //
+    // Every un-mollified barrier here is a function of one scalar, the squared
+    // distance D, so its exact Hessian is
+    //
+    //   H = B''(D) gradD gradD^T + B'(D) hessD,                            (*)
+    //
+    // which is literally what `*_barrier_gradient_hessian` assembles. Two
+    // facts about (*) were measured over 200 000 randomised pairs of each type
+    // against the real device functions (`gn_contact_probe.cu`):
+    //
+    //  * The shipped Stiff-GIPC log^2 barrier has **B'' >= 0 and B' <= 0**
+    //    everywhere on its active domain (and beyond it). B'' is a sum of four
+    //    terms that are each non-negative there, because L = log(D/dHat^2) < 0
+    //    and D - dHat^2 < 0 make every term a product of an even power or of
+    //    two negatives; the thickness variant has the same structure. So the
+    //    first term of (*) is PSD and all of the indefiniteness is in the
+    //    second.
+    //  * The *whole* PSD projection of (*) -- the K10 / s16 / s25 / s31 chain
+    //    of reduced eigen-solves -- is, to a mean relative Frobenius error of
+    //    1e-4 or better, the **rank-1** matrix
+    //
+    //      H_spd ~= c gradD gradD^T,     c = B''(D) + B'(D) / (2 D).        (**)
+    //
+    //    The reason is that D is a squared distance, so along its own gradient
+    //    direction `ghat = gradD/|gradD|` one has `ghat^T hessD ghat =
+    //    |gradD|^2 / (2 D)` exactly for PP and to leading order for PE/PT/EE;
+    //    (**) therefore reproduces the projected Hessian's leading eigenvalue
+    //    *exactly*, and the projection's remaining eigenvalues are ~1e-4 of it.
+    //    Measured: mean lambda_max(H_rank1)/lambda_max(H_spd) = 1.0000 for all
+    //    four pair types, and the rank the exact projection keeps is 3 of 12
+    //    (PT, EE), 2 of 9 (PE) and 1 of 6 (PP).
+    //
+    // `c` is non-negative wherever the barrier is active: the probe measures
+    // |B'| <= 0.9651 B'' D, so 2 B'' D + B' >= 1.03 B'' D > 0. It is clamped
+    // anyway -- one instruction, and it keeps the PSD guarantee if a future
+    // step substitutes a different barrier.
+    //
+    // Dropping `B'/(2D)` gives the *plain* Gauss-Newton Hessian `c = B''`,
+    // which is also PSD but over-stiffens the contact by a measured factor of
+    // 1.74; round 6 measured that variant (`Proj = 3`) and rejected it -- see
+    // the round record. This is an approximation, not a rewrite: the energy
+    // and the gradient are untouched, the Hessian is not.
+    template <int N>
+    inline __device__ void barrier_rank1_hessian(Matrix<Float, N, N>&    H,
+                                                 const Vector<Float, N>& GradD,
+                                                 Float                   c)
+    {
+        if(c < 0.0)
+            c = 0.0;
+        // explicit mirrored fill: the result is *exactly* symmetric, which the
+        // half-block assembler and the downstream solvers both rely on
+#pragma unroll
+        for(int i = 0; i < N; ++i)
+        {
+            const Float ci = c * GradD[i];
+#pragma unroll
+            for(int j = i; j < N; ++j)
+            {
+                const Float v = ci * GradD[j];
+                H(i, j)       = v;
+                H(j, i)       = v;
+            }
+        }
+    }
+
+    //tex: $$ c = B''(D) + \frac{B'(D)}{2D} \quad (Rank1 = 1) \qquad c = B''(D) \quad (Rank1 = 3, \text{plain Gauss-Newton})$$
+    template <int Rank1>
+    inline __device__ Float barrier_rank1_coeff(Float ddBddD, Float dBdD, Float D)
+    {
+        if constexpr(Rank1 == 3)
+            return ddBddD;
+        else
+            return ddBddD + dBdD / (2.0 * D);
+    }
+
     inline __device__ Float PT_barrier_energy(Float          kappa,
                                               Float          d_hat,
                                               Float          thickness,
@@ -171,6 +247,38 @@ namespace sym::codim_ipc_simplex_contact
         // H = \frac{\partial^2 B}{\partial D^2} \frac{\partial D}{\partial x} \frac{\partial D}{\partial x}^T + \frac{\partial B}{\partial D} \frac{\partial^2 D}{\partial x^2}
         //$$
         H = ddBddD * GradD * GradD.transpose() + dBdD * HessD;
+    }
+
+    // round-6 (s03): rank-1 PT barrier Hessian -- same gradient, no
+    // `point_triangle_distance2_hessian`, no PSD projection.
+    template <int Rank1 = 1>
+    inline __device__ void PT_barrier_gradient_hessian_gn(Vector12&       G,
+                                                          Matrix12x12&    H,
+                                                          const Vector4i& flag,
+                                                          Float           kappa,
+                                                          Float           d_hat,
+                                                          Float           thickness,
+                                                          const Vector3&  P,
+                                                          const Vector3&  T0,
+                                                          const Vector3&  T1,
+                                                          const Vector3&  T2)
+    {
+        using namespace codim_ipc_contact;
+        using namespace distance;
+
+        Float D;
+        point_triangle_distance2(flag, P, T0, T1, T2, D);
+
+        Vector12 GradD;
+        point_triangle_distance2_gradient(flag, P, T0, T1, T2, GradD);
+
+        Float dBdD;
+        dKappaBarrierdD(dBdD, kappa, D, d_hat, thickness);
+        G = dBdD * GradD;
+
+        Float ddBddD;
+        ddKappaBarrierddD(ddBddD, kappa, D, d_hat, thickness);
+        barrier_rank1_hessian<12>(H, GradD, barrier_rank1_coeff<Rank1>(ddBddD, dBdD, D));
     }
 
     inline __device__ void PT_barrier_gradient(Vector12&       G,
@@ -336,6 +444,88 @@ namespace sym::codim_ipc_simplex_contact
         H = Hessek * B + Gradek * GradB.transpose() + GradB * Gradek.transpose() + ek * HessB;
     }
 
+    // round-6 (s03): Gauss-Newton EE barrier Hessian for the branch in which
+    // the edge-edge mollifier is inactive -- there `ek == 1` and both its
+    // derivatives vanish, so the Hessian is a plain barrier Hessian of a
+    // flagged distance and the rank-1 form applies verbatim. The *mollified*
+    // branch is a function of two scalars (the mollifier argument and D), so
+    // this decomposition does not hold for it; it falls through to the exact
+    // Hessian and the K10 9x9 projection, unchanged. `mollified` reports which
+    // branch was taken, exactly as in the exact version.
+    // Unlike the exact function, `edge_edge_distance2_hessian` is only
+    // evaluated on the mollified branch -- the un-mollified branch never needs
+    // it at all.
+    template <int Rank1 = 1>
+    inline __device__ void mollified_EE_barrier_gradient_hessian_gn(Vector12&    G,
+                                                                    Matrix12x12& H,
+                                                                    bool& mollified,
+                                                                    const Vector4i& flag,
+                                                                    Float kappa,
+                                                                    Float d_hat,
+                                                                    Float thickness,
+                                                                    const Vector3& t0_Ea0,
+                                                                    const Vector3& t0_Ea1,
+                                                                    const Vector3& t0_Eb0,
+                                                                    const Vector3& t0_Eb1,
+                                                                    const Vector3& Ea0,
+                                                                    const Vector3& Ea1,
+                                                                    const Vector3& Eb0,
+                                                                    const Vector3& Eb1)
+    {
+        using namespace codim_ipc_contact;
+        using namespace distance;
+
+        Float D;
+        edge_edge_distance2(flag, Ea0, Ea1, Eb0, Eb1, D);
+
+        Vector12 GradD;
+        edge_edge_distance2_gradient(flag, Ea0, Ea1, Eb0, Eb1, GradD);
+
+        Float dBdD;
+        dKappaBarrierdD(dBdD, kappa, D, d_hat, thickness);
+
+        Float ddBddD;
+        ddKappaBarrierddD(ddBddD, kappa, D, d_hat, thickness);
+
+        Float eps_x;
+        edge_edge_mollifier_threshold(
+            t0_Ea0, t0_Ea1, t0_Eb0, t0_Eb1, static_cast<Float>(1e-3), eps_x);
+
+        Float cross_norm2;
+        edge_edge_cross_norm2(Ea0, Ea1, Eb0, Eb1, cross_norm2);
+
+        if(!(cross_norm2 < eps_x))  // mollifier inactive: ek == 1, derivatives == 0
+        {
+            mollified = false;
+            G         = dBdD * GradD;
+            barrier_rank1_hessian<12>(H, GradD, barrier_rank1_coeff<Rank1>(ddBddD, dBdD, D));
+            return;
+        }
+
+        mollified = true;
+
+        Matrix12x12 HessD;
+        edge_edge_distance2_hessian(flag, Ea0, Ea1, Eb0, Eb1, HessD);
+
+        Float B;
+        KappaBarrier(B, kappa, D, d_hat, thickness);
+
+        Vector12    GradB = dBdD * GradD;
+        Matrix12x12 HessB = ddBddD * GradD * GradD.transpose() + dBdD * HessD;
+
+        Float ek;
+        edge_edge_mollifier(Ea0, Ea1, Eb0, Eb1, eps_x, ek);
+
+        Vector12 Gradek;
+        edge_edge_mollifier_gradient(Ea0, Ea1, Eb0, Eb1, eps_x, Gradek);
+
+        Matrix12x12 Hessek;
+        edge_edge_mollifier_hessian(Ea0, Ea1, Eb0, Eb1, eps_x, Hessek);
+
+        G = Gradek * B + ek * GradB;
+        H = Hessek * B + Gradek * GradB.transpose() + GradB * Gradek.transpose() + ek * HessB;
+    }
+
     inline __device__ void mollified_EE_barrier_gradient(Vector12&       G,
                                                          const Vector4i& flag,
                                                          Float           kappa,
@@ -438,6 +628,36 @@ namespace sym::codim_ipc_simplex_contact
         H = ddBddD * GradD * GradD.transpose() + dBdD * HessD;
     }
 
+    // round-6 (s03): rank-1 PE barrier Hessian.
+    template <int Rank1 = 1>
+    inline __device__ void PE_barrier_gradient_hessian_gn(Vector9&        G,
+                                                          Matrix9x9&      H,
+                                                          const Vector3i& flag,
+                                                          Float           kappa,
+                                                          Float           d_hat,
+                                                          Float           thickness,
+                                                          const Vector3&  P,
+                                                          const Vector3&  E0,
+                                                          const Vector3&  E1)
+    {
+        using namespace codim_ipc_contact;
+        using namespace distance;
+
+        Float D = 0.0;
+        point_edge_distance2(flag, P, E0, E1, D);
+
+        Vector9 GradD;
+        point_edge_distance2_gradient(flag, P, E0, E1, GradD);
+
+        Float dBdD;
+        dKappaBarrierdD(dBdD, kappa, D, d_hat, thickness);
+        G = dBdD * GradD;
+
+        Float ddBddD;
+        ddKappaBarrierddD(ddBddD, kappa, D, d_hat, thickness);
+        barrier_rank1_hessian<9>(H, GradD, barrier_rank1_coeff<Rank1>(ddBddD, dBdD, D));
+    }
+
     inline __device__ void PE_barrier_gradient(Vector9&        G,
                                                const Vector3i& flag,
                                                Float           kappa,
@@ -516,6 +736,35 @@ namespace sym::codim_ipc_simplex_contact
         // H = \frac{\partial^2 B}{\partial D^2} \frac{\partial D}{\partial x} \frac{\partial D}{\partial x}^T + \frac{\partial B}{\partial D} \frac{\partial^2 D}{\partial x^2}
         //$$
         H = ddBddD * GradD * GradD.transpose() + dBdD * HessD;
+    }
+
+    // round-6 (s03): rank-1 PP barrier Hessian.
+    template <int Rank1 = 1>
+    inline __device__ void PP_barrier_gradient_hessian_gn(Vector6&        G,
+                                                          Matrix6x6&      H,
+                                                          const Vector2i& flag,
+                                                          Float           kappa,
+                                                          Float           d_hat,
+                                                          Float           thickness,
+                                                          const Vector3&  P0,
+                                                          const Vector3&  P1)
+    {
+        using namespace codim_ipc_contact;
+        using namespace distance;
+
+        Float D = 0.0;
+        point_point_distance2(flag, P0, P1, D);
+
+        Vector6 GradD;
+        point_point_distance2_gradient(flag, P0, P1, GradD);
+
+        Float dBdD;
+        dKappaBarrierdD(dBdD, kappa, D, d_hat, thickness);
+        G = dBdD * GradD;
+
+        Float ddBddD;
+        ddKappaBarrierddD(ddBddD, kappa, D, d_hat, thickness);
+        barrier_rank1_hessian<6>(H, GradD, barrier_rank1_coeff<Rank1>(ddBddD, dBdD, D));
     }
 
     inline __device__ void PP_barrier_gradient(Vector6&        G,
