@@ -1,0 +1,14 @@
+SASS identity of the OLD arm -- main (e66953ff) vs perf/round6-s03-contact-proj,
+same nvcc command line, src/.../ipc_simplex_normal_contact.cu. The branch's
+Proj=0 instantiations are matched against main's five-parameter names.
+  base functions 53, head functions 67, matched 53, unmatched base 0
+  object size: base 6725640 B, head 9793496 B
+  identical SASS instruction streams: 52 / 53
+  DIFFERS f2577732d810->e88d8e481fb1  29720->29712 instr, FP64+MUFU 8107->8107
+    ZN4uipc7backend4cuda70ANONdo_assemble_kernelILb0ELi0ELb1ELb0ELb0EEEvNS0_9cuda_tool11Dense2DBaseILb1ENS1_12ContactCoeffEEENS4_11CBufferViewIiEENS8_IN5Eigen6MatrixIdLi3ELi1
+
+  the two instantiations the benchmark scenes actually launch:
+      30952 instr  IDENTICAL  <Lb0ELi1ELb1ELb1ELb0E>
+      12304 instr  IDENTICAL  <Lb0ELi2ELb0ELb0ELb1E>
+
+  new rank-1 instantiations added by this step: 12
