@@ -68,6 +68,13 @@ namespace
     // projection is a template parameter so that each instantiation carries only
     // one code path's register/stack footprint (the 12x12 eigen-solve alone costs
     // ~7 KB of stack frame).
+    // s02 (round 6): Proj = 3 is the Gauss-Newton hinge Hessian -- E'' g g^T
+    // with the indefinite E' * hess(theta) term dropped. It is PSD by
+    // construction (E'' = 2 L0 kappa / h_bar >= 0), so it runs *no* eigen-solve
+    // and never evaluates dihedral_angle_hessian. Unlike Proj 0/1/2 this is an
+    // algorithmic approximation, not a re-arrangement: same energy, same
+    // gradient, different search direction. UIPC_DSB_GAUSS_NEWTON=0 restores
+    // the exact-Hessian-plus-projection path.
     template <int Proj, int Solver>
     __global__ void DiscreteShellBending_do_compute_gradient_hessian_kernel(
         cuda_tool::BufferView<Vector4i>        stencils,
@@ -111,23 +118,35 @@ namespace
         if(gradient_only)
             return;
 
-        DSB::ddEddx(H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa);
-        H12x12 *= Vdt2;
-        // s14: the discrete-shell bending energy depends on the vertices only
-        // through the dihedral angle, which is translation invariant, so
-        // H t = 0 exactly for every rigid translation t and the K7/K16
-        // translation-free 9x9 projection applies verbatim (the same lever
-        // round 3 put on the Dahl friction hinge). UIPC_DSB_REDUCED_SPD=0
-        // restores the 12x12 eigen-solve; UIPC_DSB_BLOCKED_PROJ=0 uses the
-        // dense 12x9 basis products of K7 instead of the K16 block assembly.
-        // s19: Solver = 0 restores Eigen's SelfAdjointEigenSolver inside the
-        // 9x9 (or 12x12) PSD projection, 1 = the fixed-size tridiagonal QL.
-        if constexpr(Proj == 1)
-            make_spd_translation_free_4x3_blocked<Solver>(H12x12);
-        else if constexpr(Proj == 2)
-            make_spd_translation_free_4x3<Solver>(H12x12);
+        if constexpr(Proj == 3)
+        {
+            // s02: Gauss-Newton. PSD by construction, no projection at all.
+            // Vdt2 goes in as the rank-1 scale, so there is no separate
+            // 144-multiply pass over the assembled matrix.
+            DSB::ddEddx_gauss_newton(
+                H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, Vdt2);
+        }
         else
-            make_spd<12, Solver>(H12x12);
+        {
+            DSB::ddEddx(H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa);
+            H12x12 *= Vdt2;
+            // s14: the discrete-shell bending energy depends on the vertices
+            // only through the dihedral angle, which is translation invariant,
+            // so H t = 0 exactly for every rigid translation t and the K7/K16
+            // translation-free 9x9 projection applies verbatim (the same lever
+            // round 3 put on the Dahl friction hinge). UIPC_DSB_REDUCED_SPD=0
+            // restores the 12x12 eigen-solve; UIPC_DSB_BLOCKED_PROJ=0 uses the
+            // dense 12x9 basis products of K7 instead of the K16 block assembly.
+            // s19: Solver = 0 restores Eigen's SelfAdjointEigenSolver inside
+            // the 9x9 (or 12x12) PSD projection, 1 = the fixed-size
+            // tridiagonal QL.
+            if constexpr(Proj == 1)
+                make_spd_translation_free_4x3_blocked<Solver>(H12x12);
+            else if constexpr(Proj == 2)
+                make_spd_translation_free_4x3<Solver>(H12x12);
+            else
+                make_spd<12, Solver>(H12x12);
+        }
 
         TripletMatrixAssembler TMA{H3x3s};
         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
@@ -178,6 +197,11 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
     // s19: UIPC_MAKE_SPD_JACOBI=0 -> Eigen's SelfAdjointEigenSolver in the
     // PSD projection (the pre-round-5 path); default = tridiagonal QL
     bool m_tql2 = true;
+    // s02 (round 6): Gauss-Newton hinge Hessian (E'' grad(theta) grad(theta)^T,
+    // PSD by construction, no eigen-solve). UIPC_DSB_GAUSS_NEWTON=0 restores
+    // the exact Hessian followed by the s14/s19 PSD projection, and then the
+    // three switches above select which projection.
+    bool m_gauss_newton = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -188,6 +212,8 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         // historical name: it selects evd_tridiag_ql, not a Jacobi sweep (R1)
         const char* t  = std::getenv("UIPC_MAKE_SPD_JACOBI");
         m_tql2         = !(t && t[0] == '0');
+        const char* gn = std::getenv("UIPC_DSB_GAUSS_NEWTON");
+        m_gauss_newton = !(gn && gn[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -410,7 +436,39 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
                 });
         };
 
-        if(m_tql2)
+        // s02: UIPC_DSB_GN_VERIFY=1 is the numerics probe for the
+        // Gauss-Newton path -- it runs the *real* shipped kernel
+        // <Proj=1, Solver=1> first, snapshots the gradient doublets it wrote,
+        // then runs <Proj=3, Solver=1> over the same inputs and counts the
+        // mismatching 32-bit words on device. The energy and the gradient are
+        // supposed to be bit-identical between the two instantiations (only
+        // the Hessian is approximated), and this is what proves it on the
+        // binary rather than by reading the source. The live state after the
+        // pair is the Gauss-Newton launch's, so the run continues on the
+        // shipped path while it is being checked.
+        static const bool gn_verify = []
+        {
+            const char* v = std::getenv("UIPC_DSB_GN_VERIFY");
+            return v && v[0] != '0';
+        }();
+        if(m_gauss_newton && gn_verify)
+        {
+            static cuda_tool::SpreadVerifier sv_gn{"DiscreteShellBending::gauss_newton_gradient"};
+            sv_gn.begin();
+            sv_gn.add_doublet(info.gradients());
+            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>);
+            sv_gn.snapshot();
+            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>);
+            sv_gn.compare();
+            return;
+        }
+
+        if(m_gauss_newton)
+        {
+            // s02: Solver is irrelevant here -- Proj = 3 runs no eigen-solve.
+            launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>);
+        }
+        else if(m_tql2)
         {
             if(!m_reduced_spd)
                 launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<0, 1>);
