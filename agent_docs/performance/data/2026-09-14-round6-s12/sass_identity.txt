@@ -1,0 +1,11 @@
+SASS DIFFERS    fem_linear_subsystem   (31 functions)
+
+Detail (s12): the diff is PURELY ADDITIVE -- two hunks, 0 deleted and 0 changed lines.
+  base: 29 device functions, 6496 SASS instructions
+  head: 31 device functions, 6640 SASS instructions
+The two head-only functions are
+  cuda_tool::details::buffer_fill_kernel<Eigen::Matrix<double,3,3>>
+  cuda_tool::buffer_fill_verify_kernel<Eigen::Matrix<double,3,3>>
+i.e. the DeviceBuffer<Matrix3x3>::resize instantiation that only
+`UIPC_FEM_GH_COST_PROBE=1` can reach (the probe's scratch buffer). Every device
+function that the shipped path executes is byte-identical to 48f1c6e3.

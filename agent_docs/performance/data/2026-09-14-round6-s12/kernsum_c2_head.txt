@@ -1,0 +1,24 @@
+stiff-gipc-case2, full 250-frame run at head 48f1c6e3, cuda_gpu_kern_sum (per-kernel numbers only -- scene totals are retired, s10)
+kernel duration sum 41747.5 ms; 1662 Newton iterations; wall 250 x 186.78 ms = 46695 ms
+
+       ms      %      n  us/launch  kernel
+   7582.2 18.16%  64345      117.8  void uipc::backend::cuda::<unnamed>::Spmv_rbk_sym_spmv_dot_chunked_kernel<(int)1, (int
+   4729.2 11.33%   1662     2845.5  void uipc::backend::cuda::<unnamed>::StableNeoHookean3D_do_compute_gradient_hessian_ke
+   3523.1  8.44%  66007       53.4  uipc::backend::cuda::<unnamed>::MASPreconditionerEngine_schwarz_local_solve_rowdot_ker
+   2117.5  5.07%   1921     1102.3  void uipc::backend::cuda::<unnamed>::InfoStacklessBVH_pairFilter_kernel<(bool)1, uipc:
+   1953.7  4.68%   1662     1175.5  void uipc::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix_kernel<(int)128
+   1796.2  4.30%   1921      935.1  void uipc::backend::cuda::<unnamed>::InfoStacklessBVH_stacklessSelf_kernel<(bool)1, (b
+   1503.2  3.60%  66007       22.8  uipc::backend::cuda::<unnamed>::MASPreconditionerEngine_build_multi_level_R_kernel(uip
+   1423.0  3.41%   1662      856.2  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<(bool)0, (int)1, (bool)1, (boo
+   1388.8  3.33%   1662      835.6  void uipc::backend::cuda::<unnamed>::InfoStacklessBVHSimplexTrajectoryFilter_filter_to
+   1035.3  2.48%   6648      155.7  void cub::CUB_200700_750_NS::DeviceRadixSortOnesweepKernel<cub::CUB_200700_750_NS::Dev
+    958.3  2.30%  64345       14.9  uipc::backend::cuda::<unnamed>::fused_update_xr_kernel(uipc::backend::cuda_tool::CDens
+    903.1  2.16%   1662      543.4  uipc::backend::cuda::<unnamed>::FEMLinearSubsystem_assemble_dytopo_effect_k2_kernel(ui
+    900.6  2.16%   1922      468.6  void uipc::backend::cuda::<unnamed>::InfoStacklessBVH_pairFilter_kernel<(bool)0, uipc:
+    876.2  2.10%   1662      527.2  uipc::backend::cuda::<unnamed>::MASPreconditionerEngine_invert_cluster_matrices_sweep_
+    850.0  2.04%   1922      442.2  void uipc::backend::cuda::<unnamed>::InfoStacklessBVH_stacklessOther_kernel<(bool)1, u
+    833.2  2.00%  66007       12.6  uipc::backend::cuda::<unnamed>::fused_dot_kernel(uipc::backend::cuda_tool::DenseVector
+    709.2  1.70%   1662      426.7  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<(bool)0, (int)2, (bool)0, (boo
+    663.4  1.59%   1662      399.1  uipc::backend::cuda::<unnamed>::MASPreconditionerEngine_scatter_hessian_to_clusters_k1
+    657.3  1.57%  66007       10.0  uipc::backend::cuda::<unnamed>::MASPreconditionerEngine_collect_final_Z_kernel(uipc::b
+    640.9  1.54%   1662      385.6  void uipc::backend::cuda::<unnamed>::InfoStacklessBVHSimplexTrajectoryFilter_filter_to

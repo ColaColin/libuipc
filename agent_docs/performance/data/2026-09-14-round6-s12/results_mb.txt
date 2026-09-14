@@ -1,0 +1,10 @@
+=== s12mb  mas-bunny  n=10 per arm ===
+       mean_ms: off    66.5799 [66.3954, 66.7505]   probe    68.2577 [68.1401, 68.3594]     +2.52%  DISJOINT  t=-43.29 p=7e-19
+     median_ms: off    73.1851 [72.9819, 73.4244]   probe    74.9894 [74.6484, 75.2655]     +2.47%  DISJOINT
+ ms_per_newton: off    14.3183 [14.2786, 14.3550]   probe    14.6791 [14.6538, 14.7009]     +2.52%  DISJOINT  t=-43.29 p=7e-19
+    ms_per_pcg: off     0.1891 [0.1886, 0.1896]   probe     0.1939 [0.1935, 0.1943]     +2.53%  DISJOINT  t=-42.53 p=2.43e-19
+        newton: off   465.0000 [465.0000, 465.0000]   probe   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+           pcg: off 35208.0000 [35185.0000, 35225.0000]   probe 35203.5000 [35180.0000, 35225.0000]     -0.01%  overlapping
+   line_search: off   465.0000 [465.0000, 465.0000]   probe   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+
+raw runs + summary: /workspace/output/round6/s12/ab

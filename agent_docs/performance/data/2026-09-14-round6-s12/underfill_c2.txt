@@ -1,0 +1,18 @@
+trace window: kernel duration sum 8170.9 ms, occupancy-weighted 7719.1 ms => mean first-wave fill 94.5%
+under-filled time (1-fill weighted) = 451.8 ms = 5.5% of kernel time
+
+biggest under-filled kernels (duration x (1-fill)):
+  idle   180.1ms  tot   397.7ms  fill  54.7%  n=   664  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<(bool)
+  idle    51.4ms  tot   105.2ms  fill  51.1%  n=   728  uipc::backend::cuda::<unnamed>::StrainLimitingBaraffWitkinShel
+  idle    24.7ms  tot    24.8ms  fill   0.1%  n= 12745  uipc::backend::cuda::<unnamed>::fused_pcg_scalar_kernel(uipc::
+  idle    21.8ms  tot    23.8ms  fill   8.4%  n=   514  uipc::backend::cuda::<unnamed>::do_assemble_kernel(bool, uipc:
+  idle    21.8ms  tot    41.2ms  fill  47.2%  n=   785  uipc::backend::cuda::<unnamed>::do_compute_energy_k3_kernel(ui
+  idle    17.2ms  tot    24.0ms  fill  28.4%  n=   785  uipc::backend::cuda::<unnamed>::do_compute_energy_k2_kernel(ui
+  idle    16.9ms  tot    63.8ms  fill  73.5%  n=  2360  uipc::backend::cuda::<unnamed>::InfoStacklessBVHSimplexTraject
+  idle    15.5ms  tot    16.5ms  fill   6.6%  n=   785  uipc::backend::cuda::<unnamed>::do_compute_energy_k1_kernel(ui
+  idle    11.4ms  tot   216.1ms  fill  94.7%  n=  2068  void cub::CUB_200700_750_NS::DeviceRadixSortOnesweepKernel<cub
+  idle    11.4ms  tot    11.5ms  fill   1.3%  n=   785  uipc::backend::cuda::<unnamed>::do_compute_energy_k4_kernel(ui
+  idle    11.0ms  tot    11.9ms  fill   7.9%  n=   595  uipc::backend::cuda::<unnamed>::do_compute_energy_kernel(uipc:
+  idle     9.1ms  tot    18.2ms  fill  50.0%  n=   517  void cub::CUB_200700_750_NS::DeviceRadixSortHistogramKernel<cu
+  idle     7.1ms  tot    15.9ms  fill  55.3%  n=  2603  void cub::CUB_200700_750_NS::DeviceReduceKernel<cub::CUB_20070
+  idle     6.6ms  tot     6.7ms  fill   0.7%  n=  2999  void cub::CUB_200700_750_NS::DeviceReduceSingleTileKernel<cub:

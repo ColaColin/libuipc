@@ -1,0 +1,79 @@
+s12 predictions -- recorded BEFORE any A/B arm was run, at head 48f1c6e3.
+Step: s11's candidate 1 -- the ABD body-local G/H prepass (s10/s11), applied to FEM.
+
+What the brief asked me to verify first (PERF_METHOD 2.11): that the FEM elastic G/H is
+"body-local in the same sense the ABD ortho potential is -- it depends on positions, not
+on the contact set".
+
+FINDING BEFORE ANY MEASUREMENT (code, not inference):
+  The *inputs* are hoistable, exactly as the brief says.  The elastic G/H kernels read
+  fem().xs, x_bars, Dm3x3_invs, rest_volumes, the tet/tri index buffers and the per-element
+  material parameters; none of those is written by the contact phase.
+  The *outputs* are not.  The ABD prepass works because its four outputs are PRIVATE
+  buffers allocated once in Impl::init().  The FEM reporter gradient half is private
+  (FEMLinearSubsystem::Impl::reporter_gradients) but the Hessian half is written straight
+  into `info.hessians()`, a subview of the GLOBAL triplet_A, and three separate properties
+  of that destination make it unavailable before the contact phase:
+    (1) its SIZE includes dytopo_effect_receiver->hessians().triplet_count()
+        (fem_linear_subsystem.cu:289) and triplet_A is only resized -- and, on growth,
+        REALLOCATED -- at global_linear_system.cu:856-858, after the contact count exists;
+    (2) its OFFSET is subsystem_triplet_offsets[triplet_i] + kinetic_count
+        (global_linear_system.cu:920), which on any multi-subsystem scene includes a
+        preceding subsystem's contact triplets;
+    (3) it is OVERWRITTEN afterwards: _assemble_linear_system opens with
+        triplet_A.row_indices().fill(-1) / col_indices().fill(-1)
+        (global_linear_system.cu:881-882), on the default stream, after the contact phase.
+  So the only surviving design is ABD's shape: stage the elastic Hessian in a private
+  triplet buffer during the prepass, then COPY it into info.hessians() once that exists.
+  ABD needs no such copy: its assemble_kinetic_shape_k1/k2 scatter already existed.
+
+PREDICTIONS
+
+P1 (ceiling of the prize).  From the head trace of a 60-frame stiff-gipc-case2 window
+   (332 Newton iterations): the occupancy-weighted under-fill census says the whole GPU
+   timeline is 94.5 % filled on first-wave occupancy and the contact-assembly launches
+   contribute 202 ms of the 452 ms of idle-machine-equivalent time, i.e. 0.61 ms per
+   Newton iteration against a 28.1 ms Newton iteration.  I predict the ceiling of ANY
+   prepass-style overlap on case2 is 1.9-2.2 % of the wall, and the realistic figure
+   lower still, because s09 measured that hiding part 2 under part 1 costs part 1
+   +3.83 % of its own time on this scene and the FEM elastic kernel is 40x part 2's grid.
+
+P2 (why the ABD mechanism cannot repeat).  ortho_potential is 18 blocks of 32 threads and
+   332 us against contact part 1's 1440 us -- it fits ENTIRELY inside part 1's shadow.
+   StableNeoHookean3D G/H on case2 is 1249 blocks of 128 threads at 168 reg (3 blocks/SM
+   on cc 7.5 -> 120 blocks fills the machine, so 10.4 waves) and 2829 us against part 1's
+   880 us.  It is a saturating throughput kernel, not a latency-bound sliver.  I predict
+   that at most 31 % of it (880/2829) can ever be concurrent with contact part 1, and that
+   the two cannot share an SM at all: 128x168 = 21504 registers + part 1's 65280 exceeds
+   the 65536-register file.
+
+P3 (floor of the cost -- what this step measures).  The staging copy moves the reporter
+   Hessian region twice: row indices (4 B) + col indices (4 B) + the 3x3 block (72 B) per
+   triplet, read once and written once.  The FEM reporter Hessian region on case2 is
+   ~1.7-1.8 M triplets (inferred: FEMLinearSubsystem_assemble_k2 runs over a median
+   1902x1024 = 1.95 M triplets; kinetic is ~42 k and the dytopo region ~136 k).  That is
+   ~280 MB per Newton iteration.  Two rates bracket it:
+     - a pure contiguous D2D memcpy at ~380 GB/s  -> ~0.74 ms per Newton = +2.6 % of wall;
+     - the tree's own triplet copy kernel rate: FEMLinearSubsystem_assemble_dytopo_effect_k2
+       regresses at 2.31 ns per triplet over 332 launches (intercept -5.6 us)
+       -> ~4.1 ms per Newton = +14.6 % of wall.
+   I predict the measured probe (which is the memcpy form, i.e. the cheap end) lands at
+   +2 to +4 % of case2's wall, and therefore that the copy alone exceeds the ENTIRE
+   ceiling from P1.  VERDICT PREDICTED: the FEM G/H prepass is a net loss and s11's
+   candidate 1 should be closed.
+   If instead the probe reads below +1.5 %, P1's ceiling and P3's floor overlap and the
+   design would need building and measuring properly rather than closing.
+
+P4 (counts).  The probe writes only to scratch nothing reads, so no computed quantity
+   changes and Newton/PCG/line-search counts must stay inside case2's +-0.15 % envelope.
+   If they move more than that, the instrument is wrong, not the result.
+
+P5 (the alternative, for the candidate list).  The same 0.61 ms/Newton shadow can be
+   captured from the other side with NO copy: the contact G/H already runs on a side
+   stream (part 1, stream 14) and is joined at the end of IPCSimplexNormalContact::assemble,
+   but its results are not READ until FEMLinearSubsystem::_assemble_dytopo_effect, which is
+   after the 2829 us SNH G/H.  On case2 GlobalDyTopoEffectManager takes the single-receiver
+   fast path (no _convert_matrix, no _distribute -- confirmed: zero distribute_k kernels in
+   the trace), so there is no blocking D2H in between.  I predict that deferring that join
+   past the FEM reporter assembly is worth most of P1's ceiling on case2 at zero copy cost,
+   and nothing on any scene that takes the _convert_matrix/_distribute path.
