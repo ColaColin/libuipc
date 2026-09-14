@@ -1,0 +1,48 @@
+## PE severity probe: 1265702 usable samples of 2000000
+
+## relative error of the rank-1 PE Hessian, binned by contact severity
+   g = sqrt(D)/(xi+dHat): 1 = just touching the activation distance,
+   1e-5 = five decades deeper into the barrier.
+
+g bin                 n     rel mean      rel p99      rel max lam2/lam1 mn lam1 med [k/d2] lam2 max [k/d2]
+1.0e-05-3.2e-05   102138   2.6561e-06   1.9736e-05   2.5557e-05   2.4545e-06     5.6909e-01     1.3780e-01
+3.2e-05-1.0e-04   116790   8.0894e-06   6.2176e-05   8.2426e-05   7.4804e-06     5.1604e-02     3.9889e-02
+1.0e-04-3.2e-04   116468   2.5910e-05   1.9990e-04   2.6481e-04   2.3972e-05     4.6671e-03     1.0417e-02
+3.2e-04-1.0e-03   116626   8.3237e-05   6.4666e-04   8.4577e-04   7.7034e-05     3.8149e-04     3.0757e-03
+1.0e-03-3.2e-03   116853   2.6223e-04   2.0173e-03   2.6960e-03   2.4263e-04     3.0417e-05     7.1368e-04
+3.2e-03-1.0e-02   116772   8.2544e-04   6.3681e-03   8.5038e-03   7.6400e-04     2.4820e-06     2.0704e-04
+1.0e-02-3.2e-02   117527   2.5974e-03   2.0038e-02   1.1260e-01   2.4042e-03     1.8471e-07     4.8570e-05
+3.2e-02-1.0e-01   120580   7.9261e-03   6.1875e-02   8.5194e-01   7.3428e-03     1.3933e-08     2.9057e-04
+1.0e-01-3.2e-01   140950   2.3220e-02   1.7698e-01   9.9957e-01   2.0285e-02     1.1277e-09     4.3308e-04
+3.2e-01-1.0e+00   186372   5.4930e-02   9.9868e-01   1.0000e+00   2.9187e-02     3.9122e-11     1.3565e-04
+   (lam1/lam2 are in the dimensionless unit kappa/dHat^2: the ABSOLUTE stiffness.
+    A large relative error where lam2 is orders of magnitude below the deep-contact
+    lam1 is not a physics problem -- it is a near-zero matrix being set to zero.)
+
+## does a large relative error ever coincide with a large ABSOLUTE dropped stiffness?
+   reference lam1 (median over g < 1e-4, i.e. a real contact) = 1.8442e-01 kappa/dHat^2
+   samples with rel > 1e-2                                    : 151425 of 1265702 (11.964 %)
+   ... AND dropped stiffness lam2 > 1 % of that reference     : 0 (0.0000 %)
+   pairs with lam1 > 1e-02 x reference (338954, 26.8 %): rel mean 9.0764e-05 max 1.5343e-02, lam2/lam1 max 1.5153e-02
+   pairs with lam1 > 1e-04 x reference (549937, 43.4 %): rel mean 4.4266e-04 max 1.0566e-01, lam2/lam1 max 1.0624e-01
+
+## by where the point's foot falls on the edge
+case                            n     rel mean      rel max lam2/lam1 max
+interior foot (dim 3)     1213398   5.5381e-03   2.2502e-01   2.3079e-01
+beyond an endpoint          52304   1.5663e-01   1.0000e+00   9.8938e-01
+
+## the worst 0.1 % of samples by relative error -- what configuration are they?
+   n=1265   rel in [9.9976e-01, 1.0000e+00]
+   mean log10(g) = -0.06  (g = 8.683e-01)   mean t = 0.492   interior foot 0/1265
+   mean lambda_2/lambda_1 of the shipped projection = 6.3136e-03
+   mean |B'|/(B'' D) = 0.0950
+   mean lambda_1 = 5.9374e-11, lambda_2 = 3.7239e-13  [kappa/dHat^2]   mean B'' = 6.0903e-14 [kappa/dHat^4]
+   the dropped eigenvector's relative motion, resolved:
+      along the contact normal  0.2342
+      along the edge (the slide) 0.9144
+      along the binormal         0.1508
+
+## the whole population, for contrast
+   mean lambda_2/lambda_1 = 7.5825e-03
+   dropped eigenvector: normal 0.0240  edge 0.9660  binormal 0.0283
+   ||H_proj - H_rank1||/||H_proj||: mean 1.1782e-02  max 1.0000e+00

@@ -1,0 +1,136 @@
+[    7.2s] warmup     p0:   58.529 ms  Newton 500
+[   14.5s] warmup  pnull:   59.987 ms  Newton 509
+[   21.9s] warmup     p5:   60.892 ms  Newton 512
+[   28.9s] warmup     p1:   57.440 ms  Newton 508
+[   36.2s] rep  1     p0:   59.490 ms  Newton 506  PCG 19620  LS 524
+[   43.4s] rep  1  pnull:   58.451 ms  Newton 505  PCG 19185  LS 523
+[   50.7s] rep  1     p5:   60.514 ms  Newton 509  PCG 20110  LS 529
+[   57.8s] rep  1     p1:   58.065 ms  Newton 511  PCG 19525  LS 535
+[   65.3s] rep  2     p0:   62.479 ms  Newton 525  PCG 20575  LS 547
+[   72.3s] rep  2     p1:   57.165 ms  Newton 501  PCG 19595  LS 527
+[   79.6s] rep  2     p5:   59.287 ms  Newton 504  PCG 19750  LS 525
+[   86.9s] rep  2  pnull:   60.364 ms  Newton 513  PCG 20225  LS 533
+[   94.0s] rep  3     p5:   57.946 ms  Newton 498  PCG 19375  LS 516
+[  102.1s] rep  3     p1:   67.074 ms  Newton 579  PCG 21765  LS 632
+[  109.5s] rep  3     p0:   60.618 ms  Newton 512  PCG 20220  LS 529
+[  116.8s] rep  3  pnull:   59.321 ms  Newton 508  PCG 19550  LS 528
+[  124.2s] rep  4     p5:   60.947 ms  Newton 514  PCG 20400  LS 535
+[  131.5s] rep  4  pnull:   60.678 ms  Newton 514  PCG 20080  LS 532
+[  138.8s] rep  4     p0:   59.001 ms  Newton 503  PCG 19390  LS 524
+[  145.6s] rep  4     p1:   55.883 ms  Newton 500  PCG 19030  LS 518
+[  153.1s] rep  5     p0:   61.846 ms  Newton 520  PCG 20390  LS 539
+[  160.4s] rep  5  pnull:   59.503 ms  Newton 511  PCG 19880  LS 531
+[  167.7s] rep  5     p5:   60.065 ms  Newton 509  PCG 20270  LS 528
+[  174.7s] rep  5     p1:   57.645 ms  Newton 510  PCG 19400  LS 532
+[  182.1s] rep  6     p0:   61.237 ms  Newton 515  PCG 20410  LS 535
+[  189.2s] rep  6     p1:   57.994 ms  Newton 509  PCG 19700  LS 533
+[  196.5s] rep  6     p5:   60.184 ms  Newton 512  PCG 19850  LS 531
+[  203.8s] rep  6  pnull:   59.464 ms  Newton 508  PCG 19575  LS 528
+[  211.0s] rep  7     p5:   59.020 ms  Newton 507  PCG 19705  LS 528
+[  217.9s] rep  7     p1:   56.126 ms  Newton 501  PCG 18970  LS 524
+[  225.3s] rep  7     p0:   60.773 ms  Newton 514  PCG 20090  LS 537
+[  232.5s] rep  7  pnull:   59.589 ms  Newton 506  PCG 19835  LS 525
+[  239.6s] rep  8     p5:   58.316 ms  Newton 496  PCG 19425  LS 515
+[  246.9s] rep  8  pnull:   59.450 ms  Newton 506  PCG 19790  LS 528
+[  254.3s] rep  8     p0:   60.386 ms  Newton 511  PCG 19855  LS 533
+[  261.1s] rep  8     p1:   55.295 ms  Newton 496  PCG 18820  LS 516
+[  268.4s] rep  9     p0:   59.862 ms  Newton 504  PCG 20035  LS 525
+[  275.5s] rep  9  pnull:   58.547 ms  Newton 502  PCG 19160  LS 525
+[  282.7s] rep  9     p5:   59.462 ms  Newton 507  PCG 19830  LS 529
+[  289.8s] rep  9     p1:   57.558 ms  Newton 508  PCG 19695  LS 532
+[  297.1s] rep 10     p0:   60.355 ms  Newton 506  PCG 20210  LS 532
+[  304.2s] rep 10     p1:   58.105 ms  Newton 510  PCG 19825  LS 531
+[  311.6s] rep 10     p5:   60.334 ms  Newton 515  PCG 20050  LS 535
+[  318.9s] rep 10  pnull:   59.351 ms  Newton 511  PCG 19585  LS 531
+[  326.1s] rep 11     p5:   59.285 ms  Newton 505  PCG 19745  LS 524
+[  333.2s] rep 11     p1:   57.792 ms  Newton 507  PCG 19590  LS 526
+[  340.5s] rep 11     p0:   60.512 ms  Newton 512  PCG 20040  LS 531
+[  347.8s] rep 11  pnull:   60.409 ms  Newton 510  PCG 20025  LS 531
+[  355.0s] rep 12     p5:   59.009 ms  Newton 506  PCG 19465  LS 526
+[  362.4s] rep 12  pnull:   60.180 ms  Newton 508  PCG 19905  LS 528
+[  369.6s] rep 12     p0:   59.091 ms  Newton 503  PCG 19630  LS 525
+[  376.7s] rep 12     p1:   57.856 ms  Newton 507  PCG 19615  LS 528
+[  384.0s] rep 13     p0:   60.714 ms  Newton 516  PCG 19825  LS 539
+[  391.3s] rep 13  pnull:   60.501 ms  Newton 510  PCG 20145  LS 530
+[  398.7s] rep 13     p5:   60.512 ms  Newton 513  PCG 20300  LS 533
+[  405.8s] rep 13     p1:   57.770 ms  Newton 510  PCG 19630  LS 532
+[  413.1s] rep 14     p0:   60.577 ms  Newton 514  PCG 20045  LS 534
+[  420.2s] rep 14     p1:   58.128 ms  Newton 512  PCG 19550  LS 530
+[  427.4s] rep 14     p5:   59.120 ms  Newton 504  PCG 19845  LS 524
+[  434.6s] rep 14  pnull:   58.810 ms  Newton 504  PCG 19455  LS 526
+[  441.8s] rep 15     p5:   59.117 ms  Newton 505  PCG 19875  LS 524
+[  448.9s] rep 15     p1:   57.268 ms  Newton 508  PCG 19220  LS 528
+[  456.2s] rep 15     p0:   59.580 ms  Newton 507  PCG 19955  LS 526
+[  463.6s] rep 15  pnull:   61.194 ms  Newton 516  PCG 20350  LS 538
+[  470.7s] rep 16     p5:   57.995 ms  Newton 501  PCG 19575  LS 522
+[  477.9s] rep 16  pnull:   59.679 ms  Newton 507  PCG 20050  LS 527
+[  485.5s] rep 16     p0:   62.156 ms  Newton 533  PCG 20020  LS 560
+[  492.4s] rep 16     p1:   56.326 ms  Newton 503  PCG 19125  LS 526
+[  499.8s] rep 17     p0:   60.644 ms  Newton 514  PCG 20170  LS 538
+[  507.1s] rep 17  pnull:   60.367 ms  Newton 512  PCG 20005  LS 531
+[  514.5s] rep 17     p5:   60.522 ms  Newton 514  PCG 19955  LS 533
+[  521.6s] rep 17     p1:   58.414 ms  Newton 512  PCG 20180  LS 532
+[  529.0s] rep 18     p0:   61.062 ms  Newton 521  PCG 20030  LS 543
+[  536.2s] rep 18     p1:   58.283 ms  Newton 512  PCG 19890  LS 533
+[  543.4s] rep 18     p5:   59.331 ms  Newton 505  PCG 19785  LS 527
+[  550.4s] rep 18  pnull:   57.556 ms  Newton 496  PCG 19130  LS 517
+[  557.7s] rep 19     p5:   60.010 ms  Newton 509  PCG 20280  LS 529
+[  564.6s] rep 19     p1:   55.303 ms  Newton 496  PCG 19015  LS 514
+[  571.6s] rep 19     p0:   57.307 ms  Newton 499  PCG 18900  LS 519
+[  579.1s] rep 19  pnull:   61.462 ms  Newton 517  PCG 20665  LS 538
+[  586.2s] rep 20     p5:   58.944 ms  Newton 508  PCG 19590  LS 530
+[  593.6s] rep 20  pnull:   60.463 ms  Newton 513  PCG 20115  LS 530
+[  600.6s] rep 20     p0:   57.101 ms  Newton 494  PCG 19135  LS 515
+[  607.7s] rep 20     p1:   57.652 ms  Newton 507  PCG 19500  LS 525
+
+=== cost_cwc  cube-wall-cloth  n=20 per arm, 4 arms, baseline=p0 ===
+
+-- newton
+       p0: mean    511.4500 sd   8.9525 [494.0000, 533.0000]    +0.00%  overlapping  t=+0.00 p=1
+    pnull: mean    508.8500 sd   4.8608 [496.0000, 517.0000]    -0.51%  overlapping  t=+1.11 p=0.275
+       p5: mean    507.0500 sd   5.0247 [496.0000, 515.0000]    -0.86%  overlapping  t=+1.87 p=0.0716
+       p1: mean    509.9500 sd  16.6026 [496.0000, 579.0000]    -0.29%  overlapping  t=+0.35 p=0.731
+
+-- pcg
+       p0: mean  19927.2500 sd 409.0186 [18900.0000, 20575.0000]    +0.00%  overlapping  t=+0.00 p=1
+    pnull: mean  19835.5000 sd 399.4869 [19130.0000, 20665.0000]    -0.46%  overlapping  t=+0.70 p=0.489
+       p5: mean  19859.0000 sd 293.9668 [19375.0000, 20400.0000]    -0.34%  overlapping  t=+0.59 p=0.559
+       p1: mean  19582.0000 sd 603.0224 [18820.0000, 21765.0000]    -1.73%  overlapping  t=+2.07 p=0.0467
+
+-- line_search
+       p0: mean    532.7500 sd  10.0542 [515.0000, 560.0000]    +0.00%  overlapping  t=+0.00 p=1
+    pnull: mean    529.0000 sd   4.6583 [517.0000, 538.0000]    -0.70%  overlapping  t=+1.48 p=0.152
+       p5: mean    527.1500 sd   5.2941 [515.0000, 535.0000]    -1.05%  overlapping  t=+2.15 p=0.0402
+       p1: mean    532.7000 sd  23.4779 [514.0000, 632.0000]    -0.01%  overlapping  t=+0.01 p=0.993
+
+-- mean_ms
+       p0: mean     60.2396 sd   1.3494 [57.1012, 62.4791]    +0.00%  overlapping  t=+0.00 p=1
+    pnull: mean     59.7670 sd   0.9423 [57.5557, 61.4616]    -0.78%  overlapping  t=+1.25 p=0.219
+       p5: mean     59.4960 sd   0.8429 [57.9458, 60.9474]    -1.23%  overlapping  t=+2.04 p=0.05
+       p1: mean     57.7851 sd   2.3331 [55.2950, 67.0738]    -4.07%  overlapping  t=+3.97 p=0.000407
+
+-- median_ms
+       p0: mean     52.2341 sd   1.0211 [50.0964, 54.5714]    +0.00%  overlapping  t=+0.00 p=1
+    pnull: mean     52.4207 sd   0.9677 [50.6823, 54.8251]    +0.36%  overlapping  t=-0.58 p=0.567
+       p5: mean     52.3809 sd   0.8461 [49.9546, 53.9650]    +0.28%  overlapping  t=-0.48 p=0.632
+       p1: mean     53.0068 sd   2.7123 [50.6842, 64.0372]    +1.48%  overlapping  t=-1.16 p=0.256
+
+-- ms_per_newton
+       p0: mean     11.7775 sd   0.1092 [11.4844, 11.9278]    +0.00%  overlapping  t=+0.00 p=1
+    pnull: mean     11.7449 sd   0.0927 [11.5744, 11.8881]    -0.28%  overlapping  t=+0.99 p=0.328
+       p5: mean     11.7334 sd   0.0778 [11.5759, 11.8888]    -0.37%  overlapping  t=+1.43 p=0.161
+       p1: mean     11.3290 sd   0.1071 [11.1482, 11.5844]    -3.81%  overlapping  t=+12.78 p=2.5e-15
+
+-- ms_per_pcg
+       p0: mean      0.3023 sd   0.0029 [0.2984, 0.3105]    +0.00%  overlapping  t=+0.00 p=1
+    pnull: mean      0.3013 sd   0.0021 [0.2974, 0.3056]    -0.32%  overlapping  t=+1.15 p=0.258
+       p5: mean      0.2996 sd   0.0021 [0.2959, 0.3033]    -0.89%  overlapping  t=+3.24 p=0.00263
+       p1: mean      0.2950 sd   0.0037 [0.2895, 0.3082]    -2.41%  overlapping  t=+6.69 p=8.34e-08
+
+-- cloth_min_y
+       p0: mean      0.2862 sd   0.0060 [0.2795, 0.3005]    +0.00%  overlapping  t=+0.00 p=1
+    pnull: mean      0.2875 sd   0.0050 [0.2812, 0.2997]    +0.43%  overlapping  t=-0.69 p=0.496
+       p5: mean      0.2860 sd   0.0051 [0.2789, 0.2969]    -0.09%  overlapping  t=+0.14 p=0.892
+       p1: mean      0.2910 sd   0.0055 [0.2842, 0.3026]    +1.66%  overlapping  t=-2.55 p=0.015
+
+raw runs + summary: /workspace/output/round6/v2/cost

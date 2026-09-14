@@ -1,0 +1,14 @@
+95 % bootstrap CI on the relative shift of median areal strain (eps = X - 1),
+B and S against R = A + A'.  20 000 resamples.  The pre-registered fail line is +10 %.
+
+statistic                           B shift                     95% CI            S shift                     95% CI
+verify_ar_q999_mean                  +1.99% [   -2.50%,   +7.47%]             -5.51% [  -12.20%,   +0.49%]
+verify_ar_q99_mean                   +1.95% [   -3.59%,   +6.87%]             -8.04% [  -14.39%,   -3.52%]
+verify_ar_mean_mean                  -9.69% [  -60.72%,  +96.22%]           -118.92% [ -154.87%,  -50.28%]
+verify_ar_total_mean                 -9.77% [  -60.16%,  +85.28%]           -115.33% [ -147.26%,  -48.99%]
+
+absolute areal strain, median [min, max] over runs, x1e3:
+  verify_ar_q999_mean      R +20.8622 [+16.4634,+31.1251]   B +21.2768 [+16.9100,+23.7297]   S +19.7119
+  verify_ar_q99_mean       R +10.7580 [ +8.2864,+12.5606]   B +10.9675 [ +8.4892,+12.3469]   S  +9.8928
+  verify_ar_mean_mean      R  -0.2904 [ -0.5452, +0.2656]   B  -0.2622 [ -0.8108, +0.2015]   S  +0.0549
+  verify_ar_total_mean     R  -0.2989 [ -0.5578, +0.2607]   B  -0.2697 [ -0.8317, +0.2000]   S  +0.0458

@@ -1,0 +1,142 @@
+================================================================================================
+## config base   runs per arm: {'0': 5, '1': 5}
+   setup: {'tag': 'base_1_5', 'layers': '6', 'cells': '20', 'edge': '0.008', 'd_hat': '0.0008', 'cloth_r': '0.0002', 'gap0': '0.002', 'press': '0.009', 'drag': '0.0', 'frames': '80', 'strength': '10000.0', 'rank1': '1'}
+================================================================================================
+   arm rank1=0: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [292.0, 292.0, 292.0, 292.0, 292.0]
+      severity reached: min g = -0.6088  (d_min -87.06 um)   final stack thickness mm ['4.7223', '4.7223', '4.7223', '4.7223', '4.7223']
+   arm rank1=1: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [291.0, 292.0, 292.0, 292.0, 292.0]
+      severity reached: min g = -0.6088  (d_min -87.07 um)   final stack thickness mm ['4.7223', '4.7223', '4.7223', '4.7223', '4.7223']
+
+            g bin   frames 0/1  Newton 0  Newton 1    delta          p     PCG 0     PCG 1     dPCG
+   [ 1.00, 9.99)    55/55         3.091     3.091    +0.0%          1      50.5      50.6    +0.2%
+   [ 0.75, 1.00)   145/145        4.759     4.752    -0.1%      0.942     100.2      98.0    -2.2%
+   [ 0.50, 0.75)    20/20         3.000     3.000    +0.0%          1     144.0     145.2    +0.9%
+   [ 0.35, 0.50)    20/20         3.000     3.000    +0.0%          1     130.0     129.2    -0.6%
+   [ 0.20, 0.35)    15/15         3.000     3.000    +0.0%          1     126.3     125.3    -0.8%
+   [ 0.10, 0.20)    15/15         3.000     3.000    +0.0%          1     114.3     114.3    +0.0%
+   [ 0.00, 0.10)    15/15         3.000     3.000    +0.0%          1     110.0     110.0    +0.0%
+   [-9.99, 0.00)   115/115        3.000     3.000    +0.0%          1     104.8     104.8    +0.0%
+
+   regression of (Newton_1/Newton_0 - 1) on severity (bin index, deeper = larger): slope +0.0001 per bin (r=+0.41, p=0.31)
+   pre-declared degradation signature: slope > 0 and growing. -> absent
+
+   whole sweep Newton totals: arm0 mean 292.0 [292.0, 292.0, 292.0, 292.0, 292.0]   arm1 mean 291.8 [291.0, 292.0, 292.0, 292.0, 292.0]   -0.07 %
+   minimum g reached per run: arm0 [np.float64(-0.60883), np.float64(-0.60883), np.float64(-0.60883), np.float64(-0.60883), np.float64(-0.60883)]
+                              arm1 [np.float64(-0.60884), np.float64(-0.60883), np.float64(-0.60883), np.float64(-0.60883), np.float64(-0.60883)]   MW p=0.0107
+   (a *lower* g in arm 1 would mean the softened Hessian lets the layers approach further -- a physics failure, not a cost one)
+
+================================================================================================
+## config deep   runs per arm: {'0': 5, '1': 5}
+   setup: {'tag': 'deep_1_5', 'layers': '6', 'cells': '20', 'edge': '0.008', 'd_hat': '0.0008', 'cloth_r': '0.0002', 'gap0': '0.002', 'press': '0.0115', 'drag': '0.0', 'frames': '80', 'strength': '10000.0', 'rank1': '1'}
+================================================================================================
+   arm rank1=0: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [289.0, 289.0, 289.0, 289.0, 290.0]
+      severity reached: min g = -1.0673  (d_min -453.87 um)   final stack thickness mm ['5.9367', '5.9367', '5.9367', '5.9367', '5.9367']
+   arm rank1=1: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [289.0, 289.0, 289.0, 289.0, 290.0]
+      severity reached: min g = -1.0673  (d_min -453.86 um)   final stack thickness mm ['5.9367', '5.9367', '5.9367', '5.9367', '5.9367']
+
+            g bin   frames 0/1  Newton 0  Newton 1    delta          p     PCG 0     PCG 1     dPCG
+   [ 1.00, 9.99)    35/35         3.000     3.000    +0.0%          1      47.9      48.1    +0.6%
+   [ 0.75, 1.00)   120/120        5.008     5.008    +0.0%      0.986     111.4     110.4    -0.9%
+   [ 0.50, 0.75)    20/20         3.250     3.250    +0.0%          1     170.8     170.2    -0.3%
+   [ 0.35, 0.50)    10/10         3.000     3.000    +0.0%          1     123.5     123.0    -0.4%
+   [ 0.20, 0.35)    15/15         3.000     3.000    +0.0%          1     123.0     123.0    +0.0%
+   [ 0.10, 0.20)    10/10         3.000     3.000    +0.0%          1     115.0     115.0    +0.0%
+   [ 0.00, 0.10)    10/10         3.000     3.000    +0.0%          1     108.5     107.5    -0.9%
+   [-9.99, 0.00)   180/180        3.000     3.000    +0.0%          1     124.1     124.2    +0.0%
+
+   regression of (Newton_1/Newton_0 - 1) on severity (bin index, deeper = larger): slope +0.0000 per bin (r=+nan, p=nan)
+   pre-declared degradation signature: slope > 0 and growing. -> absent
+
+   whole sweep Newton totals: arm0 mean 289.2 [289.0, 289.0, 289.0, 289.0, 290.0]   arm1 mean 289.2 [289.0, 289.0, 289.0, 289.0, 290.0]   +0.00 %
+   minimum g reached per run: arm0 [np.float64(-1.06733), np.float64(-1.06732), np.float64(-1.06732), np.float64(-1.06732), np.float64(-1.06732)]
+                              arm1 [np.float64(-1.06733), np.float64(-1.06733), np.float64(-1.06732), np.float64(-1.06732), np.float64(-1.06732)]   MW p=0.14
+   (a *lower* g in arm 1 would mean the softened Hessian lets the layers approach further -- a physics failure, not a cost one)
+
+================================================================================================
+## config slide   runs per arm: {'0': 5, '1': 5}
+   setup: {'tag': 'slide_1_5', 'layers': '6', 'cells': '20', 'edge': '0.008', 'd_hat': '0.0008', 'cloth_r': '0.0002', 'gap0': '0.002', 'press': '0.009', 'drag': '0.03', 'frames': '80', 'strength': '10000.0', 'rank1': '1'}
+================================================================================================
+   arm rank1=0: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [440.0, 443.0, 444.0, 446.0, 448.0]
+      severity reached: min g = -2.1469  (d_min -1317.53 um)   final stack thickness mm ['12.3196', '12.4642', '12.4004', '12.2927', '12.5160']
+   arm rank1=1: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [440.0, 441.0, 441.0, 444.0, 445.0]
+      severity reached: min g = -2.1469  (d_min -1317.52 um)   final stack thickness mm ['12.4128', '12.5551', '12.2935', '12.3091', '12.4949']
+
+            g bin   frames 0/1  Newton 0  Newton 1    delta          p     PCG 0     PCG 1     dPCG
+   [ 1.00, 9.99)    55/53         3.327     3.245    -2.5%      0.754      86.8      83.3    -4.1%
+   [ 0.75, 1.00)   140/142        4.807     4.746    -1.3%      0.592     178.5     177.4    -0.6%
+   [ 0.50, 0.75)    25/25         4.600     4.600    +0.0%          1     368.8     374.2    +1.5%
+   [ 0.35, 0.50)    10/10         6.000     6.000    +0.0%          1     290.5     292.0    +0.5%
+   [ 0.20, 0.35)    15/15         7.000     7.000    +0.0%          1     299.0     299.7    +0.2%
+   [ 0.10, 0.20)    10/10         7.000     7.000    +0.0%          1     280.5     282.0    +0.5%
+   [ 0.00, 0.10)    10/10         7.000     7.000    +0.0%          1     284.0     284.5    +0.2%
+   [-9.99, 0.00)   135/135        7.000     7.000    +0.0%          1     323.0     323.4    +0.1%
+
+   regression of (Newton_1/Newton_0 - 1) on severity (bin index, deeper = larger): slope +0.0028 per bin (r=+0.75, p=0.0334)
+   pre-declared degradation signature: slope > 0 and growing. -> PRESENT
+
+   whole sweep Newton totals: arm0 mean 444.2 [440.0, 443.0, 444.0, 446.0, 448.0]   arm1 mean 442.2 [440.0, 441.0, 441.0, 444.0, 445.0]   -0.45 %
+   minimum g reached per run: arm0 [np.float64(-2.14691), np.float64(-2.1459), np.float64(-2.14327), np.float64(-2.14197), np.float64(-2.14059)]
+                              arm1 [np.float64(-2.1469), np.float64(-2.14609), np.float64(-2.14321), np.float64(-2.14134), np.float64(-2.13951)]   MW p=0.841
+   (a *lower* g in arm 1 would mean the softened Hessian lets the layers approach further -- a physics failure, not a cost one)
+
+================================================================================================
+## config fastslide   runs per arm: {'0': 5, '1': 5}
+   setup: {'tag': 'fastslide_1_5', 'layers': '6', 'cells': '20', 'edge': '0.008', 'd_hat': '0.0008', 'cloth_r': '0.0002', 'gap0': '0.002', 'press': '0.0115', 'drag': '0.07', 'frames': '80', 'strength': '10000.0', 'rank1': '1'}
+================================================================================================
+   arm rank1=0: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [505.0, 506.0, 507.0, 510.0, 511.0]
+      severity reached: min g = -6.1794  (d_min -4543.49 um)   final stack thickness mm ['21.4258', '21.4344', '21.4270', '21.4320', '21.4264']
+   arm rank1=1: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [506.0, 508.0, 509.0, 509.0, 511.0]
+      severity reached: min g = -6.2194  (d_min -4575.49 um)   final stack thickness mm ['21.4336', '21.4333', '21.4299', '21.4360', '21.4284']
+
+            g bin   frames 0/1  Newton 0  Newton 1    delta          p     PCG 0     PCG 1     dPCG
+   [ 1.00, 9.99)    30/30         3.667     3.633    -0.9%      0.964      87.0      91.5    +5.2%
+   [ 0.75, 1.00)   125/125        5.752     5.792    +0.7%       0.76     226.0     226.3    +0.1%
+   [ 0.50, 0.75)    15/15         6.667     6.667    +0.0%          1     401.0     401.3    +0.1%
+   [ 0.35, 0.50)    10/10         7.000     7.000    +0.0%          1     262.5     261.0    -0.6%
+   [ 0.20, 0.35)    10/10         7.000     7.000    +0.0%          1     240.0     240.5    +0.2%
+   [-9.99, 0.00)   200/200        7.000     7.000    +0.0%          1     347.1     346.9    -0.1%
+
+   regression of (Newton_1/Newton_0 - 1) on severity (bin index, deeper = larger): slope +0.0007 per bin (r=+0.26, p=0.622)
+   pre-declared degradation signature: slope > 0 and growing. -> absent
+
+   whole sweep Newton totals: arm0 mean 507.8 [505.0, 506.0, 507.0, 510.0, 511.0]   arm1 mean 508.6 [506.0, 508.0, 509.0, 509.0, 511.0]   +0.16 %
+   minimum g reached per run: arm0 [np.float64(-6.17936), np.float64(-6.17546), np.float64(-6.17415), np.float64(-6.1728), np.float64(-6.12442)]
+                              arm1 [np.float64(-6.21936), np.float64(-6.20062), np.float64(-6.1999), np.float64(-6.17732), np.float64(-6.14766)]   MW p=0.151
+   (a *lower* g in arm 1 would mean the softened Hessian lets the layers approach further -- a physics failure, not a cost one)
+
+================================================================================================
+## config tight   runs per arm: {'0': 5, '1': 5}
+   setup: {'tag': 'tight_1_5', 'layers': '6', 'cells': '20', 'edge': '0.008', 'd_hat': '0.0008', 'cloth_r': '0.0002', 'gap0': '0.002', 'press': '0.0115', 'drag': '0.03', 'frames': '80', 'strength': '10000.0', 'rank1': '1'}
+================================================================================================
+   arm rank1=0: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [483.0, 483.0, 484.0, 484.0, 484.0]
+      severity reached: min g = -3.3466  (d_min -2277.27 um)   final stack thickness mm ['20.2539', '20.2446', '20.2527', '20.2528', '20.2438']
+   arm rank1=1: frames {80}  non-converged 0  limit-hits 0  non-finite 0
+      Newton total per run [483.0, 483.0, 484.0, 484.0, 485.0]
+      severity reached: min g = -3.3466  (d_min -2277.29 um)   final stack thickness mm ['20.2434', '20.2442', '20.2443', '20.2573', '20.2440']
+
+            g bin   frames 0/1  Newton 0  Newton 1    delta          p     PCG 0     PCG 1     dPCG
+   [ 1.00, 9.99)    30/30         3.000     3.000    +0.0%          1     103.8     106.2    +2.2%
+   [ 0.75, 1.00)   125/125        5.144     5.152    +0.2%      0.999     425.2     438.1    +3.0%
+   [ 0.50, 0.75)    15/15         5.333     5.333    +0.0%          1     557.3     556.3    -0.2%
+   [ 0.35, 0.50)    10/10         6.500     6.500    +0.0%          1     440.0     439.5    -0.1%
+   [ 0.20, 0.35)    15/15         7.000     7.000    +0.0%          1     401.7     403.3    +0.4%
+   [ 0.00, 0.10)    10/10         7.000     7.000    +0.0%          1     375.5     377.0    +0.4%
+   [-9.99, 0.00)   190/190        7.000     7.000    +0.0%          1     436.8     436.7    -0.0%
+
+   regression of (Newton_1/Newton_0 - 1) on severity (bin index, deeper = larger): slope -0.0001 per bin (r=-0.41, p=0.363)
+   pre-declared degradation signature: slope > 0 and growing. -> absent
+
+   whole sweep Newton totals: arm0 mean 483.6 [483.0, 483.0, 484.0, 484.0, 484.0]   arm1 mean 483.8 [483.0, 483.0, 484.0, 484.0, 485.0]   +0.04 %
+   minimum g reached per run: arm0 [np.float64(-3.34659), np.float64(-3.34633), np.float64(-3.3462), np.float64(-3.34613), np.float64(-3.34605)]
+                              arm1 [np.float64(-3.34661), np.float64(-3.34661), np.float64(-3.3466), np.float64(-3.34646), np.float64(-3.34485)]   MW p=0.209
+   (a *lower* g in arm 1 would mean the softened Hessian lets the layers approach further -- a physics failure, not a cost one)
+
