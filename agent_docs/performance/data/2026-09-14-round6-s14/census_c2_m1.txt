@@ -1,0 +1,19 @@
+trace: kernel duration sum 8099.3 ms, occupancy-weighted 7598.8 ms => mean fill 93.8%
+under-filled time = 500.4 ms = 6.2% of kernel time
+biggest under-filled kernels:
+  idle    221.6ms  tot    448.9ms  fill  50.6%  n=   664  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<(bool)0, (int)
+  idle     53.7ms  tot    114.5ms  fill  53.1%  n=   732  uipc::backend::cuda::<unnamed>::StrainLimitingBaraffWitkinShell2D_do_c
+  idle     24.8ms  tot     27.2ms  fill   8.6%  n=   514  uipc::backend::cuda::<unnamed>::do_assemble_kernel(bool, uipc::backend
+  idle     24.4ms  tot     24.4ms  fill   0.1%  n= 12530  uipc::backend::cuda::<unnamed>::fused_pcg_scalar_kernel(uipc::backend:
+  idle     22.2ms  tot     42.1ms  fill  47.3%  n=   793  uipc::backend::cuda::<unnamed>::do_compute_energy_k3_kernel(uipc::back
+  idle     17.6ms  tot     24.7ms  fill  28.6%  n=   793  uipc::backend::cuda::<unnamed>::do_compute_energy_k2_kernel(uipc::back
+  idle     17.1ms  tot     64.0ms  fill  73.3%  n=  2368  uipc::backend::cuda::<unnamed>::InfoStacklessBVHSimplexTrajectoryFilte
+  idle     15.8ms  tot     16.9ms  fill   6.7%  n=   793  uipc::backend::cuda::<unnamed>::do_compute_energy_k1_kernel(uipc::back
+
+contact part 1: n=332 mean 1038.6 us, median grid 8.0 x 256 thr @ 255 reg, stream(s) ['14']
+contact part 2: n=332 mean 313.5 us, median grid 21.0 x 384 thr @ 154 reg, stream(s) ['7']
+SNH kernels: ['void uipc::backend::cuda::<unnamed>::StableNeoHookean3D_do_compute_gra']
+SNH start - part1 end: mean -179.4 us, median -247.7 us, min -1144.1, frac<0 (SNH starts before part 1 ends) = 0.762
+part 1 window covered by non-part-2 kernels: mean 61.3% ; by SNH: 29.4%
+idle-machine inside part-1 windows (dur x (1-fill), naive per-launch): 252.7 ms over 332 windows = 761 us/iter
+SNH per launch: mean 2842.2 us, n=332, grid 1249.0 x 128 @ 168 reg

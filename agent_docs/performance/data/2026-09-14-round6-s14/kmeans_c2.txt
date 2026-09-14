@@ -1,0 +1,13 @@
+kernel (us/launch, n)                               c2_head_w60_          c2_m1_w60_cu          c2_m2_w60_cu
+do_assemble_kernel<(bool)0, (int)1               878.7 n=  329      1038.6 n=  332      1030.5 n=  329
+do_assemble_kernel<(bool)0, (int)2               317.7 n=  329       313.5 n=  332       316.2 n=  329
+StableNeoHookean3D_do_compute_gra               2829.6 n=  329      2842.2 n=  332      2828.1 n=  329
+StrainLimitingBaraffWitkinShell2D_do_c           144.7 n=  725       156.5 n=  732       155.7 n=  724
+DiscreteShellBending                              91.9 n=  725        92.2 n=  732        92.1 n=  724
+FiniteElementBDF1Kinetic_do_co                    21.5 n=  725        21.6 n=  732        21.5 n=  724
+FEMLinearSubsystem_assemble_dy                   237.6 n=  658       237.5 n=  664       235.8 n=  658
+FEMLinearSubsystem_assemble_re                   111.0 n=  329       110.5 n=  332       111.2 n=  329
+buffer_view_fill_kerne                             7.2 n= 2303         8.1 n= 2324         8.1 n= 2303
+do_assemble_kernel(bool                           46.1 n=  508        52.9 n=  514        51.3 n=  508
+fast_segmental_reduce_matrix                    1156.6 n=  329      1161.4 n=  332      1156.5 n=  329
+rbk_sym_spmv_dot                                 107.2 n=12500       107.6 n=12530       107.3 n=12535

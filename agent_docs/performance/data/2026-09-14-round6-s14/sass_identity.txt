@@ -1,0 +1,12 @@
+SASS DIFFERS    ipc_simplex_normal_contact   (base 74 fn / 829512 instr, head 75 fn / 829544 instr)
+   changed/added/removed instruction lines: 68
+> 		Function : __nv_static_X__X_29_ipc_simplex_normal_contact_cu_X_X__ZN4uipc7backend4cuda70_GLOBAL__N__X_29_ipc_simplex_normal_contact_cu_X_Xdj_compare_words_kernelEPKjS4_Pym
+SASS IDENTICAL  fem_linear_subsystem   (31 functions, 6640 SASS instructions)
+SASS IDENTICAL  abd_linear_subsystem   (60 functions, 38016 SASS instructions)
+SASS IDENTICAL  global_dytopo_effect_manager   (63 functions, 31128 SASS instructions)
+SASS IDENTICAL  dytopo_effect_reporter   (14 functions, 544 SASS instructions)
+SASS IDENTICAL  dytopo_effect_receiver   (14 functions, 544 SASS instructions)
+SASS IDENTICAL  contact_exporter_manager   (14 functions, 544 SASS instructions)
+SASS IDENTICAL  abd_fem_linear_subsystem   (15 functions, 1320 SASS instructions)
+
+contact TU diff: 0 removed lines, 69 added lines, all in one hunk = the verify-only dj_compare_words_kernel (32 SASS instructions); every pre-existing function byte-identical

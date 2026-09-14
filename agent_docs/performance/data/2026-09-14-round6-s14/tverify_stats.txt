@@ -1,0 +1,22 @@
+tumbler --verify, 180 frames, off n=6 / mode 1 n=6, one build
+  verify_ok                          off 6/6 true   m1 6/6 true
+  verify_all_finite                  off 6/6 true   m1 6/6 true
+  verify_contained_radial            off 6/6 true   m1 6/6 true
+  verify_contained_axial             off 6/6 true   m1 6/6 true
+  verify_cc_min_dist                 off  0.00252364 [0.00248428, 0.00258857]   m1  0.00246854 [0.00236396, 0.00252994]  Welch p=0.104  MW p=0.180
+  verify_bore_gap_min                off 0.000783273 [0.000739603, 0.000839869]   m1 0.000820679 [0.000711806, 0.000932887]  Welch p=0.367  MW p=0.485
+  verify_tri_height_min              off   0.00355296 [0.0031527, 0.00382519]   m1   0.00368682 [0.00337534, 0.0038939]  Welch p=0.324  MW p=0.485
+  verify_lifter_depth_max            off -0.00101579 [-0.00128034, -7.19308e-05]   m1 -0.00117383 [-0.00122963, -0.00107682]  Welch p=0.449  MW p=0.589
+  verify_area_ratio_max              off           1.52411 [1.19433, 2.54062]   m1            1.4842 [1.19671, 2.11069]  Welch p=0.875  MW p=0.818
+  verify_area_ratio_min              off        0.772541 [0.724425, 0.803375]   m1        0.798807 [0.780118, 0.815014]  Welch p=0.123  MW p=0.180
+  verify_max_speed                   off           2.72312 [2.06803, 3.34288]   m1           3.26722 [2.68309, 4.19546]  Welch p=0.090  MW p=0.093
+  verify_r_max                       off        0.298621 [0.298532, 0.298758]   m1         0.298636 [0.298572, 0.29869]  Welch p=0.678  MW p=0.485
+  verify_mean_disp_mm_last_quarter   off           16.3183 [15.0306, 17.6962]   m1             16.6127 [13.563, 18.037]  Welch p=0.715  MW p=0.394
+  verify_newton_total                off                 1458.33 [1418, 1511]   m1                 1466.17 [1348, 1532]  Welch p=0.796  MW p=0.470
+  verify_pcg_total                   off                 47600 [45585, 50280]   m1               45909.2 [38075, 50695]  Welch p=0.409  MW p=0.485
+  verify_line_search_total           off                 1705.17 [1634, 1831]   m1                 1708.83 [1535, 1813]  Welch p=0.943  MW p=0.748
+  verify_not_converged_frames        off                             0 [0, 0]   m1                             0 [0, 0]
+  verify_hit_newton_limit_frames     off                             0 [0, 0]   m1                             0 [0, 0]
+  verify_hit_ls_limit_frames         off                             0 [0, 0]   m1                             0 [0, 0]
+  verify_ccd_toi_min                 off          0.4504 [0.343988, 0.650728]   m1        0.523175 [0.407945, 0.590879]  Welch p=0.190  MW p=0.132
+  verify_ls_alpha_min                off        0.439845 [0.343988, 0.650728]   m1        0.504966 [0.348687, 0.590879]  Welch p=0.280  MW p=0.240

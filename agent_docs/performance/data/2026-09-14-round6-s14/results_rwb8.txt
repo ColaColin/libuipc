@@ -1,0 +1,31 @@
+[    3.9s] warmup       off: 25.694 ms/frame (discarded)
+[    7.7s] warmup        on: 25.672 ms/frame (discarded)
+[   11.6s] rep 1      off: 25.365 ms/frame  Newton 464  PCG 12400
+[   15.4s] rep 1       on: 25.488 ms/frame  Newton 459  PCG 12325
+[   19.2s] rep 2       on: 25.261 ms/frame  Newton 472  PCG 13055
+[   23.2s] rep 2      off: 26.317 ms/frame  Newton 468  PCG 12835
+[   27.1s] rep 3      off: 26.183 ms/frame  Newton 469  PCG 12630
+[   30.9s] rep 3       on: 25.540 ms/frame  Newton 471  PCG 13100
+[   34.8s] rep 4       on: 25.564 ms/frame  Newton 472  PCG 12845
+[   38.7s] rep 4      off: 26.037 ms/frame  Newton 468  PCG 12615
+[   42.6s] rep 5      off: 25.792 ms/frame  Newton 465  PCG 12595
+[   46.5s] rep 5       on: 25.814 ms/frame  Newton 470  PCG 12820
+[   50.3s] rep 6       on: 25.008 ms/frame  Newton 462  PCG 12630
+[   54.1s] rep 6      off: 25.624 ms/frame  Newton 470  PCG 12850
+[   58.0s] rep 7      off: 25.833 ms/frame  Newton 470  PCG 12530
+[   61.9s] rep 7       on: 25.872 ms/frame  Newton 473  PCG 13005
+[   65.8s] rep 8       on: 25.852 ms/frame  Newton 480  PCG 12805
+[   69.6s] rep 8      off: 25.623 ms/frame  Newton 470  PCG 12695
+
+=== s14rwb  rigid-wrecking-balls  n=8 per arm ===
+       mean_ms: off    25.8467 [25.3653, 26.3167]   on    25.5498 [25.0082, 25.8716]     -1.15%  overlapping  t=+1.91 p=0.0766
+     median_ms: off    22.8006 [22.4710, 23.1400]   on    22.5560 [22.2767, 22.7135]     -1.07%  overlapping
+ ms_per_newton: off     6.6274 [6.5419, 6.7479]   on     6.5256 [6.4223, 6.6634]     -1.54%  overlapping  t=+2.62 p=0.02
+    ms_per_pcg: off     0.2453 [0.2393, 0.2488]   on     0.2392 [0.2322, 0.2482]     -2.51%  overlapping  t=+2.95 p=0.0124
+        newton: off   468.0000 [464.0000, 470.0000]   on   469.8750 [459.0000, 480.0000]     +0.40%  overlapping
+           pcg: off 12643.7500 [12400.0000, 12850.0000]   on 12823.1250 [12325.0000, 13100.0000]     +1.42%  overlapping
+   line_search: off   481.8750 [473.0000, 488.0000]   on   482.7500 [467.0000, 508.0000]     +0.18%  overlapping
+
+!! pcg moved 1.42% against a 1.15% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+raw runs + summary: /workspace/output/round6/s14/ab

@@ -1,0 +1,70 @@
+s14 -- the read set of the contact assembly's outputs, derived from the code at 8ab46206.
+
+WHAT THE SIDE STREAM WRITES (part 1, stream 14; in mode 2 also part 2 on its own stream):
+  the PT/EE (mode 2: + PE/PP) gradient and Hessian sub-views that SimplexNormalContact::do_assemble
+  carves out of GlobalDyTopoEffectManager's `collected_dytopo_effect_gradient` / `_hessian`
+  (simplex_normal_contact.cu:99-160: info.gradients().subview(...) / info.hessians().subview(...)).
+  Nothing else: the kernels' other arguments are inputs (positions, rest positions, pair lists,
+  thicknesses, d_hats, the contact tabular, m_ee_perm).
+
+WHAT THE SIDE STREAM READS that somebody later WRITES (the R->W half of the hazard):
+  positions            -> written by the line search's step (after solve) and next frame
+  PTs/EEs pair lists   -> rewritten by the trajectory filter in the line search / next iteration
+  m_ee_perm/m_ee_counters -> rewritten by the next do_assemble's partition_ee
+  collected_* buffers  -> resized/reallocated by the next _assemble's loose_resize_entries
+  All of these are ordered after `solve()`, whose assembly joins (below), or after the next
+  do_assemble / _assemble, which join at their top.
+
+EVERY CONSUMER of the collected gradient/Hessian, and where the join now sits in front of it:
+
+ fast path (exactly one receiver: stiff-gipc-case2, mas-bunny [FEM]; rigid-wrecking-balls [ABD]) --
+ the receiver is handed `collected_*.cview()` directly (global_dytopo_effect_manager.cu:186-216):
+  1. FEMLinearSubsystem::Impl::report_extent      fem_linear_subsystem.cu:290-296
+       host-side counts only -> now `gradient_count()` / `hessian_count()` (no join)
+  2. FEMLinearSubsystem::Impl::_assemble_dytopo_effect  fem_linear_subsystem.cu:530-559
+       `gradients()` / `hessians()` accessors -> JOIN (FEMDyTopoEffectReceiver::gradients/hessians
+       call DyTopoEffectReceiver::join_assemble -> GlobalDyTopoEffectManager::join_assemble ->
+       IPCSimplexNormalContact::do_join_assemble). This is the FIRST device read on case2/mas-bunny,
+       after the FEM kinetic + elastic reporters (SNH, bending, strain limiting) have been issued.
+  3. ABDLinearSubsystem::Impl::report_extent       abd_linear_subsystem.cu:898
+       host-side count -> `hessian_count()` (no join)
+  4. ABDLinearSubsystem::Impl::_prepare_dytopo_pairs  abd_linear_subsystem.cu:1245
+       `hessians()` (row/col indices read by the pair-key kernel) -> JOIN. On ABD scenes this is
+       inside _update_subsystem_extent, i.e. before any assembly work is issued: the shadow is empty
+       there by construction, which is why rwb is predicted flat.
+  5. ABDLinearSubsystem::Impl::_assemble_dytopo_effect  abd_linear_subsystem.cu:1330-1442
+       `gradients()` / `hessians()` -> JOIN (already taken by 4).
+
+ non-fast path (>= 2 receivers: cube-wall-cloth, tumbler-garments [FEM + ABD + 2 coupling]):
+  6. GlobalDyTopoEffectManager::Impl::compute_dytopo_effect  global_dytopo_effect_manager.cu:236-243
+       `join_assemble()` immediately before `_convert_matrix()` -- the converter's radix sort reads
+       collected_* right there. This is EXACTLY today's join point (the host had returned from
+       do_assemble a few microseconds earlier), so these scenes keep today's ordering.
+  7. _distribute (:246-350) and the receivers' classified views: read the SORTED buffers produced
+       by 6 on the default stream -> ordered after the join by stream order.
+  8. ABDFEM/FEMABD coupling receivers `hessians()` (abd_fem_linear_subsystem.cu:116-140): join too
+       (idempotent; already taken by 6).
+
+ other consumers:
+  9. GlobalDyTopoEffectManager::Impl::_assemble   global_dytopo_effect_manager.cu:223
+       join at the top, before `loose_resize_entries` can reallocate the buffers a pending kernel
+       is still writing (also covers the gradient-only assembles of the GIPC adaptive strategy,
+       which take the fused launch and defer nothing).
+ 10. IPCSimplexNormalContact::do_assemble          ipc_simplex_normal_contact.cu:1229
+       join at the top, before partition_ee rewrites m_ee_perm / m_ee_counters.
+ 11. ContactExporterManager::get_contact_gradient/hessian  contact_exporter_manager.cu:67/79
+       the exporters copy_to() the per-type sub-views on the (legacy) default stream, which is NOT
+       ordered against a cudaStreamNonBlocking side stream -> join first.
+ 12. GlobalDyTopoEffectManager::gradients()/hessians() (the SORTED views, :145-150): no callers in
+       the backend (grep); on the fast path they are never refreshed anyway (pre-existing).
+ 13. Energy: DyTopoEffectLineSearchReporter / compute_energy read positions and pair lists, never
+       the assembled gradient/Hessian; the energy kernels run on the default stream after solve.
+
+ AL pipeline (advance_al.cu): uses the AL contact models, not IPCSimplexNormalContact
+ (`require<IPCPipelineFlag>()`), so nothing is ever deferred there; every join call is a no-op.
+
+THE STRUCTURAL GUARANTEE: the only way to obtain a device view of the received data is through a
+receiver accessor that joins; the manager's own two readers join explicitly; the two remaining
+direct readers (the exporters, the next assemble) join explicitly. A consumer that was missed would
+show up as a NEW accessor, not as a silent race -- and `hessian_count()`-style host reads are the
+only non-joining accessors, by name.

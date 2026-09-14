@@ -1,0 +1,46 @@
+s14 -- defer the contact assembly's join (the dual of s12), predictions written BEFORE any
+measurement of the changed binary. Head = 8ab46206 (main), branch perf/round6-s14-contact-join.
+
+P1 (premise, checked on a head trace first): stiff-gipc-case2 has exactly one DyTopoEffectReceiver
+    (FEM) and takes GlobalDyTopoEffectManager's single-receiver fast path: ZERO
+    GlobalDyTopoEffectManager_distribute_* kernels and zero converter launches inside
+    compute_dytopo_effect in a 60-frame trace. rigid-wrecking-balls (ABD only) also takes it.
+    cube-wall-cloth and tumbler-garments have FEM+ABD+2 coupling receivers = 4 receivers and take
+    the non-fast path (distribute kernels present) -> they MUST read as today (fallback).
+
+P2 (ceiling at this head): the duration-weighted occupancy census of the contact-assembly window
+    on case2 gives ~0.6 ms of idle machine per Newton iteration (s12: 0.61). ab.py's Newton
+    iteration is now 24.7 ms (s13), so the reachable ceiling is ~2.4 % of case2's wall;
+    the nsys-inflated trace will say ~2.2 %.
+
+P3 (mechanism, from the trace of the changed binary): with the join deferred, SNH G/H starts
+    BEFORE contact part 1 ends in > 90 % of the Newton iterations on case2 (today: 0 %).
+    Part 1's own per-launch time grows by 0-5 % (its 8 blocks are already resident when SNH is
+    issued; SNH cannot share an SM with a 65 280-register block). SNH per launch grows by ~2-4 %
+    while 8 of 40 SMs are taken for ~0.45 ms of its 2.8 ms.
+
+P4 (end to end, case2, ms/Newton, n >= 12 per arm, ABBA + warm-up, null arm in the sweep):
+    mode 1 (join deferred; part 2 stays on the default stream ahead of SNH): -0.8 to -1.6 %.
+    mode 2 (join deferred; part 2 on its own side stream so the default stream is free at once):
+    -1.2 to -2.2 %, i.e. mode 2 >= mode 1 because part 2's ~0.43 ms leaves the serial path too.
+    Both bounded above by P2. Newton / PCG / line-search counts move by less than the scene's
+    own noise (bit-identical outputs: same kernels, same launch geometry, same atomic order).
+
+P5 (controls): mas-bunny within +-0.15 % (21 contact-assembly launches per run: vacuous);
+    cube-wall-cloth and tumbler within their null envelopes (fallback path, join before the
+    converter exactly as today); rigid-wrecking-balls flat: the ABD subsystem reads the contact
+    Hessian's indices in report_extent (_prepare_dytopo_pairs), i.e. before any other device work
+    is enqueued, so the deferred join lands a few host-microseconds after today's.
+
+P6 (correctness): UIPC_CONTACT_DEFERRED_JOIN_VERIFY=1 compares every 32-bit word of the PT/EE
+    (and, in mode 2, PE/PP) gradient+Hessian output regions after the deferred join against a
+    snapshot taken on the side stream right after the contact kernels: 0 mismatching words.
+    gate.sh counts identical to baseline_tests.txt in every arm. mas-bunny Newton 465 and line
+    search 465 in every run. UIPC_BCOO_HASH first-conversion hash identical across arms.
+
+P7 (the join is load-bearing): in verify mode the "would-have-been-stale" snapshot -- a D2D copy
+    of the live output region issued on the default stream at the deferred-join point, BEFORE
+    waiting on the event -- differs from the side-stream snapshot in a large fraction of the
+    iterations on case2 (the contact kernels really are still running when the reader arrives),
+    and in 0 iterations on cube-wall-cloth (the manager joins before the converter, so the
+    receiver-side join finds nothing pending).
