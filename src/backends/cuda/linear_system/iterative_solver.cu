@@ -48,6 +48,11 @@ std::array<const void*, 3> IterativeSolver::matrix_data_ptrs() const
     return m_system->m_impl.matrix_data_ptrs();
 }
 
+int IterativeSolver::spmv_grid_key() const
+{
+    return m_system->m_impl.spmv_grid_blocks();
+}
+
 
 bool IterativeSolver::accuracy_statisfied(cuda_tool::DenseVectorView<Float> r)
 {

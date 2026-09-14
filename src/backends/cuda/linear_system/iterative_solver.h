@@ -40,6 +40,11 @@ class IterativeSolver : public SimSystem
                               cudaStream_t stream = nullptr);
     // data pointers of the assembled system matrix (FusedPCG graph key)
     std::array<const void*, 3> matrix_data_ptrs() const;
+    // round6 (s13): the SpMV+dot grid in blocks (0 = the capacity grid). It is
+    // baked into a captured graph, so any solver that captures the SpMV must
+    // carry it in its validity key or a replay could launch a grid too small
+    // for a matrix that has since grown.
+    int spmv_grid_key() const;
     bool accuracy_statisfied(cuda_tool::DenseVectorView<Float> r);
     cuda_tool::LinearSystemContext& ctx() const;
 

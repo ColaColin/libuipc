@@ -806,6 +806,19 @@ namespace
         // UIPC_SPMV_GRID_STRIDE=1 to enable it; the 5090 acceptance run tests it as a
         // one-variable arm, where the idle-block share is predicted to grow.
         bool grid_stride = false;
+        // round6 (s13): size the grid from the *current* nnz instead of the
+        // reserved capacity. Unlike grid_stride this keeps one virtual block
+        // per physical block, so every block walks the same triplets in the
+        // same order as the capacity grid and the result is bit-identical
+        // (up to the pre-existing atomic nondeterminism). UIPC_SPMV_GRID_FIT=0
+        // restores the capacity grid.
+        bool grid_fit = true;
+        // headroom over the current nnz, in 1/8ths, and the quantum the fitted
+        // grid is rounded up to (blocks). Both exist only to keep the number
+        // -- which is part of the PCG graph's validity key -- from moving on
+        // every assembly. UIPC_SPMV_GRID_FIT_HEADROOM / _QUANTUM.
+        int grid_fit_headroom_eighths = 1;
+        int grid_fit_quantum          = 64;
     };
     // s22: how many blocks of this kernel the device can hold resident.
     // Queried once per C (the occupancy API is a driver call; the result is a
@@ -863,11 +876,51 @@ namespace
                 e.pcg_fuse_ap_zero = !(s[0] == '0');
             if(const char* s = std::getenv("UIPC_SPMV_GRID_STRIDE"))
                 e.grid_stride = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_SPMV_GRID_FIT"))
+                e.grid_fit = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_SPMV_GRID_FIT_HEADROOM"))
+            {
+                int v = std::atoi(s);
+                if(v >= 0 && v <= 64)
+                    e.grid_fit_headroom_eighths = v;
+            }
+            if(const char* s = std::getenv("UIPC_SPMV_GRID_FIT_QUANTUM"))
+            {
+                int v = std::atoi(s);
+                if(v >= 1)
+                    e.grid_fit_quantum = v;
+            }
             return e;
         }();
         return env;
     }
 }  // namespace
+
+int Spmv::fit_block_count(SizeT triplet_count, SizeT triplet_capacity)
+{
+    const SpmvEnv& env = spmv_env();
+    if(!env.grid_fit || env.chunk <= 0)
+        return 0;  // capacity grid (or the per-triplet kernel, which is untouched)
+
+    constexpr SizeT block_dim = 256;
+    const SizeT     per_block = block_dim * (SizeT)env.chunk;
+    const SizeT     cap_blocks = (triplet_capacity + per_block - 1) / per_block;
+    if(cap_blocks == 0)
+        return 0;
+
+    SizeT need = (triplet_count + per_block - 1) / per_block;
+    // headroom, then round up to the quantum: the result is part of the PCG
+    // graph's validity key, so it must not move every time the contact set
+    // adds a triplet.
+    need += (need * (SizeT)env.grid_fit_headroom_eighths) / 8;
+    const SizeT q = (SizeT)env.grid_fit_quantum;
+    need          = ((need + q - 1) / q) * q;
+    if(need < q)
+        need = q;
+    if(need >= cap_blocks)
+        return 0;  // nothing to gain; keep the capacity grid and its key
+    return (int)need;
+}
 
 void Spmv::sym_spmv(Float                                a,
                     cuda_tool::CBCOOMatrixView<Float, 3> A,
@@ -965,7 +1018,8 @@ void Spmv::rbk_sym_spmv_dot(Float                                a,
                             cuda_tool::VarView<Float>            d_dot,
                             cuda_tool::CDense<IndexT> d_triplet_count,
                             SizeT                     triplet_capacity,
-                            cudaStream_t              stream)
+                            cudaStream_t              stream,
+                            int                       grid_blocks)
 {
     if(b != 0)
     {
@@ -988,7 +1042,14 @@ void Spmv::rbk_sym_spmv_dot(Float                                a,
 
     // grid covers the reserved capacity: blocks beyond the current
     // (device-side) count exit with zero work, so the launch shape need not
-    // change when the count does
+    // change when the count does.
+    // round6 (s13): the capacity is the *raw*, pre-reduce triplet count, so
+    // that shape is 3-9x larger than the nnz needs -- 85.7 % of mas-bunny's
+    // blocks and 88.4 % of case2's exist only to read the count and exit.
+    // `grid_blocks` (from Spmv::fit_block_count, via the caller so the PCG
+    // graph key can see it) replaces it with a grid fitted to the nnz. Blocks
+    // past the nnz take the same early exit the spare capacity blocks took,
+    // and each remaining block walks exactly the triplets it walked before.
     constexpr int block_dim = 256;
 
     auto launch_triplet =
@@ -1018,6 +1079,13 @@ void Spmv::rbk_sym_spmv_dot(Float                                a,
         int bc = env.grid_stride ?                                                         \
                      std::min(block_count, resident_blocks<CC>()) :                        \
                      block_count;                                                          \
+        /* round6 (s13): the fitted grid, when the caller supplied one. It is */           \
+        /* always <= the capacity grid, so it never adds blocks; blocks past  */           \
+        /* the nnz take the same early exit the capacity grid's spare blocks  */           \
+        /* take. The virtual-block loop below makes it safe even if the       */           \
+        /* device-side count were to exceed what it was sized for.            */           \
+        if(!env.grid_stride && grid_blocks > 0)                                            \
+            bc = std::min(block_count, grid_blocks);                                       \
         Spmv_rbk_sym_spmv_dot_chunked_kernel<CC>                                           \
             <<<bc, block_dim, 0, stream>>>(a, rows, cols, vals, xp, yp, dd, cnt);          \
         break;                                                                             \

@@ -2,6 +2,7 @@
 #include <sim_system.h>
 #include <functional>
 #include <array>
+#include <algorithm>
 #include <uipc/common/list.h>
 #include <uipc/common/vector.h>
 #include <cuda_tool/cuda_tool.h>
@@ -313,6 +314,8 @@ class GlobalLinearSystem : public SimSystem
         cuda_tool::DeviceDenseMatrix<Float>      debug_A;  // dense A for debug
         // device-side copy of bcoo_A's triplet count (for graph-stable SpMV)
         cuda_tool::DeviceVar<IndexT> triplet_count_dev;
+        // round6 (s13): see spmv_grid_blocks() above
+        int m_spmv_grid_blocks = 0;
 
         Spmv                      spmver;
         MatrixConverter<Float, 3> converter;
@@ -342,6 +345,26 @@ class GlobalLinearSystem : public SimSystem
         {
             auto v = bcoo_A.cview();
             return {v.row_indices().data(), v.col_indices().data(), v.values().data()};
+        }
+
+        // round6 (s13): the SpMV+dot grid, in blocks, or 0 for "the capacity
+        // grid". It is baked into the captured graph, so it is part of the
+        // FusedPCG validity key: the grid must never be smaller than the nnz
+        // needs, and the key is what guarantees a re-capture before it would
+        // be. Monotone within a capacity, so a matrix that grows by one
+        // triplet does not force a rebuild.
+        int spmv_grid_blocks() const { return m_spmv_grid_blocks; }
+        // called once per assembly, after bcoo_A's nnz is known
+        void update_spmv_grid_blocks()
+        {
+            int want = Spmv::fit_block_count(bcoo_A.triplet_count(),
+                                             bcoo_A.triplet_capacity());
+            // 0 means "capacity grid"; it wins over any fitted value, because
+            // it is the only one guaranteed to cover any nnz the capacity holds
+            if(want == 0 || m_spmv_grid_blocks == 0)
+                m_spmv_grid_blocks = want;
+            else
+                m_spmv_grid_blocks = std::max(m_spmv_grid_blocks, want);
         }
 
 

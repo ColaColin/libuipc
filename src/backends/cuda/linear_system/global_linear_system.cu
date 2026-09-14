@@ -767,6 +767,8 @@ void GlobalLinearSystem::Impl::build_linear_system()
         // upload the nnz count for graph-stable SpMV launches (async on the
         // default stream; drained before any solve reads it)
         triplet_count_dev = (IndexT)bcoo_A.triplet_count();
+        // round6 (s13): and the grid that covers it (see spmv_grid_blocks())
+        update_spmv_grid_blocks();
     }
 
     {
@@ -1080,7 +1082,8 @@ void GlobalLinearSystem::Impl::spmv_dot(cuda_tool::CDenseVectorView<Float> x,
                             d_dot,
                             triplet_count_dev.cviewer(),
                             bcoo_A.triplet_capacity(),
-                            stream);
+                            stream,
+                            m_spmv_grid_blocks);
 }
 
 bool GlobalLinearSystem::Impl::accuracy_statisfied(cuda_tool::DenseVectorView<Float> r)

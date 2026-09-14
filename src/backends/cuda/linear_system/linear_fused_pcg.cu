@@ -1286,14 +1286,16 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
 void LinearFusedPCG::destroy_graph()
 {
     m_graph.reset_graph();
-    m_graph_n = 0;
+    m_graph_n         = 0;
+    m_graph_spmv_grid = -1;
 }
 
 #if CUDA_TOOL_GRAPH_WHILE
 void LinearFusedPCG::destroy_while()
 {
     m_while.reset_graph();
-    m_while_n = 0;
+    m_while_n         = 0;
+    m_while_spmv_grid = -1;
 }
 
 bool LinearFusedPCG::while_key_matches(cuda_tool::DenseVectorView<Float>  x,
@@ -1315,7 +1317,9 @@ bool LinearFusedPCG::while_key_matches(cuda_tool::DenseVectorView<Float>  x,
                                         d_rz.data(),
                                         d_rz_new.data(),
                                         d_pAp.data()};
-    return m_while_n == x.size() && m_while_max_iter == max_iter && m_while_ptrs == ptrs;
+    // round6 (s13): as in graph_key_matches -- the SpMV grid is baked in
+    return m_while_n == x.size() && m_while_max_iter == max_iter
+           && m_while_ptrs == ptrs && m_while_spmv_grid == spmv_grid_key();
 }
 
 void LinearFusedPCG::rebuild_while(cuda_tool::DenseVectorView<Float>  x,
@@ -1379,8 +1383,9 @@ void LinearFusedPCG::rebuild_while(cuda_tool::DenseVectorView<Float>  x,
                         d_rz.data(),
                         d_rz_new.data(),
                         d_pAp.data()};
-    m_while_n        = x.size();
-    m_while_max_iter = max_iter;
+    m_while_n         = x.size();
+    m_while_max_iter  = max_iter;
+    m_while_spmv_grid = spmv_grid_key();
     logger::info("LinearFusedPCG: captured full-GPU while-loop graph (n = {})", x.size());
 }
 #endif
@@ -1405,8 +1410,11 @@ bool LinearFusedPCG::graph_key_matches(cuda_tool::DenseVectorView<Float>  x,
                                         d_rz.data(),
                                         d_rz_new.data(),
                                         d_pAp.data()};
+    // round6 (s13): the SpMV grid is baked into the capture; a matrix that has
+    // grown past what it was sized for must re-capture, not replay.
     return m_graph_n == x.size() && m_graph_interval == interval
-           && m_graph_max_iter == max_iter && m_graph_ptrs == ptrs;
+           && m_graph_max_iter == max_iter && m_graph_ptrs == ptrs
+           && m_graph_spmv_grid == spmv_grid_key();
 }
 
 void LinearFusedPCG::rebuild_graph(cuda_tool::DenseVectorView<Float>  x,
@@ -1452,9 +1460,10 @@ void LinearFusedPCG::rebuild_graph(cuda_tool::DenseVectorView<Float>  x,
                         d_rz.data(),
                         d_rz_new.data(),
                         d_pAp.data()};
-    m_graph_n        = x.size();
-    m_graph_interval = interval;
-    m_graph_max_iter = max_iter;
+    m_graph_n         = x.size();
+    m_graph_interval  = interval;
+    m_graph_max_iter  = max_iter;
+    m_graph_spmv_grid = spmv_grid_key();
 }
 
 SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,

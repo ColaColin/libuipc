@@ -108,13 +108,17 @@ class LinearFusedPCG : public IterativeSolver
     SizeT                       m_graph_n        = 0;
     SizeT                       m_graph_interval = 0;
     SizeT                       m_graph_max_iter = 0;
+    // round6 (s13): the SpMV+dot grid baked into the capture (blocks; 0 = the
+    // capacity grid). Part of the key, so a matrix that outgrows it re-captures.
+    int                         m_graph_spmv_grid = -1;
 
     // --- full-GPU while-loop graph (CUDA >= 12.4) ---
     cuda_tool::GraphWhile        m_while;
     cuda_tool::DeviceVar<IndexT> d_iter;
     std::array<const void*, 12>  m_while_ptrs{};
-    SizeT                        m_while_n        = 0;
-    SizeT                        m_while_max_iter = 0;
+    SizeT                        m_while_n         = 0;
+    SizeT                        m_while_max_iter  = 0;
+    int                          m_while_spmv_grid = -1;
     bool while_key_matches(cuda_tool::DenseVectorView<Float>  x,
                            cuda_tool::CDenseVectorView<Float> b,
                            SizeT                              max_iter) const;
