@@ -689,6 +689,29 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // stream, so the rare expensive pairs overlap the bulk instead of
     // serialising behind it. UIPC_CONTACT_SPLIT=0 restores the fused
     // launch, =1 runs the two launches back to back on the default stream.
+    //
+    // round-6 (s09): re-measured for the first time since K9, all three arms,
+    // four scenes. **Keep 2.** The mechanism is not balance -- part 1 is
+    // 2.1-3.7x part 2 at this head and that is structural (part 1 costs
+    // 6.5-13.4x part 2 *per pair*, and the trajectory filter demotes every
+    // degenerate PT/EE candidate into the PE/PP lists, so no scene comes
+    // within a factor of 3 of inverting it). The mechanism is **occupancy**:
+    // part 1 runs 256 threads at 255 registers = 8 of cc 7.5's 32 warp slots,
+    // part 2 384 threads at 154 registers = 12 of 32, and at one block per SM
+    // a second *concurrent kernel* is the only way this code can fill an SM.
+    // Measured on the nsys timeline, part 2 is 98.3 / 91.7 / 96.8 / 98.1 %
+    // hidden inside part 1's window on rigid-wrecking-balls / cube-wall-cloth
+    // / stiff-gipc-case2 / tumbler-garments, so **part 2 is not on the
+    // critical path in any scene** and PE+PP work is worth ~0 on wall time.
+    // End to end (n=20/20/7, one build, interleaved with a bit-identical null
+    // arm): =1 costs +3.25 / +2.66 / +0.79 % ms/Newton, and =0 -- the fused
+    // kernel K9 replaced -- costs +0.07 % (p=0.86) / +1.30 % / +0.09 %. On
+    // rigid-wrecking-balls the split is therefore worth **nothing** over the
+    // pre-K9 code; it pays on the other three, where part 1's grid already
+    // exceeds the machine and the fused kernel's PE/PP threads pay part 1's
+    // frame (2 919 local stores against part 2's own 413). Round 4 s16 had
+    // already rejected 3-way and 4-way splits, so the partition is settled in
+    // both directions. See agent_docs/performance/data/2026-09-14-round6-s09/.
     int m_split = 2;
     // perf/kernels (K10): EE Hessian PSD projection on the translation-free
     // 9x9 subspace (UIPC_EE_REDUCED_SPD=0 restores the 12x12 eigen-solve)
