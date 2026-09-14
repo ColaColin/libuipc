@@ -52,6 +52,21 @@ class DiagLinearSubsystem : public SimSystem
     // contact part 1 in the work distributor's queue, and one 32-thread block
     // at 192 registers denies a whole SM to a 256-thread block at 255 -- part 1
     // then waits for them instead of covering them.
+    //
+    // round 6 (s11) refined the second half of that, and the refinement is the
+    // reason `GlobalLinearSystem::launch_assembly_prepass` is public: this hook
+    // fires too LATE when SimEngine calls it, because
+    // GlobalDyTopoEffectManager::_distribute blocks the host on a D2H until the
+    // contact kernels have drained, so the launch reaches the queue ~2 us after
+    // contact part 1 has already finished. The useful call site is inside the
+    // contact assembly itself, just after both contact parts are queued
+    // (`UIPC_ABD_GH_PREPASS=4`, the default; see
+    // affine_body/abd_gh_prepass_mode.h for the five arms and the numbers).
+    // SimEngine's call stays as the backstop, and the launch is idempotent, so
+    // a subsystem that adopts these hooks needs no knowledge of which call site
+    // actually fired. **Going one slot earlier -- ahead of contact part 2 --
+    // costs 3 pp of the win on rigid-wrecking-balls**: the same
+    // submission-order effect, one kernel further down the list.
     virtual void do_arm_assemble_prepass() {}
     virtual void do_launch_assemble_prepass() {}
     virtual void do_accuracy_check(GlobalLinearSystem::AccuracyInfo& info)  = 0;

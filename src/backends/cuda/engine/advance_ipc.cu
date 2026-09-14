@@ -486,6 +486,17 @@ void SimEngine::advance()
                 // work distributor hands SMs out in submission order, so the
                 // big 255-register blocks must be queued first and the prepass
                 // fills what they leave.
+                //
+                // s11: under the default (UIPC_ABD_GH_PREPASS=4) the launch has
+                // usually already happened, inside the K9 contact fork -- by
+                // the time the host gets here it has been blocked in
+                // GlobalDyTopoEffectManager::_distribute's D2H until the
+                // contact kernels drained, which is far too late to reach
+                // contact part 1's shadow. This call stays as the backstop for
+                // the iterations that never reach the contact call site (the
+                // fused contact launch, a gradient-only assemble, an empty
+                // part) and it is a no-op when the prepass is already in
+                // flight.
                 m_global_linear_system->launch_assembly_prepass();
 
 

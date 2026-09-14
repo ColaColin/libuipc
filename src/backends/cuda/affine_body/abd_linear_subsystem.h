@@ -171,10 +171,13 @@ class ABDLinearSubsystem final : public DiagLinearSubsystem
         // shadow of contact G+H part 1 (24 blocks of 256 at 255 registers on a
         // 40-SM part: one block per SM, ~990 us per launch with nothing else
         // resident). UIPC_ABD_GH_PREPASS=0 = the old path (no side stream).
-        // 0 = off (pre-s10 order), 1 = enqueue after the contact launches
-        // (shipped), 2 = enqueue before them (measured, and it is a wash: see
-        // the comment on DiagLinearSubsystem::do_arm_assemble_prepass)
-        int          gh_prepass         = 1;
+        // The five placements, the measurement that picks between them and the
+        // default all live in `affine_body/abd_gh_prepass_mode.h`. For this
+        // class only three cases exist: 0 = no prepass at all, 2 = arm and
+        // launch here, and 1/3/4 = arm here and let the call site that owns
+        // that slot do the launch (SimEngine's backstop for 1, the K9 contact
+        // fork for 3 and 4).
+        int          gh_prepass         = 4;
         cudaStream_t gh_prepass_stream  = nullptr;
         cudaEvent_t  gh_prepass_fork    = nullptr;
         cudaEvent_t  gh_prepass_join    = nullptr;

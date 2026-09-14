@@ -9,6 +9,8 @@
 #include <utils/make_spd.h>
 #include <utils/primitive_d_hat.h>
 #include <pipeline/ipc_pipeline_flag.h>
+#include <linear_system/global_linear_system.h>
+#include <affine_body/abd_gh_prepass_mode.h>
 #include <cstdlib>
 
 namespace uipc::backend::cuda
@@ -776,12 +778,50 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     cudaEvent_t  m_fork           = nullptr;
     cudaEvent_t  m_join           = nullptr;
 
+    // round-6 (s11): where in the host's *issue order* the ABD body-local
+    // gradient/Hessian prepass (s10, UIPC_ABD_GH_PREPASS) is enqueued.
+    //
+    // s10 established that the stream is not the effect, the issue order is:
+    // the work distributor hands SMs out in submission order, so a 32-thread
+    // prepass block issued ahead of part 1 denies a whole SM to part 1's
+    // 65 280-register block for part 1's entire duration (mode 2). But issuing
+    // it after the dytopo-effect phase (mode 1, s10's shipped placement) is too
+    // late for a different reason, and that reason is on the *host*:
+    // GlobalDyTopoEffectManager::Impl::_distribute does a blocking D2H
+    // (`selected_hessian_offsets` -> `h_total_count`), so the host stalls
+    // inside compute_dytopo_effect() until the contact kernels have drained and
+    // only reaches SimEngine's launch hook after part 1 has already ended.
+    // Measured by s10: 0 % of the prepass runs inside part 1's window.
+    //
+    // These two slots are inside the fork, after part 1 is already queued:
+    //   3 = between part 1's and part 2's launches,
+    //   4 = right after part 2's launch.
+    // 0/1/2 leave this class alone (SimEngine keeps its hook either way -- the
+    // launch is idempotent, so the first call site to run wins).
+    int                  m_prepass_slot = 0;
+    GlobalLinearSystem*  m_gls          = nullptr;
+
     virtual void do_build(BuildInfo& info) override
     {
         require<IPCPipelineFlag>();
 
         if(const char* e = std::getenv("UIPC_CONTACT_SPLIT"))
             m_split = std::atoi(e);
+        // s11: the prepass call site (see abd_gh_prepass_mode.h -- the env
+        // switch is parsed there so that its default lives in one place).
+        // Only meaningful with the K9 split on (m_split == 2); with the fused
+        // launch there is no "between part 1 and part 2", and SimEngine's
+        // backstop hook does the launch exactly as in mode 1.
+        {
+            int m = abd_gh_prepass_mode();
+            if(m == 3 || m == 4)
+            {
+                m_prepass_slot = m;
+                m_gls          = find<GlobalLinearSystem>();
+                if(!m_gls)
+                    m_prepass_slot = 0;
+            }
+        }
         if(const char* e = std::getenv("UIPC_EE_REDUCED_SPD"))
             m_ee_reduced_spd = !(e[0] == '0');
         if(const char* e = std::getenv("UIPC_EE_REDUCED_RANGE"))
@@ -1179,7 +1219,13 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 CUDA_TOOL_CHECK(cudaStreamWaitEvent(side, m_fork, 0));
             }
             launch.operator()<GradientOnly, 1>(pt_count, n_ptee, n_ptee, n_ptee, side);
+            // s11 slot 3: part 1 is queued, part 2 is not.
+            if(m_prepass_slot == 3 && m_gls)
+                m_gls->launch_assembly_prepass();
             launch.operator()<GradientOnly, 2>(0, 0, pe_count, n_pepp, nullptr);
+            // s11 slot 4: both contact parts are queued.
+            if(m_prepass_slot == 4 && m_gls)
+                m_gls->launch_assembly_prepass();
             if(m_split == 2)
             {
                 CUDA_TOOL_CHECK(cudaEventRecord(m_join, side));

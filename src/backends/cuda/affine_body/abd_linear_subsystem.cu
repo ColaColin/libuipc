@@ -11,6 +11,7 @@
 #include <affine_body/abd_linear_subsystem_reporter.h>
 #include <affine_body/affine_body_kinetic.h>
 #include <affine_body/affine_body_constitution.h>
+#include <affine_body/abd_gh_prepass_mode.h>
 #include <utils/report_extent_check.h>
 #include <cstdlib>
 #include <cstdio>
@@ -715,30 +716,6 @@ namespace uipc::backend::cuda
 {
 namespace
 {
-    // s10 env switch, read once: UIPC_ABD_GH_PREPASS=0 restores the pre-s10
-    // order (the body-local kinetic/shape gradient+hessian runs in place, on
-    // the default stream, inside _assemble_kinetic_shape)
-    int abd_gh_prepass_mode()
-    {
-        static const int mode = []
-        {
-            // the s20/s24 spread verifiers stage their shadow copies and their
-            // comparison kernels on the default stream, so they cannot see a
-            // launch that ran on the prepass side stream: with the verifier on,
-            // the prepass is forced off so the verification still means what it
-            // says.
-            const char* v = std::getenv("UIPC_GRID_SPREAD_VERIFY");
-            if(v && v[0] != '0')
-                return 0;
-            const char* e = std::getenv("UIPC_ABD_GH_PREPASS");
-            if(!e)
-                return 1;
-            int m = std::atoi(e);
-            return (m == 0 || m == 1 || m == 2) ? m : 1;
-        }();
-        return mode;
-    }
-
     bool abd_gh_prepass_verify()
     {
         static const bool on = []

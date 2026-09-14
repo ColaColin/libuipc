@@ -355,6 +355,23 @@ class GlobalLinearSystem : public SimSystem
         std::string debug_dump_path;
     };
 
+    // perf round 6 (s10): called once per Newton iteration, immediately before
+    // the dytopo-effect phase (arm) and once the contact launches of that phase
+    // have been issued (launch). Lets every diag subsystem run the
+    // iteration-frozen part of its assembly on a side stream, inside the shadow
+    // of the contact assembly (see DiagLinearSubsystem::do_arm_assemble_prepass).
+    //
+    // round 6 (s11): `launch_assembly_prepass` is public because *where* in the
+    // host's issue order it is called is the whole effect, and the useful call
+    // sites are inside the contact assembly, not in SimEngine. It is idempotent
+    // -- a subsystem that has already launched its armed prepass does nothing --
+    // so SimEngine's call after the dytopo phase stays as the backstop for
+    // iterations in which the contact call site is not reached at all.
+    // `UIPC_ABD_GH_PREPASS` selects the call site; see
+    // `IPCSimplexNormalContact::m_prepass_slot`.
+    void arm_assembly_prepass();
+    void launch_assembly_prepass();
+
     SizeT dof_count() const;
     SizeT last_solve_iterations() const noexcept;
     void  compute_gradient(ComputeGradientInfo& info);
@@ -382,14 +399,6 @@ class GlobalLinearSystem : public SimSystem
 
     // only be called by SimEngine::do_init();
     void init();
-
-    // perf round 6 (s10): only be called by SimEngine::do_advance(), once per
-    // Newton iteration, immediately before and immediately after the
-    // dytopo-effect phase. Lets every diag subsystem run the iteration-frozen
-    // part of its assembly on a side stream, inside the shadow of the contact
-    // assembly (see DiagLinearSubsystem::do_arm_assemble_prepass).
-    void arm_assembly_prepass();
-    void launch_assembly_prepass();
 
     // only be called by SimEngine::do_advance()
     void solve();
