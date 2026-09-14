@@ -1,0 +1,18 @@
+build_multi_level_R_kernel               IDENTICAL (1200 vs 1200 instrs)
+rowdot2<16,0,0>                          IDENTICAL (456 vs 456 instrs)
+rowdot(s12)                              IDENTICAL (120 vs 120 instrs)
+collect_final_Z_kernel                   IDENTICAL (216 vs 216 instrs)
+schwarz_local_solve_kernel(old atomic)   IDENTICAL (448 vs 448 instrs)
+fused_R<true,0 push-first>               MISSING in head
+fused_R<true,1 push-after>               MISSING in head
+fused_R<true,2 prefetch>                 MISSING in head
+fused_R<false,0 coarse>                  MISSING in head
+build_multi_level_R_kernel               instrs=1200 LDG=31 STG=3 LDS=10 STS=4 FMUL=0 FFMA=0 FADD=26 BRA=41 BAR=0 SHFL=12 RED=0 ATOM=27 F2F=3 EXIT=8
+rowdot2<16,0,0>                          instrs=456 LDG=97 STG=3 LDS=0 STS=0 FMUL=16 FFMA=32 FADD=16 BRA=2 BAR=0 SHFL=0 RED=0 ATOM=0 F2F=0 EXIT=5
+rowdot(s12)                              instrs=120 LDG=19 STG=3 LDS=0 STS=0 FMUL=4 FFMA=8 FADD=2 BRA=3 BAR=0 SHFL=0 RED=0 ATOM=0 F2F=0 EXIT=5
+collect_final_Z_kernel                   instrs=216 LDG=26 STG=6 LDS=0 STS=0 FMUL=0 FFMA=0 FADD=15 BRA=9 BAR=0 SHFL=0 RED=0 ATOM=0 F2F=3 EXIT=5
+schwarz_local_solve_kernel(old atomic)   instrs=448 LDG=22 STG=0 LDS=6 STS=3 FMUL=6 FFMA=12 FADD=23 BRA=11 BAR=1 SHFL=12 RED=0 ATOM=3 F2F=0 EXIT=4
+fused_R<true,0 push-first>               instrs=1400 LDG=68 STG=3 LDS=19 STS=2 FMUL=16 FFMA=32 FADD=64 BRA=53 BAR=1 SHFL=48 RED=0 ATOM=15 F2F=1 EXIT=5
+fused_R<true,1 push-after>               instrs=992 LDG=68 STG=3 LDS=19 STS=2 FMUL=16 FFMA=32 FADD=64 BRA=19 BAR=1 SHFL=48 RED=0 ATOM=15 F2F=1 EXIT=5
+fused_R<true,2 prefetch>                 instrs=1016 LDG=66 STG=3 LDS=23 STS=7 FMUL=16 FFMA=32 FADD=64 BRA=26 BAR=1 SHFL=48 RED=0 ATOM=15 F2F=1 EXIT=5
+fused_R<false,0 coarse>                  instrs=456 LDG=97 STG=3 LDS=0 STS=0 FMUL=16 FFMA=32 FADD=16 BRA=2 BAR=0 SHFL=0 RED=0 ATOM=0 F2F=0 EXIT=5

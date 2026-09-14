@@ -1,0 +1,35 @@
+v5_mb_f1.log mode=5
+   Z_fine    applies= 490  max|diff|=0.000000e+00  max rel=0.000000e+00  max|ref|=2.682742e-04
+   Z_coarse  applies= 490  max|diff|=6.519258e-09  max rel=6.368776e-06  max|ref|=9.799859e-03
+   R_coarse  applies= 490  max|diff|=3.278255e-07  max rel=3.122914e-06  max|ref|=4.728962e-01
+v5_mb_f2.log mode=5
+   Z_fine    applies= 490  max|diff|=0.000000e+00  max rel=0.000000e+00  max|ref|=2.682742e-04
+   Z_coarse  applies= 490  max|diff|=9.313226e-09  max rel=8.682879e-06  max|ref|=9.799859e-03
+   R_coarse  applies= 490  max|diff|=4.470348e-07  max rel=2.609371e-06  max|ref|=4.728962e-01
+v5_mb_f3.log mode=5
+   Z_fine    applies= 490  max|diff|=0.000000e+00  max rel=0.000000e+00  max|ref|=2.682742e-04
+   Z_coarse  applies= 490  max|diff|=6.984919e-09  max rel=9.016893e-06  max|ref|=9.799859e-03
+   R_coarse  applies= 490  max|diff|=3.278255e-07  max rel=2.209588e-06  max|ref|=4.728962e-01
+v2_mb_f1.log mode=2
+   Z_fine    applies= 490  max|diff|=0.000000e+00  max rel=0.000000e+00  max|ref|=2.682742e-04
+   Z_coarse  applies= 490  max|diff|=5.587935e-09  max rel=4.418051e-06  max|ref|=9.799858e-03
+   R_coarse  applies= 490  max|diff|=2.682209e-07  max rel=1.371464e-06  max|ref|=4.728964e-01
+v2_mb_f3.log mode=2
+   Z_fine    applies= 490  max|diff|=0.000000e+00  max rel=0.000000e+00  max|ref|=2.682742e-04
+   Z_coarse  applies= 490  max|diff|=3.259629e-09  max rel=4.882134e-06  max|ref|=9.799859e-03
+   R_coarse  applies= 490  max|diff|=1.490116e-07  max rel=1.775430e-06  max|ref|=4.728960e-01
+v2_mb_f0.log mode=2
+   R         applies= 490  max|diff|=2.384186e-07  max rel=2.929966e-06  max|ref|=4.728961e-01
+   Z         applies= 490  max|diff|=4.656613e-09  max rel=4.475818e-06  max|ref|=9.799851e-03
+v5_c2_f1.log mode=5
+   Z_fine    applies= 497  max|diff|=0.000000e+00  max rel=0.000000e+00  max|ref|=7.192064e-03
+   Z_coarse  applies= 497  max|diff|=4.656613e-09  max rel=4.563523e-06  max|ref|=6.230475e-03
+   R_coarse  applies= 497  max|diff|=2.235174e-07  max rel=1.799291e-06  max|ref|=2.281049e-01
+v5_cwc_f1.log mode=5
+   Z_fine    applies=  12  max|diff|=0.000000e+00  max rel=0.000000e+00  max|ref|=5.104536e-03
+   Z_coarse  applies=  12  max|diff|=9.313226e-10  max rel=3.192378e-07  max|ref|=4.898348e-03
+   R_coarse  applies=  12  max|diff|=5.587935e-09  max rel=6.113401e-07  max|ref|=1.699614e-02
+v5_tum_f1.log mode=5
+   Z_fine    applies=  13  max|diff|=0.000000e+00  max rel=0.000000e+00  max|ref|=6.865857e-04
+   Z_coarse  applies=  13  max|diff|=4.656613e-09  max rel=1.081454e-05  max|ref|=1.111441e-02
+   R_coarse  applies=  13  max|diff|=1.455192e-10  max rel=7.273686e-07  max|ref|=4.592527e-04
