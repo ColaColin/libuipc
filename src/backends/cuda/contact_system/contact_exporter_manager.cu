@@ -13,6 +13,10 @@ void ContactExporterManager::do_build()
     auto feature   = std::make_shared<core::ContactSystemFeature>(overrider);
     features().insert(feature);
 
+    // s14: the exporters read the contact gradient/Hessian buffers directly;
+    // a deferred contact join (UIPC_CONTACT_DEFERRED_JOIN) is taken before that
+    m_dytopo_effect_manager = find<GlobalDyTopoEffectManager>();
+
     on_init_scene([&] { init(); });
 }
 
@@ -59,6 +63,8 @@ void ContactExporterManager::get_contact_gradient(std::string_view    prim_type,
     if(!exporter)
         return;
     _create_prim_type_on_geo(prim_type, prim_grad);
+    if(m_dytopo_effect_manager)
+        m_dytopo_effect_manager->join_assemble();
     exporter->contact_gradient(prim_type, prim_grad);
 }
 
@@ -69,6 +75,8 @@ void ContactExporterManager::get_contact_hessian(std::string_view    prim_type,
     if(!exporter)
         return;
     _create_prim_type_on_geo(prim_type, prim_hess);
+    if(m_dytopo_effect_manager)
+        m_dytopo_effect_manager->join_assemble();
     exporter->contact_hessian(prim_type, prim_hess);
 }
 

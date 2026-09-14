@@ -44,6 +44,11 @@ void DyTopoEffectReporter::assemble(GlobalDyTopoEffectManager::GradientHessianIn
     m_impl.hessians  = info.hessians();
 }
 
+void DyTopoEffectReporter::join_assemble()
+{
+    do_join_assemble();
+}
+
 void DyTopoEffectReporter::compute_energy(GlobalDyTopoEffectManager::EnergyInfo& info)
 {
     do_compute_energy(info);

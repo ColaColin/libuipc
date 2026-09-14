@@ -17,7 +17,8 @@ class ABDFEMDyTopoEffectReceiver final : public DyTopoEffectReceiver
         cuda_tool::CTripletMatrixView<Float, 3> hessians;
     };
 
-    auto hessians() const noexcept { return m_impl.hessians; }
+    // device view: joined before it is handed out (s14, see the base)
+    auto hessians() const { join_assemble(); return m_impl.hessians; }
 
   private:
     virtual void do_report(GlobalDyTopoEffectManager::ClassifyInfo& info) override;

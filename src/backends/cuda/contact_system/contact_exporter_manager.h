@@ -33,6 +33,7 @@ class ContactExporterManager final : public SimSystem
     unordered_map<std::string, ContactExporter*> m_exporter_map;
     SimSystemSlotCollection<ContactExporter>     m_contact_exporters;
     vector<std::string>                          m_contact_prim_types;
+    GlobalDyTopoEffectManager*                   m_dytopo_effect_manager = nullptr;
 
     friend class ContactExporter;
     void add_exporter(ContactExporter* exporter);

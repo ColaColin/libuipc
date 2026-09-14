@@ -5,11 +5,18 @@ namespace uipc::backend::cuda
 void DyTopoEffectReceiver::do_build()
 {
     auto& manager = require<GlobalDyTopoEffectManager>();
+    m_manager     = &manager;
 
     BuildInfo info;
     do_build(info);
 
     manager.add_receiver(this);
+}
+
+void DyTopoEffectReceiver::join_assemble() const
+{
+    if(m_manager)
+        m_manager->join_assemble();
 }
 
 void DyTopoEffectReceiver::do_init(InitInfo&) {}

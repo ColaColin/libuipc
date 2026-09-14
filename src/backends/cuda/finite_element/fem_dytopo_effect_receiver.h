@@ -20,8 +20,12 @@ class FEMDyTopoEffectReceiver final : public DyTopoEffectReceiver
         cuda_tool::CTripletMatrixView<Float, 3> hessians;
     };
 
-    auto gradients() const noexcept { return m_impl.gradients; }
-    auto hessians() const noexcept { return m_impl.hessians; }
+    // device views: joined before they are handed out (s14, see the base)
+    auto gradients() const { join_assemble(); return m_impl.gradients; }
+    auto hessians() const { join_assemble(); return m_impl.hessians; }
+    // host-side sizes for report_extent(): no join
+    SizeT gradient_count() const noexcept { return m_impl.gradients.doublet_count(); }
+    SizeT hessian_count() const noexcept { return m_impl.hessians.triplet_count(); }
 
   protected:
     virtual void do_build(DyTopoEffectReceiver::BuildInfo& info) override;

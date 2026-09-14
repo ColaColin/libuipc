@@ -895,7 +895,7 @@ void ABDLinearSubsystem::Impl::report_extent(GlobalLinearSystem::DiagExtentInfo&
         if(dytopo_pair_reduce)
             H12x12_count += _prepare_dytopo_pairs();
         else
-            H12x12_count += dytopo_effect_receiver->hessians().triplet_count();
+            H12x12_count += dytopo_effect_receiver->hessian_count();
     }
 
 

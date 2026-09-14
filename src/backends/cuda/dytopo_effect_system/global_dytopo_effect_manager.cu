@@ -217,13 +217,28 @@ void GlobalDyTopoEffectManager::Impl::compute_dytopo_effect(ComputeDyTopoEffectI
         }
     }
 
+    // the non-fast path reads the collected buffers right here (the
+    // converter's sort), so a reporter that deferred its join is joined now:
+    // these scenes keep exactly today's ordering.
+    join_assemble();
     _convert_matrix();
     _distribute(info);
+}
+
+void GlobalDyTopoEffectManager::Impl::join_assemble()
+{
+    for(auto&& R : dytopo_effect_reporters.view())
+        R->join_assemble();
 }
 
 void GlobalDyTopoEffectManager::Impl::_assemble(ComputeDyTopoEffectInfo& info)
 {
     Timer timer{"Assemble Dytopo Effect"};
+
+    // s14: the collected buffers are resized (and may be reallocated) below;
+    // a join deferred from the previous assemble that nothing consumed (an
+    // aborted iteration, say) is taken here, before that.
+    join_assemble();
 
     auto vertex_count = global_vertex_manager->positions().size();
 
@@ -462,6 +477,11 @@ void GlobalDyTopoEffectManager::init()
 void GlobalDyTopoEffectManager::compute_dytopo_effect(ComputeDyTopoEffectInfo& info)
 {
     m_impl.compute_dytopo_effect(info);
+}
+
+void GlobalDyTopoEffectManager::join_assemble()
+{
+    m_impl.join_assemble();
 }
 
 void GlobalDyTopoEffectManager::compute_dytopo_effect()

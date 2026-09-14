@@ -285,14 +285,15 @@ void FEMLinearSubsystem::Impl::report_extent(GlobalLinearSystem::DiagExtentInfo&
 
     if(dytopo_effect_receiver)  // if dytopo_effect enabled
     {
-        grad_offset += dytopo_effect_receiver->gradients().doublet_count();
-        hess_offset += dytopo_effect_receiver->hessians().triplet_count();
+        // s14: host-side counts only -- the device views (which join a
+        // deferred contact assembly) are first taken in _assemble_dytopo_effect
+        grad_offset += dytopo_effect_receiver->gradient_count();
+        hess_offset += dytopo_effect_receiver->hessian_count();
 
-        UIPC_ASSERT(!(gradient_only
-                      && !dytopo_effect_receiver->hessians().triplet_count() == 0),
+        UIPC_ASSERT(!(gradient_only && !dytopo_effect_receiver->hessian_count() == 0),
                     "When gradient_only is true, hessian_offset must be 0, yours {}.\n"
                     "Ref: https://github.com/spiriMirror/libuipc/issues/295",
-                    dytopo_effect_receiver->hessians().triplet_count());
+                    dytopo_effect_receiver->hessian_count());
     }
 
     // 2) Gradient Count

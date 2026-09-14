@@ -675,6 +675,19 @@ namespace
         }
     }
 
+    // round-6 (s14): UIPC_CONTACT_DEFERRED_JOIN_VERIFY=1 -- count the 32-bit
+    // words in which two copies of the contact assembly's output differ.
+    __global__ void dj_compare_words_kernel(const unsigned int* __restrict__ a,
+                                            const unsigned int* __restrict__ b,
+                                            unsigned long long* __restrict__ out,
+                                            size_t n)
+    {
+        size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        if(a[i] != b[i])
+            atomicAdd(out, 1ull);
+    }
 }  // namespace
 
 class IPCSimplexNormalContact final : public SimplexNormalContact
@@ -801,6 +814,55 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     int                  m_prepass_slot = 0;
     GlobalLinearSystem*  m_gls          = nullptr;
 
+    // round-6 (s14): where the K9 side stream is joined back into the default
+    // stream. `UIPC_CONTACT_DEFERRED_JOIN`:
+    //   0 = at the end of do_assemble, i.e. before the host returns to the
+    //       dytopo-effect manager (the pre-s14 order, the rollback);
+    //   1 = deferred: the join is taken by whoever first *reads* the assembly
+    //       -- a receiver's view accessor (FEM/ABD `_assemble_dytopo_effect`,
+    //       ABD `_prepare_dytopo_pairs`), the manager on the multi-receiver
+    //       path (before its converter, exactly today's point), the next
+    //       assemble (before its resize), or a contact exporter. Part 2 stays
+    //       on the default stream.
+    //   2 = as 1, and part 2 goes on a second side stream, so nothing of the
+    //       contact assembly is left on the default stream at all.
+    // With 1/2 the default stream no longer waits for part 1 before it runs
+    // the FEM elastic gradient/Hessian, so that work fills part 1's shadow
+    // (s12 measured 3.4 ms of it per Newton iteration against a 1.2 ms
+    // contact assembly on stiff-gipc-case2) -- with no copy, because it is
+    // the *join* that moves, not the work. Meaningful only with the K9 split
+    // (m_split == 2); the fused / serial launches have nothing to defer.
+    int          m_deferred_join = 1;
+    bool         m_join_pending  = false;
+    cudaStream_t m_side_stream2  = nullptr;
+    cudaEvent_t  m_join2         = nullptr;
+
+    // UIPC_CONTACT_DEFERRED_JOIN_VERIFY=1: device-side check that the values
+    // a reader sees after the deferred join are the values the contact
+    // kernels wrote, and a measurement of how load-bearing the join is.
+    //  - `snap_side`: the output regions copied on the side stream(s) right
+    //    after the contact kernels (ordered after them);
+    //  - `snap_stale`: the same regions copied on the DEFAULT stream at the
+    //    deferred-join point BEFORE the wait -- what a reader would have seen
+    //    without the join;
+    //  - after the wait: live == snap_side must hold (0 words), and
+    //    snap_stale != snap_side counts the words that were still unwritten.
+    bool                                  m_dj_verify = false;
+    cuda_tool::DeviceBuffer<unsigned int> m_dj_snap_side;
+    cuda_tool::DeviceBuffer<unsigned int> m_dj_snap_stale;
+    cuda_tool::DeviceBuffer<unsigned long long> m_dj_out;
+    struct DjRegion
+    {
+        const void*  ptr;
+        size_t       bytes;
+        cudaStream_t stream;
+    };
+    std::vector<DjRegion> m_dj_regions;
+    size_t                m_dj_words = 0;
+    unsigned long long    m_dj_calls = 0, m_dj_pending = 0, m_dj_reallocs = 0;
+    unsigned long long    m_dj_words_total = 0, m_dj_mismatch = 0, m_dj_stale_words = 0,
+                       m_dj_stale_calls = 0;
+
     virtual void do_build(BuildInfo& info) override
     {
         require<IPCPipelineFlag>();
@@ -845,17 +907,192 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
                 m_proj = 0;
         }
 
+        // s14: the deferred join. Forced off under UIPC_GRID_SPREAD_VERIFY
+        // for the same reason as the ABD prepass: the spread verifiers stage
+        // on the default stream and are not ordered against a side stream.
+        if(const char* e = std::getenv("UIPC_CONTACT_DEFERRED_JOIN"))
+        {
+            m_deferred_join = std::atoi(e);
+            if(m_deferred_join < 0 || m_deferred_join > 2)
+                m_deferred_join = 0;
+        }
+        if(const char* v = std::getenv("UIPC_GRID_SPREAD_VERIFY"); v && v[0] != '0')
+            m_deferred_join = 0;
+        if(m_split != 2)
+            m_deferred_join = 0;
+        if(const char* e = std::getenv("UIPC_CONTACT_DEFERRED_JOIN_VERIFY"))
+            m_dj_verify = (e[0] != '0');
+
         if(m_split == 2)
         {
             CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream, cudaStreamNonBlocking));
             CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_fork, cudaEventDisableTiming));
             CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_join, cudaEventDisableTiming));
+            if(m_deferred_join == 2)
+            {
+                CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&m_side_stream2, cudaStreamNonBlocking));
+                CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&m_join2, cudaEventDisableTiming));
+            }
         }
+        if(m_dj_verify)
+            m_dj_out.resize(2);
+    }
+
+    // s14: make the default stream wait for the contact kernels left on the
+    // side stream(s) by the last do_assemble. Idempotent. Called by the
+    // dytopo-effect manager before any consumer of the assembly.
+    virtual void do_join_assemble() override
+    {
+        if(!m_join_pending)
+            return;
+        if(m_dj_verify)
+            _dj_before_join();
+        CUDA_TOOL_CHECK(cudaStreamWaitEvent(nullptr, m_join, 0));
+        if(m_side_stream2)
+            CUDA_TOOL_CHECK(cudaStreamWaitEvent(nullptr, m_join2, 0));
+        m_join_pending = false;
+        if(m_dj_verify)
+            _dj_after_join();
+    }
+
+    // ---- UIPC_CONTACT_DEFERRED_JOIN_VERIFY -------------------------------
+    template <typename View>
+    void _dj_add_doublets(View v, cudaStream_t s)
+    {
+        if(v.doublet_count() == 0)
+            return;
+        m_dj_regions.push_back({v.indices().data(), v.indices().size() * sizeof(int), s});
+        m_dj_regions.push_back({v.values().data(), v.values().size() * sizeof(Vector3), s});
+    }
+    template <typename View>
+    void _dj_add_triplets(View v, cudaStream_t s)
+    {
+        if(v.triplet_count() == 0)
+            return;
+        m_dj_regions.push_back({v.row_indices().data(), v.row_indices().size() * sizeof(int), s});
+        m_dj_regions.push_back({v.col_indices().data(), v.col_indices().size() * sizeof(int), s});
+        m_dj_regions.push_back({v.values().data(), v.values().size() * sizeof(Matrix3x3), s});
+    }
+    void _dj_copy(cuda_tool::DeviceBuffer<unsigned int>& dst, bool on_region_stream)
+    {
+        size_t off = 0;
+        for(auto& r : m_dj_regions)
+        {
+            CUDA_TOOL_CHECK(cudaMemcpyAsync((char*)dst.data() + off,
+                                            r.ptr,
+                                            r.bytes,
+                                            cudaMemcpyDeviceToDevice,
+                                            on_region_stream ? r.stream : nullptr));
+            off += r.bytes;
+        }
+    }
+    // right after the launches, on the side stream(s): the reference copy
+    void _dj_snapshot_side(ContactInfo& info, cudaStream_t side, cudaStream_t side2)
+    {
+        m_dj_regions.clear();
+        _dj_add_doublets(info.PT_gradients(), side);
+        _dj_add_triplets(info.PT_hessians(), side);
+        _dj_add_doublets(info.EE_gradients(), side);
+        _dj_add_triplets(info.EE_hessians(), side);
+        if(side2)
+        {
+            _dj_add_doublets(info.PE_gradients(), side2);
+            _dj_add_triplets(info.PE_hessians(), side2);
+            _dj_add_doublets(info.PP_gradients(), side2);
+            _dj_add_triplets(info.PP_hessians(), side2);
+        }
+        size_t bytes = 0;
+        for(auto& r : m_dj_regions)
+            bytes += r.bytes;
+        m_dj_words = bytes / sizeof(unsigned int);
+        // a reallocation (cudaFree) synchronises the whole device and would
+        // hide the race this mode measures: reserve with headroom, and count
+        if(m_dj_snap_side.capacity() < m_dj_words)
+        {
+            ++m_dj_reallocs;
+            m_dj_snap_side.reserve(m_dj_words * 2);
+            m_dj_snap_stale.reserve(m_dj_words * 2);
+        }
+        m_dj_snap_side.resize_discard(m_dj_words);
+        m_dj_snap_stale.resize_discard(m_dj_words);
+        _dj_copy(m_dj_snap_side, true);
+    }
+    // at the deferred-join point, before the wait
+    void _dj_before_join()
+    {
+        ++m_dj_calls;
+        bool pending = cudaEventQuery(m_join) == cudaErrorNotReady;
+        if(m_side_stream2 && cudaEventQuery(m_join2) == cudaErrorNotReady)
+            pending = true;
+        (void)cudaGetLastError();
+        if(pending)
+            ++m_dj_pending;
+        _dj_copy(m_dj_snap_stale, false);
+    }
+    // after the wait, on the default stream
+    void _dj_after_join()
+    {
+        if(m_dj_words == 0)
+            return;
+        CUDA_TOOL_CHECK(cudaMemsetAsync(m_dj_out.data(), 0, 2 * sizeof(unsigned long long), nullptr));
+        auto   k     = dj_compare_words_kernel;
+        size_t off   = 0;
+        int    block = 256;
+        for(auto& r : m_dj_regions)
+        {
+            size_t n = r.bytes / sizeof(unsigned int);
+            int    g = (int)((n + block - 1) / block);
+            k<<<g, block, 0, nullptr>>>((const unsigned int*)r.ptr,
+                                        (const unsigned int*)((char*)m_dj_snap_side.data() + off),
+                                        m_dj_out.data(),
+                                        n);
+            k<<<g, block, 0, nullptr>>>((const unsigned int*)((char*)m_dj_snap_stale.data() + off),
+                                        (const unsigned int*)((char*)m_dj_snap_side.data() + off),
+                                        m_dj_out.data() + 1,
+                                        n);
+            off += r.bytes;
+        }
+        unsigned long long h[2] = {0, 0};
+        CUDA_TOOL_CHECK(cudaMemcpy(h, m_dj_out.data(), sizeof(h), cudaMemcpyDeviceToHost));
+        m_dj_words_total += m_dj_words;
+        m_dj_mismatch += h[0];
+        m_dj_stale_words += h[1];
+        if(h[1])
+            ++m_dj_stale_calls;
+        if(h[0])
+            logger::error("[deferred-join-verify] {} mismatching words after the join (call {})",
+                          h[0],
+                          m_dj_calls);
+        if(m_dj_calls % 200 == 0)
+            _dj_report();
+    }
+    void _dj_report()
+    {
+        logger::warn("[deferred-join-verify] mode={} calls={} pending_at_join={} ({:.1f}%) "
+                     "words_compared={} mismatching_after_join={} "
+                     "stale_without_join: calls={} ({:.1f}%) words={} ({:.2f}%) reallocs={}",
+                     m_deferred_join,
+                     m_dj_calls,
+                     m_dj_pending,
+                     m_dj_calls ? 100.0 * m_dj_pending / m_dj_calls : 0.0,
+                     m_dj_words_total,
+                     m_dj_mismatch,
+                     m_dj_stale_calls,
+                     m_dj_calls ? 100.0 * m_dj_stale_calls / m_dj_calls : 0.0,
+                     m_dj_stale_words,
+                     m_dj_words_total ? 100.0 * m_dj_stale_words / m_dj_words_total : 0.0,
+                     m_dj_reallocs);
     }
 
     ~IPCSimplexNormalContact() override
     {
+        if(m_dj_verify)
+            _dj_report();
         // best effort: the CUDA context may already be gone at exit
+        if(m_join2)
+            cudaEventDestroy(m_join2);
+        if(m_side_stream2)
+            cudaStreamDestroy(m_side_stream2);
         if(m_join)
             cudaEventDestroy(m_join);
         if(m_fork)
@@ -985,6 +1222,11 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
 
         if(total == 0)
             return;
+
+        // s14: a join deferred from the previous assemble is taken before this
+        // one rewrites m_ee_perm / m_ee_counters (the manager has normally
+        // done it already; this is the reporter guarding its own buffers)
+        do_join_assemble();
 
         // round-4 (s17): empty = the natural pair order (no partition)
         cuda_tool::CBufferView<IndexT> ee_perm{};
@@ -1211,25 +1453,44 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
             // (+1 ms per iteration, measured).
             if constexpr(!GradientOnly)
                 partition_ee(nullptr);
-            cudaStream_t side = nullptr;
+            cudaStream_t side  = nullptr;
+            cudaStream_t side2 = nullptr;  // s14 mode 2: part 2's own stream
             if(m_split == 2)
             {
                 side = m_side_stream;
+                if(m_deferred_join == 2)
+                    side2 = m_side_stream2;
                 CUDA_TOOL_CHECK(cudaEventRecord(m_fork, nullptr));
                 CUDA_TOOL_CHECK(cudaStreamWaitEvent(side, m_fork, 0));
+                if(side2)
+                    CUDA_TOOL_CHECK(cudaStreamWaitEvent(side2, m_fork, 0));
             }
             launch.operator()<GradientOnly, 1>(pt_count, n_ptee, n_ptee, n_ptee, side);
             // s11 slot 3: part 1 is queued, part 2 is not.
             if(m_prepass_slot == 3 && m_gls)
                 m_gls->launch_assembly_prepass();
-            launch.operator()<GradientOnly, 2>(0, 0, pe_count, n_pepp, nullptr);
+            launch.operator()<GradientOnly, 2>(0, 0, pe_count, n_pepp, side2);
             // s11 slot 4: both contact parts are queued.
             if(m_prepass_slot == 4 && m_gls)
                 m_gls->launch_assembly_prepass();
             if(m_split == 2)
             {
+                if(m_dj_verify)
+                    _dj_snapshot_side(info, side, side2);
                 CUDA_TOOL_CHECK(cudaEventRecord(m_join, side));
-                CUDA_TOOL_CHECK(cudaStreamWaitEvent(nullptr, m_join, 0));
+                if(side2)
+                    CUDA_TOOL_CHECK(cudaEventRecord(m_join2, side2));
+                if(m_deferred_join)
+                {
+                    // s14: the join is taken by the first reader, see
+                    // do_join_assemble(); the host returns at once and keeps
+                    // issuing the default stream's work behind part 1.
+                    m_join_pending = true;
+                }
+                else
+                {
+                    CUDA_TOOL_CHECK(cudaStreamWaitEvent(nullptr, m_join, 0));
+                }
             }
         };
 

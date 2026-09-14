@@ -20,6 +20,12 @@ class DyTopoEffectReceiver : public SimSystem
     };
 
   protected:
+    // round-6 (s14): every accessor that hands out a device view of the
+    // received gradient/Hessian calls this first, so a contact assembly whose
+    // join was deferred (IPCSimplexNormalContact, UIPC_CONTACT_DEFERRED_JOIN)
+    // is joined before its first reader, not at a point somebody remembered.
+    // Host-side counts (doublet/triplet counts) do not need it.
+    void         join_assemble() const;
     virtual void do_init(InitInfo&);
     virtual void do_report(GlobalDyTopoEffectManager::ClassifyInfo& info) = 0;
     virtual void do_receive(GlobalDyTopoEffectManager::ClassifiedDyTopoEffectInfo& info) = 0;
@@ -32,5 +38,6 @@ class DyTopoEffectReceiver : public SimSystem
     void         report(GlobalDyTopoEffectManager::ClassifyInfo& info);
     void  receive(GlobalDyTopoEffectManager::ClassifiedDyTopoEffectInfo& info);
     SizeT m_index = ~0ull;
+    GlobalDyTopoEffectManager* m_manager = nullptr;
 };
 }  // namespace uipc::backend::cuda

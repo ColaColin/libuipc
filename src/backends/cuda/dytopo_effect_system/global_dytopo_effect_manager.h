@@ -122,6 +122,7 @@ class GlobalDyTopoEffectManager final : public SimSystem
         void _assemble(ComputeDyTopoEffectInfo& info);
         void _convert_matrix();
         void _distribute(ComputeDyTopoEffectInfo& info);
+        void join_assemble();
 
         SimSystemSlot<GlobalVertexManager> global_vertex_manager;
 
@@ -177,6 +178,14 @@ class GlobalDyTopoEffectManager final : public SimSystem
     cuda_tool::CBCOOMatrixView<Float, 3> hessians() const noexcept;
 
     void compute_dytopo_effect(ComputeDyTopoEffectInfo& info);
+
+    // round-6 (s14): make the default stream wait for any reporter's
+    // assembly kernels still in flight on a side stream (see
+    // DyTopoEffectReporter::do_join_assemble). Idempotent and cheap when
+    // nothing is pending. Every consumer of the collected gradient/Hessian
+    // goes through it: the receivers' view accessors, the converter, the
+    // next assemble's buffer resize, and the contact exporters.
+    void join_assemble();
 
   protected:
     virtual void do_build() override;
