@@ -1,0 +1,38 @@
+cube-wall-cloth, n=10/arm, one build, 5 interleaved arms
+
+-- ms_per_newton
+       off: mean   11.4100  sd  0.0683  [11.3178,11.5260]
+     after: mean   11.4119  sd  0.0998  [11.2452,11.5610]
+    before: mean   11.2200  sd  0.0898  [11.0811,11.3467]
+     fork3: mean   11.0553  sd  0.1234  [10.9209,11.2830]
+     fork4: mean   11.1686  sd  0.1017  [10.9995,11.3275]
+   pairwise (Welch):
+         off vs after     +0.02%  t= -0.05  p=0.961  
+         off vs before    -1.67%  t= +5.32  p=5.81e-05  
+         off vs fork3     -3.11%  t= +7.95  p=1.44e-06  DISJOINT
+         off vs fork4     -2.12%  t= +6.23  p=1.29e-05  
+       after vs before    -1.68%  t= +4.52  p=0.000273  
+       after vs fork3     -3.12%  t= +7.10  p=1.63e-06  
+       after vs fork4     -2.13%  t= +5.40  p=3.96e-05  
+      before vs fork3     -1.47%  t= +3.41  p=0.00345  
+      before vs fork4     -0.46%  t= +1.20  p=0.247  
+       fork3 vs fork4     +1.02%  t= -2.24  p=0.0384  
+
+-- mean_ms
+       off: mean   58.2508  sd  0.9590  [56.9287,60.0504]
+     after: mean   57.9198  sd  1.1267  [55.7761,59.6549]
+    before: mean   56.8214  sd  1.0438  [55.3158,58.6512]
+     fork3: mean   55.9131  sd  1.3005  [54.2792,57.8816]
+     fork4: mean   56.7839  sd  0.9646  [55.1769,57.9970]
+   pairwise (Welch):
+         off vs after     -0.57%  t= +0.71  p=0.489  
+         off vs before    -2.45%  t= +3.19  p=0.00512  
+         off vs fork3     -4.01%  t= +4.57  p=0.000287  
+         off vs fork4     -2.52%  t= +3.41  p=0.00312  
+       after vs before    -1.90%  t= +2.26  p=0.0364  
+       after vs fork3     -3.46%  t= +3.69  p=0.00173  
+       after vs fork4     -1.96%  t= +2.42  p=0.0265  
+      before vs fork3     -1.60%  t= +1.72  p=0.103  
+      before vs fork4     -0.07%  t= +0.08  p=0.934  
+       fork3 vs fork4     +1.56%  t= -1.70  p=0.108  
+

@@ -1,0 +1,46 @@
+s11 -- bit-identity of the two new call sites, and of the shipped default
+=========================================================================
+
+UIPC_ABD_GH_PREPASS_VERIFY=1. After the join, the four prepass output buffers
+(body_id_to_{shape,kinetic}_{gradient,hessian}) are snapshotted D2D, the SAME
+work is recomputed in place on the default stream, and every 64-bit word of the
+two copies is compared on device (s10's harness, unchanged).
+
+The verifier stages its snapshot and its comparison kernel on the DEFAULT stream
+and is called only after `_join_prepass()` has made the default stream wait on
+the side stream's join event, so it does see the side-stream launch. (This is
+the s20/s24 trap s10 recorded: a verifier on the default stream cannot see a
+launch that ran elsewhere unless the join precedes it. Here it does.)
+
+  mode 3 (between contact part 1 and part 2)
+    rigid-wrecking-balls, 40 frames    20 416 032 words,  0 mismatching
+    cube-wall-cloth,      40 frames   106 030 080 words,  0 mismatching
+
+  mode 4 (just after contact part 2)  -- the new default
+    rigid-wrecking-balls, 40 frames    20 595 120 words,  0 mismatching
+    cube-wall-cloth,      40 frames   106 030 080 words,  0 mismatching
+
+  shipped default, UIPC_ABD_GH_PREPASS unset (resolves to 4)
+    rigid-wrecking-balls, 40 frames    20 595 120 words,  0 mismatching
+    cube-wall-cloth,      40 frames   106 030 080 words,  0 mismatching
+
+  ----------------------------------------------------------------------
+  total                              379 696 512 words,  0 mismatching
+
+This is the strong form. The side stream's only ordering constraint is the fork
+event, and that event is recorded at the SAME point (before the dytopo-effect
+phase) in modes 1, 2, 3 and 4 -- only the host's enqueue point moves, so the
+GPU-visible dependency graph is identical across all of them. The four output
+buffers have exactly one writer each (`_compute_kinetic_shape`) and exactly one
+reader each (`assemble_kinetic_shape_k1/k2`), verified by grep at this head:
+nothing in the contact or dytopo path names any of them, and there is no atomic
+anywhere in the body-local gradient/Hessian. The join precedes every reader.
+
+Because nothing downstream can see a difference, Newton / PCG / line-search
+counts CANNOT be moved by this change, and any drift between arms is the scene's
+own non-determinism -- which is why ms_per_newton is the legitimate statistic in
+results.txt. The counts bear it out: on rigid-wrecking-balls at n=30 no arm's
+Newton count differs from `off` by more than 0.33 % (all p > 0.33), and on the
+deterministic mas-bunny every one of 18 runs reports Newton 465.
+
+See sass_identity.txt for the compile-level half of the proof.

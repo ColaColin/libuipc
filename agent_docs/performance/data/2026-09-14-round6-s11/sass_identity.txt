@@ -1,0 +1,33 @@
+SASS IDENTICAL  abd_linear_subsystem   (60 functions, 38016 SASS instructions)
+SASS DIFFERS    ipc_simplex_normal_contact   (74 functions)
+1647705c1647705
+<         /*0a00*/                   IMAD.MOV.U32 R0, RZ, RZ, 0xf6 ;                                   /* 0x000000f6ff007424 */
+---
+>         /*0a00*/                   IMAD.MOV.U32 R0, RZ, RZ, 0xf8 ;                                   /* 0x000000f8ff007424 */
+1649464c1649464
+<         /*1c50*/                   MOV R0, 0xc4 ;                                                    /* 0x000000c400007802 */
+---
+>         /*1c50*/                   MOV R0, 0xc6 ;                                                    /* 0x000000c600007802 */
+1653283c1653283
+<         /*5180*/                   IMAD.MOV.U32 R0, RZ, RZ, 0x81 ;                                   /* 0x00000081ff007424 */
+---
+>         /*5180*/                   IMAD.MOV.U32 R0, RZ, RZ, 0x83 ;                                   /* 0x00000083ff007424 */
+1656716c1656716
+<         /*3720*/                   IMAD.MOV.U32 R0, RZ, RZ, 0x41 ;                                   /* 0x00000041ff007424 */
+---
+>         /*3720*/                   IMAD.MOV.U32 R0, RZ, RZ, 0x43 ;                                   /* 0x00000043ff007424 */
+SASS IDENTICAL  advance_ipc   (14 functions, 544 SASS instructions)
+
+The four differing instructions in ipc_simplex_normal_contact are `__LINE__`
+immediates, and nothing else:
+
+    base 0x41 / 0x81 / 0xc4 / 0xf6   =  65 / 129 / 196 / 246
+    head 0x43 / 0x83 / 0xc6 / 0xf8   =  67 / 131 / 198 / 248
+
+Every one of those source lines is the same `UIPC_KERNEL_ASSERT(is_active_D(...`
+in the four instantiations of the contact kernel, shifted by exactly the two
+`#include` lines this step adds at the top of the file. 74 functions, 0
+instructions differ in any operand that is not a source line number; the other
+two touched TUs are byte-identical (60 + 14 functions, 38 560 instructions).
+This step changes host issue order only -- it compiles no new device code and
+alters none.

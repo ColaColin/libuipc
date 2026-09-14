@@ -1,0 +1,38 @@
+rigid-wrecking-balls, n=30/arm, one build, 5 interleaved arms (rotated order, 1 warm-up discarded)
+
+-- ms_per_newton
+       off: mean    6.9675  sd  0.0765  [6.7678,7.0979]
+     after: mean    6.6212  sd  0.0875  [6.4626,6.8600]
+    before: mean    6.6327  sd  0.0941  [6.2135,6.7469]
+     fork4: mean    6.6314  sd  0.0523  [6.5316,6.7361]
+      null: mean    6.9185  sd  0.0952  [6.7066,7.0580]
+   pairwise (Welch):
+         off vs after     -4.97%  t=+16.33  p=3.77e-23
+         off vs before    -4.81%  t=+15.13  p=2.26e-21
+         off vs fork4     -4.82%  t=+19.87  p=9.66e-26
+         off vs null      -0.70%  t= +2.20  p=0.0321
+       after vs before    +0.17%  t= -0.49  p=0.625
+       after vs fork4     +0.15%  t= -0.55  p=0.586
+       after vs null      +4.49%  t=-12.60  p=3.44e-18
+      before vs fork4     -0.02%  t= +0.07  p=0.947
+      before vs null      +4.31%  t=-11.70  p=6.81e-17
+       fork4 vs null      +4.33%  t=-14.48  p=1.46e-18
+
+-- mean_ms
+       off: mean   27.2276  sd  0.4990  [26.2254,28.0536]
+     after: mean   25.8337  sd  0.5978  [24.8911,27.3826]
+    before: mean   25.8323  sd  0.4799  [24.1289,26.6511]
+     fork4: mean   25.8857  sd  0.3394  [24.9370,26.5756]
+      null: mean   27.0373  sd  0.6308  [25.7977,28.1730]
+   pairwise (Welch):
+         off vs after     -5.12%  t= +9.80  p=8.96e-14
+         off vs before    -5.12%  t=+11.04  p=7.16e-16
+         off vs fork4     -4.93%  t=+12.18  p=9.94e-17
+         off vs null      -0.70%  t= +1.30  p=0.2
+       after vs before    -0.01%  t= +0.01  p=0.992
+       after vs fork4     +0.20%  t= -0.41  p=0.681
+       after vs null      +4.66%  t= -7.58  p=3.1e-10
+      before vs fork4     +0.21%  t= -0.50  p=0.621
+      before vs null      +4.66%  t= -8.33  p=2.88e-11
+       fork4 vs null      +4.45%  t= -8.81  p=2.64e-11
+

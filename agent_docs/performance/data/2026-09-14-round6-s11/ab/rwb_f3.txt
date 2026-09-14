@@ -1,0 +1,130 @@
+[    4.0s] warmup    off:   26.869 ms  Newton 467
+[    8.1s] warmup  after:   26.363 ms  Newton 468
+[   12.2s] warmup  fork3:   27.107 ms  Newton 470
+[   16.2s] warmup   null:   26.909 ms  Newton 466
+[   20.2s] rep  1    off:   27.112 ms  Newton 469  PCG 12925  LS 477
+[   24.1s] rep  1  after:   25.944 ms  Newton 464  PCG 12835  LS 473
+[   28.1s] rep  1  fork3:   26.793 ms  Newton 468  PCG 12580  LS 490
+[   32.2s] rep  1   null:   27.475 ms  Newton 474  PCG 12925  LS 483
+[   36.3s] rep  2    off:   27.799 ms  Newton 475  PCG 12935  LS 487
+[   40.5s] rep  2   null:   27.252 ms  Newton 471  PCG 12915  LS 484
+[   44.4s] rep  2  fork3:   26.317 ms  Newton 472  PCG 12690  LS 484
+[   48.3s] rep  2  after:   26.052 ms  Newton 473  PCG 13020  LS 485
+[   52.3s] rep  3  fork3:   26.532 ms  Newton 467  PCG 12770  LS 479
+[   56.2s] rep  3   null:   26.335 ms  Newton 463  PCG 12685  LS 476
+[   60.3s] rep  3    off:   26.642 ms  Newton 460  PCG 12550  LS 472
+[   64.1s] rep  3  after:   25.469 ms  Newton 461  PCG 12520  LS 472
+[   68.1s] rep  4  fork3:   26.511 ms  Newton 466  PCG 12850  LS 478
+[   72.0s] rep  4  after:   25.641 ms  Newton 469  PCG 12810  LS 481
+[   76.0s] rep  4    off:   26.535 ms  Newton 466  PCG 12815  LS 476
+[   80.0s] rep  4   null:   26.873 ms  Newton 464  PCG 12675  LS 481
+[   84.1s] rep  5    off:   27.495 ms  Newton 478  PCG 13135  LS 493
+[   87.8s] rep  5  after:   24.898 ms  Newton 460  PCG 12590  LS 477
+[   91.8s] rep  5  fork3:   26.270 ms  Newton 462  PCG 12680  LS 471
+[   95.8s] rep  5   null:   26.723 ms  Newton 462  PCG 12820  LS 472
+[   99.9s] rep  6    off:   27.707 ms  Newton 475  PCG 12710  LS 486
+[  103.9s] rep  6   null:   27.122 ms  Newton 471  PCG 12825  LS 479
+[  107.8s] rep  6  fork3:   26.360 ms  Newton 464  PCG 12435  LS 477
+[  111.7s] rep  6  after:   25.311 ms  Newton 456  PCG 12660  LS 466
+[  115.7s] rep  7  fork3:   26.392 ms  Newton 462  PCG 12795  LS 471
+[  119.7s] rep  7   null:   27.075 ms  Newton 466  PCG 12520  LS 488
+[  123.8s] rep  7    off:   27.363 ms  Newton 473  PCG 12515  LS 495
+[  127.8s] rep  7  after:   26.179 ms  Newton 472  PCG 12890  LS 482
+[  131.8s] rep  8  fork3:   27.240 ms  Newton 478  PCG 13020  LS 491
+[  135.7s] rep  8  after:   26.027 ms  Newton 465  PCG 12555  LS 474
+[  139.8s] rep  8    off:   27.680 ms  Newton 470  PCG 13090  LS 481
+[  143.9s] rep  8   null:   27.217 ms  Newton 467  PCG 12880  LS 476
+[  147.9s] rep  9    off:   26.968 ms  Newton 463  PCG 12760  LS 476
+[  151.7s] rep  9  after:   25.791 ms  Newton 463  PCG 12800  LS 470
+[  155.6s] rep  9  fork3:   25.948 ms  Newton 459  PCG 12380  LS 472
+[  159.6s] rep  9   null:   26.331 ms  Newton 463  PCG 12725  LS 472
+[  163.5s] rep 10    off:   26.427 ms  Newton 458  PCG 12725  LS 468
+[  167.5s] rep 10   null:   26.761 ms  Newton 465  PCG 12655  LS 474
+[  171.3s] rep 10  fork3:   24.619 ms  Newton 446  PCG 12520  LS 457
+[  175.1s] rep 10  after:   25.144 ms  Newton 456  PCG 12355  LS 466
+[  179.1s] rep 11  fork3:   27.313 ms  Newton 471  PCG 12615  LS 485
+[  183.2s] rep 11   null:   27.562 ms  Newton 475  PCG 12985  LS 487
+[  187.1s] rep 11    off:   26.350 ms  Newton 452  PCG 12225  LS 465
+[  191.0s] rep 11  after:   25.641 ms  Newton 460  PCG 12620  LS 469
+[  195.0s] rep 12  fork3:   26.388 ms  Newton 469  PCG 12855  LS 480
+[  198.9s] rep 12  after:   26.368 ms  Newton 477  PCG 12940  LS 487
+[  203.0s] rep 12    off:   27.621 ms  Newton 472  PCG 12845  LS 482
+[  207.1s] rep 12   null:   27.012 ms  Newton 471  PCG 12675  LS 480
+[  211.1s] rep 13    off:   27.224 ms  Newton 471  PCG 12860  LS 482
+[  215.0s] rep 13  after:   25.949 ms  Newton 469  PCG 12875  LS 480
+[  218.9s] rep 13  fork3:   25.879 ms  Newton 457  PCG 12720  LS 465
+[  223.0s] rep 13   null:   27.382 ms  Newton 472  PCG 12715  LS 488
+[  227.0s] rep 14    off:   26.986 ms  Newton 474  PCG 12530  LS 490
+[  231.1s] rep 14   null:   27.457 ms  Newton 468  PCG 12880  LS 479
+[  235.0s] rep 14  fork3:   26.318 ms  Newton 464  PCG 12735  LS 478
+[  238.9s] rep 14  after:   26.029 ms  Newton 468  PCG 12700  LS 478
+[  243.0s] rep 15  fork3:   26.918 ms  Newton 469  PCG 12875  LS 479
+[  247.1s] rep 15   null:   27.111 ms  Newton 465  PCG 13130  LS 476
+[  251.1s] rep 15    off:   27.101 ms  Newton 471  PCG 12910  LS 484
+[  254.9s] rep 15  after:   25.400 ms  Newton 463  PCG 12370  LS 477
+[  258.9s] rep 16  fork3:   26.576 ms  Newton 466  PCG 12775  LS 477
+[  262.8s] rep 16  after:   25.972 ms  Newton 464  PCG 12850  LS 473
+[  266.8s] rep 16    off:   26.834 ms  Newton 468  PCG 12755  LS 484
+[  270.8s] rep 16   null:   26.424 ms  Newton 474  PCG 12935  LS 491
+[  274.8s] rep 17    off:   26.810 ms  Newton 462  PCG 12515  LS 471
+[  278.5s] rep 17  after:   24.733 ms  Newton 464  PCG 12680  LS 473
+[  282.4s] rep 17  fork3:   25.547 ms  Newton 454  PCG 12575  LS 462
+[  286.4s] rep 17   null:   27.026 ms  Newton 467  PCG 12795  LS 479
+[  290.4s] rep 18    off:   27.271 ms  Newton 470  PCG 12925  LS 480
+[  294.4s] rep 18   null:   26.787 ms  Newton 469  PCG 13085  LS 478
+[  298.4s] rep 18  fork3:   26.755 ms  Newton 476  PCG 12735  LS 496
+[  302.2s] rep 18  after:   24.838 ms  Newton 458  PCG 12245  LS 472
+[  306.3s] rep 19  fork3:   27.444 ms  Newton 472  PCG 13085  LS 482
+[  310.1s] rep 19   null:   25.667 ms  Newton 464  PCG 12775  LS 475
+[  314.2s] rep 19    off:   27.497 ms  Newton 470  PCG 13055  LS 481
+[  318.0s] rep 19  after:   25.218 ms  Newton 467  PCG 12490  LS 476
+[  322.1s] rep 20  fork3:   27.172 ms  Newton 472  PCG 12935  LS 485
+[  325.9s] rep 20  after:   25.694 ms  Newton 467  PCG 12665  LS 479
+[  330.1s] rep 20    off:   27.490 ms  Newton 469  PCG 12915  LS 480
+[  334.2s] rep 20   null:   28.045 ms  Newton 480  PCG 12865  LS 495
+
+=== rwb_f3  rigid-wrecking-balls  n=20 per arm, 4 arms, baseline=off ===
+
+-- newton
+      off: mean    468.3000 sd   6.2857 [452.0000, 478.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    464.8000 sd   5.4461 [456.0000, 477.0000]    -0.75%  overlapping  t=+1.83 p=0.0746
+    fork3: mean    465.7000 sd   7.4572 [446.0000, 478.0000]    -0.56%  overlapping  t=+1.16 p=0.253
+     null: mean    468.5500 sd   4.7167 [462.0000, 480.0000]    +0.05%  overlapping  t=-0.14 p=0.891
+
+-- pcg
+      off: mean  12784.7500 sd 221.7176 [12225.0000, 13135.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean  12673.5000 sd 203.6793 [12245.0000, 13020.0000]    -0.87%  overlapping  t=+1.61 p=0.116
+    fork3: mean  12731.2500 sd 177.2913 [12380.0000, 13085.0000]    -0.42%  overlapping  t=+0.82 p=0.417
+     null: mean  12823.2500 sd 147.6590 [12520.0000, 13130.0000]    +0.30%  overlapping  t=-0.63 p=0.533
+
+-- line_search
+      off: mean    480.5000 sd   7.6518 [465.0000, 495.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    475.5000 sd   5.6436 [466.0000, 487.0000]    -1.04%  overlapping  t=+2.29 p=0.028
+    fork3: mean    477.9500 sd   9.4735 [457.0000, 496.0000]    -0.53%  overlapping  t=+0.91 p=0.367
+     null: mean    480.6500 sd   6.2632 [472.0000, 495.0000]    +0.03%  overlapping  t=-0.07 p=0.948
+
+-- mean_ms
+      off: mean     27.1456 sd   0.4320 [26.3502, 27.7986]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     25.6149 sd   0.4605 [24.7327, 26.3684]    -5.64%  overlapping  t=+10.57 p=7.57e-13
+    fork3: mean     26.4646 sd   0.6387 [24.6189, 27.4436]    -2.51%  overlapping  t=+3.85 p=0.000508
+     null: mean     26.9818 sd   0.5157 [25.6670, 28.0446]    -0.60%  overlapping  t=+1.06 p=0.296
+
+-- median_ms
+      off: mean     23.8216 sd   0.2261 [23.2542, 24.2817]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     22.7022 sd   0.3183 [21.6541, 23.1257]    -4.70%  DISJOINT  t=+12.50 p=2.55e-14
+    fork3: mean     23.4251 sd   0.2966 [22.4006, 23.7671]    -1.66%  overlapping  t=+4.63 p=4.68e-05
+     null: mean     23.6003 sd   0.5786 [21.9994, 24.2399]    -0.93%  overlapping  t=+1.55 p=0.133
+
+-- ms_per_newton
+      off: mean      6.9560 sd   0.0632 [6.8318, 7.0672]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean      6.6131 sd   0.0850 [6.3964, 6.7169]    -4.93%  DISJOINT  t=+14.12 p=4.9e-16
+    fork3: mean      6.8187 sd   0.0816 [6.6239, 6.9772]    -1.97%  overlapping  t=+5.80 p=1.31e-06
+     null: mean      6.9101 sd   0.0997 [6.6380, 7.0404]    -0.66%  overlapping  t=+1.69 p=0.0999
+
+-- ms_per_pcg
+      off: mean      0.2548 sd   0.0037 [0.2485, 0.2624]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean      0.2425 sd   0.0031 [0.2341, 0.2488]    -4.82%  overlapping  t=+11.01 p=3.08e-13
+    fork3: mean      0.2494 sd   0.0048 [0.2360, 0.2598]    -2.11%  overlapping  t=+3.87 p=0.000439
+     null: mean      0.2525 sd   0.0050 [0.2411, 0.2616]    -0.91%  overlapping  t=+1.62 p=0.114
+
+raw runs + summary: ab/rwb_f3

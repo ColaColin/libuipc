@@ -1,0 +1,46 @@
+s11 -- the nsys GPU busy union does not rank these arms
+=======================================================
+
+GPU busy union and trace span from `cuda_gpu_trace`, NORMALISED per Newton
+iteration (s10 compared raw totals across runs whose Newton counts differ by up
+to 5 %), full 120-frame rigid-wrecking-balls runs under
+`nsys profile -t cuda --cuda-graph-trace=node`, beside the un-instrumented
+end-to-end ms/Newton from the n=30 sweep (n=20 for arm 3).
+
+ arm  n  union/it us     sd   sd%  union d%  span d%  END-TO-END d%
+   0  4       6550.6   71.7  1.09     +0.00    +0.00          +0.00
+   1  4       6525.6   16.7  0.26     -0.38    -0.34          -4.97
+   2  4       6824.8  114.6  1.68     +4.19    +3.62          -4.81
+   3  4       6267.6   61.7  0.98     -4.32    -3.93          -1.97
+   4  4       6303.8   73.7  1.17     -3.77    -3.27          -4.82
+
+Spearman rho(union d%, end-to-end d%) over the five arms = +0.10
+
+arm 0 = UIPC_ABD_GH_PREPASS off (in place, on the default stream)
+arm 1 = enqueued by SimEngine after the whole dytopo-effect phase (s10)
+arm 2 = enqueued before the contact phase
+arm 3 = enqueued between contact part 1 and part 2       (s11)
+arm 4 = enqueued just after contact part 2               (s11, the new default)
+
+Read the last two columns together. The union reads -0.4 % for the arm worth
+-5.0 % of the wall, +4.2 % for an arm worth -4.8 %, and -4.3 % -- its best score
+-- for the arm worth only -2.0 %. The per-arm sd of the union is 0.3-1.7 %,
+while the arms are 4-9 percentage points apart on it, so this is not sampling
+noise; and with 4-6 runs per arm it is not the single-run accident that s10's
+one trace per arm could not exclude.
+
+Two separate defects are stacked here:
+  (a) the union is a LEVEL, and s10 compared levels across runs whose Newton
+      counts differ. Normalising per iteration is necessary but not sufficient;
+  (b) even normalised, the union measures GPU-busy time, which is not what these
+      arms change. Every arm hides the same 155 ms of prepass; what differs is
+      which kernel gets starved of SMs and whether that kernel is on the host's
+      critical chain. The union cannot see a host stall at all, and under nsys
+      the host stalls differently -- which is exactly the variable under test.
+
+`cuda_gpu_kern_sum` was already known to be unusable for scene totals here (it
+is a duration sum: sum/union is 1.08 off, 1.13 at mode 1 and up to 1.22 at mode
+4). This adds the union to the list. For a step that changes *where* work is
+issued, the instrument is the un-instrumented end-to-end benchmark at n>=20 with
+a null arm; the trace is for MECHANISM only (which kernel ran when), and it is
+very good at that -- see overlap_rwb.txt.

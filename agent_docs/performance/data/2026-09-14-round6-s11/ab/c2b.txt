@@ -1,0 +1,60 @@
+[   44.7s] warmup    off:  164.271 ms  Newton 1657
+[   90.0s] warmup  fork4:  167.067 ms  Newton 1663
+[  135.4s] warmup   null:  166.884 ms  Newton 1663
+[  180.3s] rep  1    off:  165.283 ms  Newton 1664  PCG 63475  LS 1793
+[  225.4s] rep  1  fork4:  165.831 ms  Newton 1663  PCG 64110  LS 1785
+[  270.5s] rep  1   null:  165.268 ms  Newton 1665  PCG 63520  LS 1792
+[  315.6s] rep  2    off:  165.709 ms  Newton 1664  PCG 64210  LS 1780
+[  360.8s] rep  2   null:  165.360 ms  Newton 1660  PCG 63940  LS 1775
+[  405.7s] rep  2  fork4:  164.748 ms  Newton 1664  PCG 63410  LS 1793
+[  450.8s] rep  3   null:  165.974 ms  Newton 1664  PCG 64280  LS 1792
+[  496.2s] rep  3    off:  166.415 ms  Newton 1666  PCG 64390  LS 1807
+[  541.5s] rep  3  fork4:  166.283 ms  Newton 1664  PCG 64370  LS 1776
+[  586.8s] rep  4   null:  166.251 ms  Newton 1665  PCG 64605  LS 1808
+[  632.1s] rep  4  fork4:  166.356 ms  Newton 1663  PCG 64755  LS 1768
+[  677.2s] rep  4    off:  165.622 ms  Newton 1663  PCG 63850  LS 1788
+[  722.3s] rep  5  fork4:  165.033 ms  Newton 1658  PCG 64040  LS 1773
+[  767.1s] rep  5   null:  164.203 ms  Newton 1661  PCG 62565  LS 1795
+[  812.5s] rep  5    off:  166.449 ms  Newton 1666  PCG 64250  LS 1792
+[  857.9s] rep  6  fork4:  166.583 ms  Newton 1660  PCG 65175  LS 1775
+[  903.0s] rep  6    off:  165.540 ms  Newton 1663  PCG 63455  LS 1780
+[  948.6s] rep  6   null:  167.232 ms  Newton 1666  PCG 64940  LS 1804
+
+=== c2b  stiff-gipc-case2  n=6 per arm, 3 arms, baseline=off ===
+
+-- newton
+      off: mean   1664.3333 sd   1.2472 [1663.0000, 1666.0000]    +0.00%  overlapping  t=+0.00 p=1
+    fork4: mean   1662.0000 sd   2.2361 [1658.0000, 1664.0000]    -0.14%  overlapping  t=+2.04 p=0.0767
+     null: mean   1663.5000 sd   2.2174 [1660.0000, 1666.0000]    -0.05%  overlapping  t=+0.73 p=0.485
+
+-- pcg
+      off: mean  63938.3333 sd 372.1633 [63455.0000, 64390.0000]    +0.00%  overlapping  t=+0.00 p=1
+    fork4: mean  64310.0000 sd 558.6815 [63410.0000, 65175.0000]    +0.58%  overlapping  t=-1.24 p=0.248
+     null: mean  63975.0000 sd 776.4771 [62565.0000, 64940.0000]    +0.06%  overlapping  t=-0.10 p=0.927
+
+-- line_search
+      off: mean   1790.0000 sd   9.1833 [1780.0000, 1807.0000]    +0.00%  overlapping  t=+0.00 p=1
+    fork4: mean   1778.3333 sd   8.2798 [1768.0000, 1793.0000]    -0.65%  overlapping  t=+2.11 p=0.0614
+     null: mean   1794.3333 sd  10.5304 [1775.0000, 1808.0000]    +0.24%  overlapping  t=-0.69 p=0.504
+
+-- mean_ms
+      off: mean    165.8362 sd   0.4410 [165.2826, 166.4493]    +0.00%  overlapping  t=+0.00 p=1
+    fork4: mean    165.8055 sd   0.6896 [164.7476, 166.5835]    -0.02%  overlapping  t=+0.08 p=0.935
+     null: mean    165.7148 sd   0.9372 [164.2028, 167.2325]    -0.07%  overlapping  t=+0.26 p=0.801
+
+-- median_ms
+      off: mean    167.8336 sd   0.5305 [166.7703, 168.3343]    +0.00%  overlapping  t=+0.00 p=1
+    fork4: mean    167.5007 sd   0.9098 [166.1673, 168.4062]    -0.20%  overlapping  t=+0.71 p=0.5
+     null: mean    167.8072 sd   1.0772 [166.7740, 169.9030]    -0.02%  overlapping  t=+0.05 p=0.962
+
+-- ms_per_newton
+      off: mean     24.9103 sd   0.0507 [24.8321, 24.9774]    +0.00%  overlapping  t=+0.00 p=1
+    fork4: mean     24.9407 sd   0.1057 [24.7517, 25.0879]    +0.12%  overlapping  t=-0.58 p=0.579
+     null: mean     24.9044 sd   0.1189 [24.7144, 25.0949]    -0.02%  overlapping  t=+0.10 p=0.922
+
+-- ms_per_pcg
+      off: mean      0.6484 sd   0.0025 [0.6452, 0.6522]    +0.00%  overlapping  t=+0.00 p=1
+    fork4: mean      0.6446 sd   0.0033 [0.6390, 0.6495]    -0.59%  overlapping  t=+2.07 p=0.068
+     null: mean      0.6476 sd   0.0045 [0.6433, 0.6561]    -0.12%  overlapping  t=+0.35 p=0.733
+
+raw runs + summary: ab/c2b

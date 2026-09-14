@@ -1,0 +1,61 @@
+s11 -- the ABD G/H prepass placement, all five call sites, one build
+====================================================================
+
+Switch: UIPC_ABD_GH_PREPASS (parsed in affine_body/abd_gh_prepass_mode.h)
+  0 off (in place, default stream, pre-s10)
+  1 enqueued by SimEngine after the whole dytopo-effect phase   (s10, was the default)
+  2 enqueued by ABDLinearSubsystem before the contact phase
+  3 enqueued between contact part 1's and part 2's launches      (s11, the brief's candidate)
+  4 enqueued just after contact part 2's launch                  (s11, the new default)
+
+All numbers: one build, arms interleaved by abn.py (rotated + reversed arm order,
+one discarded warm-up per arm), ms per Newton iteration, Welch t-test.
+The change is bit-identical (253 071 312 output words compared on device across
+modes 3 and 4, 0 mismatching), so ms_per_newton is the legitimate statistic.
+
+rigid-wrecking-balls, n=30/arm, 5 arms
+--------------------------------------
+  arm       ms/Newton      sd      vs off      p
+  off         6.9675    0.0765     +0.00 %     --
+  after (1)   6.6212    0.0875     -4.97 %     3.8e-23
+  before (2)  6.6327    0.0941     -4.81 %     2.3e-21   DISJOINT
+  fork4 (4)   6.6314    0.0523     -4.82 %     9.7e-26   DISJOINT
+  null (00)   6.9185    0.0952     -0.70 %     0.032     <- the instrument's own envelope
+  pairwise: after vs before p=0.63, after vs fork4 p=0.59, before vs fork4 p=0.95
+  => 1, 2 and 4 are INDISTINGUISHABLE on this scene.
+
+rigid-wrecking-balls, n=20/arm, fork3 (separate sweep, same build)
+-----------------------------------------------------------------
+  off 6.9560 | after 6.6131 (-4.93 %, DISJOINT) | fork3 6.8187 (-1.97 %, p=1.3e-06,
+  overlapping) | null 6.9101 (-0.66 %)
+  (a first sweep at n=10 read fork3 at -0.57 %, p=0.30.)
+  => fork3 recovers 2.0 % where every other placement recovers 4.8-5.0 %.
+
+cube-wall-cloth, n=10/arm, 5 arms
+---------------------------------
+  off 11.4100 | after 11.4119 (+0.02 %, p=0.96) | before 11.2200 (-1.67 %, p=5.8e-05)
+  fork3 11.0553 (-3.11 %, p=1.4e-06, DISJOINT) | fork4 11.1686 (-2.12 %, p=1.3e-05)
+  pairwise: after vs fork4 -2.13 % p=4.0e-05; fork3 vs fork4 +1.02 % p=0.038
+
+cube-wall-cloth, n=12/arm, with a null arm (confirmation)
+---------------------------------------------------------
+  off 11.3720 | after 11.3727 (+0.01 %, p=0.99) | fork4 11.1244 (-2.18 %, p=3.9e-06)
+  null 11.3560 (-0.14 %, p=0.70)
+
+  => the ranking INVERTS between the two ABD scenes. mode 1 -- the arm that wins
+     rigid-wrecking-balls -- is worth exactly nothing on cube-wall-cloth, and
+     mode 3 -- the worst arm on rigid-wrecking-balls -- is the best one here.
+     Mode 4 is the only arm at the top of both.
+
+Controls (both verified by s10's launch census to run ZERO ABD G/H kernels)
+---------------------------------------------------------------------------
+  mas-bunny,  n=6/arm, Newton 465 in all 18 runs (deterministic):
+    off 14.3229 | after +0.03 % (p=0.65) | fork4 +0.09 % (p=0.24)
+  stiff-gipc-case2, n=4/arm:
+    off 24.9510 | after -0.07 % (p=0.75) | fork4 -0.46 % (p=0.034, "disjoint" at n=4)
+  stiff-gipc-case2, n=6/arm re-measured with a null arm: see c2b below.
+
+tumbler-garments, n=5/arm -- NOT RESOLVED
+------------------------------------------
+  off 13.7161 (sd 1.09, i.e. 8 %) | after -5.10 % (p=0.29) | fork4 -2.00 % (p=0.69)
+  This scene's scatter here is much wider than the effect; no claim is made.

@@ -1,0 +1,62 @@
+[    8.7s] warmup    off:   66.496 ms  Newton 465
+[   17.3s] warmup  after:   66.533 ms  Newton 465
+[   25.9s] warmup  fork4:   66.555 ms  Newton 465
+[   34.6s] rep  1    off:   66.571 ms  Newton 465  PCG 35210  LS 465
+[   43.3s] rep  1  after:   66.662 ms  Newton 465  PCG 35205  LS 465
+[   52.0s] rep  1  fork4:   66.797 ms  Newton 465  PCG 35225  LS 465
+[   60.7s] rep  2    off:   66.616 ms  Newton 465  PCG 35195  LS 465
+[   69.5s] rep  2  fork4:   66.704 ms  Newton 465  PCG 35230  LS 465
+[   78.1s] rep  2  after:   66.650 ms  Newton 465  PCG 35210  LS 465
+[   86.8s] rep  3  fork4:   66.631 ms  Newton 465  PCG 35170  LS 465
+[   95.5s] rep  3    off:   66.635 ms  Newton 465  PCG 35195  LS 465
+[  104.2s] rep  3  after:   66.608 ms  Newton 465  PCG 35225  LS 465
+[  112.8s] rep  4  fork4:   66.569 ms  Newton 465  PCG 35190  LS 465
+[  121.5s] rep  4  after:   66.588 ms  Newton 465  PCG 35210  LS 465
+[  130.1s] rep  4    off:   66.572 ms  Newton 465  PCG 35210  LS 465
+[  138.9s] rep  5  after:   66.733 ms  Newton 465  PCG 35205  LS 465
+[  147.6s] rep  5  fork4:   66.758 ms  Newton 465  PCG 35215  LS 465
+[  156.2s] rep  5    off:   66.673 ms  Newton 465  PCG 35195  LS 465
+[  164.9s] rep  6  after:   66.480 ms  Newton 465  PCG 35195  LS 465
+[  173.5s] rep  6    off:   66.542 ms  Newton 465  PCG 35210  LS 465
+[  182.2s] rep  6  fork4:   66.524 ms  Newton 465  PCG 35210  LS 465
+/workspace/deps/uipc-perf-env/lib/python3.11/site-packages/scipy/stats/_axis_nan_policy.py:592: RuntimeWarning: Precision loss occurred in moment calculation due to catastrophic cancellation. This occurs when the data are nearly identical. Results may be unreliable.
+  res = hypotest_fun_out(*samples, **kwds)
+
+=== mb  mas-bunny  n=6 per arm, 3 arms, baseline=off ===
+
+-- newton
+      off: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+nan p=nan
+    fork4: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+nan p=nan
+
+-- pcg
+      off: mean  35202.5000 sd   7.5000 [35195.0000, 35210.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean  35208.3333 sd   8.9753 [35195.0000, 35225.0000]    +0.02%  overlapping  t=-1.12 p=0.292
+    fork4: mean  35206.6667 sd  20.7498 [35170.0000, 35230.0000]    +0.01%  overlapping  t=-0.42 p=0.687
+
+-- line_search
+      off: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+nan p=nan
+    fork4: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+nan p=nan
+
+-- mean_ms
+      off: mean     66.6015 sd   0.0442 [66.5425, 66.6729]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     66.6204 sd   0.0777 [66.4801, 66.7333]    +0.03%  overlapping  t=-0.47 p=0.649
+    fork4: mean     66.6638 sd   0.0982 [66.5238, 66.7966]    +0.09%  overlapping  t=-1.29 p=0.237
+
+-- median_ms
+      off: mean     73.3190 sd   0.1022 [73.1728, 73.4486]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     73.2515 sd   0.1300 [73.1238, 73.4665]    -0.09%  overlapping  t=+0.91 p=0.384
+    fork4: mean     73.2651 sd   0.2522 [72.9315, 73.7485]    -0.07%  overlapping  t=+0.44 p=0.672
+
+-- ms_per_newton
+      off: mean     14.3229 sd   0.0095 [14.3102, 14.3383]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     14.3270 sd   0.0167 [14.2968, 14.3513]    +0.03%  overlapping  t=-0.47 p=0.649
+    fork4: mean     14.3363 sd   0.0211 [14.3062, 14.3649]    +0.09%  overlapping  t=-1.29 p=0.237
+
+-- ms_per_pcg
+      off: mean      0.1892 sd   0.0002 [0.1890, 0.1894]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean      0.1892 sd   0.0002 [0.1889, 0.1896]    +0.01%  overlapping  t=-0.19 p=0.856
+    fork4: mean      0.1893 sd   0.0002 [0.1889, 0.1896]    +0.08%  overlapping  t=-1.19 p=0.264
+
+raw runs + summary: ab/mb
