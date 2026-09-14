@@ -1,0 +1,14 @@
+[seg-verify] matrix<3,3> in=1856397 out=286419 words=2577771 mismatch_words=524 (in_multiwarp_slots=524, elsewhere=0) slots=231 multiwarp_slots=435 maxrel=1.519e-14
+[seg-verify] matrix<3,3> in=1856008 out=286439 words=2577951 mismatch_words=521 (in_multiwarp_slots=521, elsewhere=0) slots=221 multiwarp_slots=420 maxrel=1.757e-14
+[seg-verify] matrix<3,3> in=1853850 out=286444 words=2577996 mismatch_words=585 (in_multiwarp_slots=585, elsewhere=0) slots=240 multiwarp_slots=461 maxrel=5.639e-15
+[seg-verify] matrix<3,3> in=1851787 out=286469 words=2578221 mismatch_words=494 (in_multiwarp_slots=494, elsewhere=0) slots=212 multiwarp_slots=411 maxrel=8.772e-15
+[seg-verify] matrix<3,3> in=1850159 out=286471 words=2578239 mismatch_words=507 (in_multiwarp_slots=507, elsewhere=0) slots=204 multiwarp_slots=403 maxrel=2.971e-13
+[seg-verify] matrix<3,3> in=1848471 out=286455 words=2578095 mismatch_words=471 (in_multiwarp_slots=471, elsewhere=0) slots=198 multiwarp_slots=392 maxrel=4.145e-13
+[seg-verify] matrix<3,3> in=1883771 out=286459 words=2578131 mismatch_words=651 (in_multiwarp_slots=651, elsewhere=0) slots=266 multiwarp_slots=501 maxrel=2.362e-14
+[seg-verify] matrix<3,3> in=1883419 out=286467 words=2578203 mismatch_words=612 (in_multiwarp_slots=612, elsewhere=0) slots=254 multiwarp_slots=486 maxrel=2.117e-14
+[seg-verify] matrix<3,3> in=1882843 out=286455 words=2578095 mismatch_words=638 (in_multiwarp_slots=638, elsewhere=0) slots=257 multiwarp_slots=482 maxrel=4.943e-15
+[seg-verify] matrix<3,3> in=1882679 out=286459 words=2578131 mismatch_words=622 (in_multiwarp_slots=622, elsewhere=0) slots=262 multiwarp_slots=495 maxrel=3.877e-15
+[seg-verify] matrix<3,3> in=1882591 out=286461 words=2578149 mismatch_words=610 (in_multiwarp_slots=610, elsewhere=0) slots=248 multiwarp_slots=476 maxrel=2.108e-14
+[seg-verify] matrix<3,3> in=1882331 out=286456 words=2578104 mismatch_words=638 (in_multiwarp_slots=638, elsewhere=0) slots=241 multiwarp_slots=446 maxrel=4.759e-15
+[seg-verify] matrix<3,3> in=1882253 out=286457 words=2578113 mismatch_words=594 (in_multiwarp_slots=594, elsewhere=0) slots=255 multiwarp_slots=497 maxrel=3.107e-15
+[seg-verify] matrix<3,3> in=1882327 out=286457 words=2578113 mismatch_words=642 (in_multiwarp_slots=642, elsewhere=0) slots=256 multiwarp_slots=485 maxrel=2.775e-15

@@ -1,0 +1,29 @@
+[   42.7s] warmup       old: 156.167 ms/frame (discarded)
+[   85.5s] warmup       new: 155.847 ms/frame (discarded)
+[  128.4s] rep 1      old: 156.889 ms/frame  Newton 1656  PCG 64135
+[  171.1s] rep 1      new: 155.631 ms/frame  Newton 1660  PCG 64525
+[  213.6s] rep 2      new: 155.258 ms/frame  Newton 1661  PCG 64170
+[  256.6s] rep 2      old: 157.418 ms/frame  Newton 1662  PCG 64355
+[  299.6s] rep 3      old: 156.418 ms/frame  Newton 1660  PCG 63425
+[  342.2s] rep 3      new: 155.102 ms/frame  Newton 1658  PCG 63845
+[  384.9s] rep 4      new: 156.376 ms/frame  Newton 1661  PCG 64665
+[  428.3s] rep 4      old: 158.237 ms/frame  Newton 1666  PCG 64850
+[  471.4s] rep 5      old: 157.307 ms/frame  Newton 1661  PCG 64325
+[  513.7s] rep 5      new: 154.274 ms/frame  Newton 1655  PCG 63275
+[  555.9s] rep 6      new: 153.775 ms/frame  Newton 1656  PCG 62840
+[  598.7s] rep 6      old: 156.529 ms/frame  Newton 1659  PCG 63285
+[  641.5s] rep 7      old: 155.998 ms/frame  Newton 1659  PCG 62910
+[  684.0s] rep 7      new: 155.170 ms/frame  Newton 1660  PCG 63805
+[  726.5s] rep 8      new: 155.262 ms/frame  Newton 1657  PCG 63710
+[  769.7s] rep 8      old: 158.012 ms/frame  Newton 1666  PCG 64455
+
+=== s17_c2  stiff-gipc-case2  n=8 per arm ===
+       mean_ms: old   157.1009 [155.9979, 158.2366]   new   155.1061 [153.7753, 156.3764]     -1.27%  overlapping  t=+5.05 p=0.000176
+     median_ms: old   158.8326 [157.5997, 160.2392]   new   156.9916 [156.0221, 158.0348]     -1.16%  overlapping
+ ms_per_newton: old    23.6437 [23.5078, 23.7450]   new    23.3804 [23.2149, 23.5365]     -1.11%  overlapping  t=+5.91 p=4.12e-05
+    ms_per_pcg: old     0.6140 [0.6100, 0.6199]   new     0.6073 [0.6030, 0.6118]     -1.10%  overlapping  t=+4.01 p=0.00142
+        newton: old  1661.1250 [1656.0000, 1666.0000]   new  1658.5000 [1655.0000, 1661.0000]     -0.16%  overlapping
+           pcg: old 63967.5000 [62910.0000, 64850.0000]   new 63854.3750 [62840.0000, 64665.0000]     -0.18%  overlapping
+   line_search: old  1780.0000 [1741.0000, 1815.0000]   new  1777.6250 [1760.0000, 1804.0000]     -0.13%  overlapping
+
+raw runs + summary: /workspace/output/round6/s17/ab/c2

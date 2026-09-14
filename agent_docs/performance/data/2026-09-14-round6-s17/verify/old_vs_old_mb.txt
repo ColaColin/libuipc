@@ -1,0 +1,12 @@
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=258 (in_multiwarp_slots=258, elsewhere=0) slots=103 multiwarp_slots=196 maxrel=9.583e-15
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=233 (in_multiwarp_slots=233, elsewhere=0) slots=97 multiwarp_slots=196 maxrel=3.466e-14
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=272 (in_multiwarp_slots=272, elsewhere=0) slots=107 multiwarp_slots=196 maxrel=3.512e-15
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=229 (in_multiwarp_slots=229, elsewhere=0) slots=91 multiwarp_slots=196 maxrel=1.893e-14
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=245 (in_multiwarp_slots=245, elsewhere=0) slots=98 multiwarp_slots=196 maxrel=7.475e-15
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=258 (in_multiwarp_slots=258, elsewhere=0) slots=95 multiwarp_slots=196 maxrel=6.812e-15
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=218 (in_multiwarp_slots=218, elsewhere=0) slots=92 multiwarp_slots=196 maxrel=1.058e-15
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=260 (in_multiwarp_slots=260, elsewhere=0) slots=106 multiwarp_slots=196 maxrel=1.138e-14
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=241 (in_multiwarp_slots=241, elsewhere=0) slots=98 multiwarp_slots=196 maxrel=7.742e-15
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=226 (in_multiwarp_slots=226, elsewhere=0) slots=95 multiwarp_slots=196 maxrel=5.089e-14
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=241 (in_multiwarp_slots=241, elsewhere=0) slots=98 multiwarp_slots=196 maxrel=1.826e-15
+[seg-verify] matrix<3,3> in=818543 out=128736 words=1158624 mismatch_words=281 (in_multiwarp_slots=281, elsewhere=0) slots=113 multiwarp_slots=196 maxrel=9.432e-15
