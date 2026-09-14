@@ -1,0 +1,171 @@
+=== s02  UIPC_DSB_GAUSS_NEWTON  (default: Gauss-Newton <Proj=3,Solver=1>; =0: exact <1,1>)
+--- default  [t_default]
+        90 x    350.65 us  void <unnamed>::DiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>
+--- UIPC_DSB_GAUSS_NEWTON=0  [t_gn0]
+        89 x   3482.55 us  void <unnamed>::DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>
+
+=== s07/V2  UIPC_CONTACT_RANK1  (contact part 2 Proj: default 5 = PP closed form; =0 exact) and
+=== s08     UIPC_CONTACT_SPD1_BASIS (contact part 1 Proj: default 8 = basis-free; =0 dense-Q eigen path)
+--- t_default  [t_default]
+        90 x    455.64 us  <unnamed>::abd_diag_preconditioner_do_assemble_kernel
+        76 x   1455.92 us  void <unnamed>::do_assemble_kernel<0, 1, 1, 1, 0, 8>
+        76 x    318.22 us  void <unnamed>::do_assemble_kernel<0, 2, 0, 0, 1, 1>
+        70 x    280.71 us  void <unnamed>::do_assemble_kernel<0>
+--- t_rank1_0  [t_rank1_0]
+       111 x    457.63 us  <unnamed>::abd_diag_preconditioner_do_assemble_kernel
+        97 x   1741.08 us  void <unnamed>::do_assemble_kernel<0, 1, 1, 1, 0, 8>
+        97 x    839.68 us  void <unnamed>::do_assemble_kernel<0, 2, 0, 0, 1, 0>
+        91 x    422.00 us  void <unnamed>::do_assemble_kernel<0>
+--- t_spd1b0  [t_spd1b0]
+        99 x    453.72 us  <unnamed>::abd_diag_preconditioner_do_assemble_kernel
+        85 x   1685.06 us  void <unnamed>::do_assemble_kernel<0, 1, 1, 1, 0, 1>
+        85 x    460.02 us  void <unnamed>::do_assemble_kernel<0, 2, 0, 0, 1, 1>
+        79 x    342.96 us  void <unnamed>::do_assemble_kernel<0>
+
+=== s04  UIPC_CCD_EARLY_OUT and s06 UIPC_CCD_COMPACT  (filter_toi_k*<EarlyOut, Stats, DcdCull>)
+--- t_default  [t_default]
+       180 x      9.44 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+       106 x     11.00 us  <unnamed>::EasyVertexHalfPlaneTrajectoryFilter_filter_active_kernel
+        94 x     54.56 us  <unnamed>::filter_active_k4_kernel
+        94 x     40.05 us  <unnamed>::filter_active_k3_kernel
+        94 x      4.63 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        94 x      4.58 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        94 x      3.90 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        94 x      3.12 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        90 x    801.32 us  void <unnamed>::filter_toi_k4_kernel<1, 0, 1>
+        90 x    393.64 us  void <unnamed>::filter_toi_k3_kernel<1, 0, 1>
+        90 x     16.95 us  <unnamed>::EasyVertexHalfPlaneTrajectoryFilter_filter_toi_kernel
+         1 x      2.59 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<int, int, int, 
+--- t_ccdeo0  [t_ccdeo0]
+       164 x      9.32 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        98 x     11.07 us  <unnamed>::EasyVertexHalfPlaneTrajectoryFilter_filter_active_kernel
+        86 x     50.21 us  <unnamed>::filter_active_k4_kernel
+        86 x     38.09 us  <unnamed>::filter_active_k3_kernel
+        86 x      4.33 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        86 x      4.27 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        86 x      3.68 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        86 x      2.99 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        82 x   1049.43 us  void <unnamed>::filter_toi_k4_kernel<0, 0, 1>
+        82 x    541.89 us  void <unnamed>::filter_toi_k3_kernel<0, 0, 1>
+        82 x     16.92 us  <unnamed>::EasyVertexHalfPlaneTrajectoryFilter_filter_toi_kernel
+         1 x      2.56 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<int, int, int, 
+--- t_ccdcp0  [t_ccdcp0]
+       121 x     10.81 us  <unnamed>::EasyVertexHalfPlaneTrajectoryFilter_filter_active_kernel
+       117 x    406.89 us  <unnamed>::filter_active_k4_kernel
+       117 x    231.93 us  <unnamed>::filter_active_k3_kernel
+       117 x     20.40 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+       117 x     19.24 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+       117 x     16.31 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+       117 x      9.54 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<Eigen::Matrix<int, 
+        98 x    921.83 us  void <unnamed>::filter_toi_k4_kernel<1, 0, 0>
+        98 x    452.24 us  void <unnamed>::filter_toi_k3_kernel<1, 0, 0>
+        98 x     16.46 us  <unnamed>::EasyVertexHalfPlaneTrajectoryFilter_filter_toi_kernel
+         1 x      2.56 us  void cub::CUB_200700_750_NS::DeviceSelectSweepKernel<cub::CUB_200700_750_NS::detail::device_select_policy_hub<int, int, int, 
+
+=== s17  UIPC_SEG_REDUCE2  (fast_segmental_reduce_matrix_k2_kernel vs the old fast_segmental_reduce_matrix_kernel)
+--- t_default  [t_default]
+        90 x    194.13 us  void uipc::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix_k2_kernel<128, 32, double, 3, 3, uipc::backend::cuda_tool::FastSegmentalReduce<
+        76 x    118.06 us  void uipc::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix_k2_kernel<128, 32, double, 3, 3, uipc::backend::cuda_tool::FastSegmentalReduce<
+        76 x     30.30 us  void uipc::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix_k2_kernel<64, 32, double, 3, 1, uipc::backend::cuda_tool::FastSegmentalReduce<6
+--- t_seg0  [t_seg0]
+        88 x    230.60 us  void uipc::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix_kernel<128, 32, double, 3, 3, uipc::backend::cuda_tool::FastSegmentalReduce<128
+        74 x    148.18 us  void uipc::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix_kernel<128, 32, double, 3, 3, uipc::backend::cuda_tool::FastSegmentalReduce<128
+        74 x     35.46 us  void uipc::backend::cuda_tool::<unnamed>::fast_segmental_reduce_matrix_kernel<64, 32, double, 3, 1, uipc::backend::cuda_tool::FastSegmentalReduce<64, 
+
+=== s09/K9  UIPC_CONTACT_SPLIT with UIPC_ABD_GH_PREPASS=1 pinned  (=2: part 1 + part 2; =1: same two launches one stream; =0: fused Part 0)
+--- r_pre1  [r_pre1]
+        28 x    412.78 us  <unnamed>::abd_diag_preconditioner_do_assemble_kernel
+        24 x     27.85 us  <unnamed>::do_assemble_kernel
+        23 x     38.75 us  <unnamed>::do_assemble_kernel
+        19 x   1556.83 us  void <unnamed>::do_assemble_kernel<0, 1, 1, 1, 0, 8>
+        19 x    617.35 us  void <unnamed>::do_assemble_kernel<0, 2, 0, 0, 1, 1>
+        18 x    369.26 us  void <unnamed>::do_assemble_kernel<0>
+--- streams of kernels matching '%do_assemble_kernel%'  [r_pre1]
+   stream   7:     84 launches
+   stream  13:     28 launches
+   stream  14:     19 launches
+   (all kernels by stream: 7:4472, 18:1200, 15:56, 13:28, 14:19)
+--- r_split1_pre1  [r_split1_pre1]
+        28 x    438.52 us  <unnamed>::abd_diag_preconditioner_do_assemble_kernel
+        24 x     29.19 us  <unnamed>::do_assemble_kernel
+        23 x     39.40 us  <unnamed>::do_assemble_kernel
+        19 x   1689.40 us  void <unnamed>::do_assemble_kernel<0, 1, 1, 1, 0, 8>
+        19 x    400.60 us  void <unnamed>::do_assemble_kernel<0, 2, 0, 0, 1, 1>
+        18 x    414.83 us  void <unnamed>::do_assemble_kernel<0>
+--- streams of kernels matching '%do_assemble_kernel%'  [r_split1_pre1]
+   stream   7:    103 launches
+   stream  13:     28 launches
+   (all kernels by stream: 7:4491, 17:1230, 14:56, 13:28)
+--- r_split0_pre1  [r_split0_pre1]
+        28 x    433.50 us  <unnamed>::abd_diag_preconditioner_do_assemble_kernel
+        24 x     28.87 us  <unnamed>::do_assemble_kernel
+        23 x     40.40 us  <unnamed>::do_assemble_kernel
+        19 x   1732.89 us  void <unnamed>::do_assemble_kernel<0, 0, 1, 1, 1, 1>
+        18 x    398.40 us  void <unnamed>::do_assemble_kernel<0>
+--- streams of kernels matching '%do_assemble_kernel%'  [r_split0_pre1]
+   stream   7:     84 launches
+   stream  13:     28 launches
+   (all kernels by stream: 7:4472, 17:1200, 14:56, 13:28)
+
+=== s10/s11  UIPC_ABD_GH_PREPASS  (default 4: the body-local G/H reporters -- affine_body_bdf1_kinetic + ortho_potential gradient/hessian -- on the prepass side stream; =0: on the default stream, in place)
+--- r_default  [r_default]
+        28 x    593.01 us  void <unnamed>::ortho_potential_compute_gradient_hessian_kernel<1>
+        28 x     36.37 us  <unnamed>::affine_body_bdf1_kinetic_compute_gradient_hessian_kernel
+        28 x     31.74 us  <unnamed>::abd_linear_subsystem_assemble_kinetic_shape_k2_kernel
+        28 x      2.59 us  <unnamed>::abd_linear_subsystem_assemble_kinetic_shape_k1_kernel
+--- streams of kernels matching '%kinetic_compute_gradient_hessian%'  [r_default]
+   stream  15:     28 launches
+   (all kernels by stream: 7:4472, 18:1230, 15:56, 13:28, 14:19)
+--- streams of kernels matching '%ortho_potential_compute_gradient_hessian%'  [r_default]
+   stream  15:     28 launches
+   (all kernels by stream: 7:4472, 18:1230, 15:56, 13:28, 14:19)
+--- r_pre1  [r_pre1]
+        28 x    343.05 us  void <unnamed>::ortho_potential_compute_gradient_hessian_kernel<1>
+        28 x     31.71 us  <unnamed>::abd_linear_subsystem_assemble_kinetic_shape_k2_kernel
+        28 x     22.53 us  <unnamed>::affine_body_bdf1_kinetic_compute_gradient_hessian_kernel
+        28 x      2.53 us  <unnamed>::abd_linear_subsystem_assemble_kinetic_shape_k1_kernel
+--- streams of kernels matching '%kinetic_compute_gradient_hessian%'  [r_pre1]
+   stream  15:     28 launches
+   (all kernels by stream: 7:4472, 18:1200, 15:56, 13:28, 14:19)
+--- streams of kernels matching '%ortho_potential_compute_gradient_hessian%'  [r_pre1]
+   stream  15:     28 launches
+   (all kernels by stream: 7:4472, 18:1200, 15:56, 13:28, 14:19)
+--- r_pre0  [r_pre0]
+        28 x    306.61 us  void <unnamed>::ortho_potential_compute_gradient_hessian_kernel<1>
+        28 x     29.60 us  <unnamed>::abd_linear_subsystem_assemble_kinetic_shape_k2_kernel
+        28 x     18.11 us  <unnamed>::affine_body_bdf1_kinetic_compute_gradient_hessian_kernel
+        28 x      2.28 us  <unnamed>::abd_linear_subsystem_assemble_kinetic_shape_k1_kernel
+--- streams of kernels matching '%kinetic_compute_gradient_hessian%'  [r_pre0]
+   stream   7:     28 launches
+   (all kernels by stream: 7:4528, 17:1200, 13:28, 14:19)
+--- streams of kernels matching '%ortho_potential_compute_gradient_hessian%'  [r_pre0]
+   stream   7:     28 launches
+   (all kernels by stream: 7:4528, 17:1200, 13:28, 14:19)
+
+=== s13  UIPC_SPMV_GRID_FIT  (grid of Spmv_rbk_sym_spmv_dot_chunked_kernel: fitted vs capacity)
+--- gridX of kernels matching '%spmv_dot_chunked%'  [m_default]
+   gridX    576:    600 launches,    58.84 us avg
+--- gridX of kernels matching '%spmv_dot_chunked%'  [m_fit0]
+   gridX   3518:    600 launches,    60.46 us avg
+
+=== s15  UIPC_MAS_ROWDOT2  (schwarz_local_solve_rowdot2_kernel<16,..> vs the round-4 rowdot kernel)
+=== s16  UIPC_MAS_FUSED_R  (fused_R_kernel, no build_multi_level_R; =0: build_multi_level_R + rowdot2)
+--- m_default  [m_default]
+       624 x     27.37 us  void <unnamed>::schwarz_local_solve_fused_R_kernel<1, 1>
+       624 x      4.62 us  void <unnamed>::schwarz_local_solve_fused_R_kernel<0, 0>
+--- m_rd0  [m_rd0]
+       624 x     28.79 us  <unnamed>::schwarz_local_solve_rowdot_kernel
+       624 x     15.36 us  <unnamed>::build_multi_level_R_kernel
+--- m_fr0  [m_fr0]
+       624 x     25.13 us  void <unnamed>::schwarz_local_solve_rowdot2_kernel<16, 0, 0>
+       624 x     15.13 us  <unnamed>::build_multi_level_R_kernel
+
+=== s14  UIPC_CONTACT_DEFERRED_JOIN  (host run-ahead past contact part 1: default 1 deferred, =0 join at do_assemble)
+--- [c_default] part-1 launches 38 on stream(s) [14]; busiest stream 17; non-contact kernels starting INSIDE a part-1 window: 296
+         74  void uipc::backend::cuda_tool::details::buffer_view_fill_kernel<int>
+         74  void uipc::backend::cuda_tool::details::buffer_view_fill_kernel<double>
+         37  <unnamed>::FiniteElementBDF1Kinetic_do_compute_gradient_hessian_kernel
+         37  <unnamed>::FEMLinearSubsystem_assemble_kinetic_kernel
+         37  <unnamed>::StrainLimitingBaraffWitkinShell2D_do_compute_gradient_hessian_kernel
+         37  void <unnamed>::StableNeoHookean3D_do_compute_gradient_hessian_kernel_occ<
+--- [c_dj0] part-1 launches 38 on stream(s) [14]; busiest stream 17; non-contact kernels starting INSIDE a part-1 window: 0

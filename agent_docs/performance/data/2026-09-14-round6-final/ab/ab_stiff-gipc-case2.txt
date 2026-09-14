@@ -1,0 +1,47 @@
+arm  base: /workspace/output/round6/base/venv/bin/python
+           uipc at /workspace/output/round6/base/venv/lib/python3.11/site-packages/uipc/__init__.py
+           836a3bc94696f7a921393652dcb0454e  libuipc_backend_cuda.so
+           7f7758aecdcac2e19275331e7f734da1  libuipc_backend_none.so
+           c423795c7a83c8154dac218a635c3087  libuipc_constitution.so
+           8bdb0b3636a888dc9ec07a94064d5c6b  libuipc_core.so
+           a31955ec1e96433eb0849e4a0231922a  libuipc_geometry.so
+           8f8b25637f43c49574f9045a0ee7879e  libuipc_io.so
+           070aeb9554b268500264719b04b7de49  libuipc_sanity_check.so
+           2a9bf2af2566e8c57da2db7fd863800f  pyuipc.cpython-311-x86_64-linux-gnu.so
+arm  head: /workspace/deps/uipc-perf-env/bin/python
+           uipc at /workspace/deps/uipc-perf-env/lib/python3.11/site-packages/uipc/__init__.py
+           0cd75513ab87a1ee2286ac37f82be907  libuipc_backend_cuda.so
+           d02ab16d7710a054af704e2156a731d7  libuipc_backend_none.so
+           54c8c90756cf881c8e9a2b00485384ca  libuipc_constitution.so
+           1087358581870acea3c765ea36122b34  libuipc_core.so
+           daacc3a73e52bd2630d5ad524b254e35  libuipc_geometry.so
+           84a670716aa792e9d4cabf1ee8fa9990  libuipc_io.so
+           569513698533be7ad7eea456fd9c4549  libuipc_sanity_check.so
+           d70ba98e5fb084956f4aeb5efff640e3  pyuipc.cpython-311-x86_64-linux-gnu.so
+libraries identical between arms: []
+[   50.5s] warmup   base: 186.907 ms/frame (discarded)
+[   93.3s] warmup   head: 155.792 ms/frame (discarded)
+[  143.3s] rep  1  base:  185.054 ms/frame  median  186.655  Newton  1647  PCG  64495  peak 1656 MiB
+[  186.0s] rep  1  head:  155.520 ms/frame  median  157.056  Newton  1656  PCG  64760  peak 1494 MiB
+[  228.6s] rep  2  head:  155.861 ms/frame  median  157.929  Newton  1660  PCG  64530  peak 1488 MiB
+[  279.0s] rep  2  base:  186.285 ms/frame  median  191.340  Newton  1660  PCG  64360  peak 1642 MiB
+[  329.1s] rep  3  base:  185.671 ms/frame  median  187.514  Newton  1659  PCG  64310  peak 1638 MiB
+[  371.4s] rep  3  head:  154.401 ms/frame  median  156.166  Newton  1654  PCG  63420  peak 1500 MiB
+[  413.8s] rep  4  head:  154.915 ms/frame  median  157.190  Newton  1661  PCG  63830  peak 1484 MiB
+[  464.6s] rep  4  base:  188.528 ms/frame  median  188.613  Newton  1668  PCG  66140  peak 1646 MiB
+[  515.1s] rep  5  base:  187.089 ms/frame  median  188.772  Newton  1662  PCG  65135  peak 1668 MiB
+[  557.9s] rep  5  head:  156.089 ms/frame  median  158.690  Newton  1665  PCG  64630  peak 1482 MiB
+
+=== v3  stiff-gipc-case2  n=5 per arm  (base -> head) ===
+         mean_ms: base   186.5252 [185.0537, 188.5282] med 186.2848   head   155.3571 [154.4011, 156.0890] med 155.5200    -16.71%  DISJOINT  t=+45.93 p=7.55e-09 MWU p=0.00794
+       median_ms: base   188.5790 [186.6554, 191.3397] med 188.6134   head   157.4063 [156.1656, 158.6903] med 157.1904    -16.53%  DISJOINT  t=+34.72 p=2.76e-08 MWU p=0.00794
+   ms_per_newton: base    28.1045 [27.9794, 28.2566] med 28.0895   head    23.4084 [23.3165, 23.4783] med 23.4368    -16.71%  DISJOINT  t=+81.60 p=3.75e-12
+      ms_per_pcg: base     0.7187 [0.7126, 0.7236] med 0.7181   head     0.6047 [0.6004, 0.6086] med 0.6038    -15.86%  DISJOINT  t=+47.96 p=1.78e-10
+          newton: base  1659.2000 [1647.0000, 1668.0000] med 1660.0000   head  1659.2000 [1654.0000, 1665.0000] med 1660.0000     +0.00%  overlapping  t=+0.00 p=1
+             pcg: base 64888.0000 [64310.0000, 66140.0000] med 64495.0000   head 64234.0000 [63420.0000, 64760.0000] med 64530.0000     -1.01%  overlapping  t=+1.51 p=0.172
+newton_per_frame: base     6.6368 [6.5880, 6.6720] med 6.6400   head     6.6368 [6.6160, 6.6600] med 6.6400     +0.00%  overlapping  t=+0.00 p=1
+   pcg_per_frame: base   259.5520 [257.2400, 264.5600] med 257.9800   head   256.9360 [253.6800, 259.0400] med 258.1200     -1.01%  overlapping  t=+1.51 p=0.172
+     line_search: base  1785.0000 [1762.0000, 1828.0000] med 1783.0000   head  1788.4000 [1780.0000, 1794.0000] med 1790.0000     +0.19%  overlapping  t=-0.29 p=0.787
+        peak_mib: base  1650.0000 [1638.0000, 1668.0000] med 1646.0000   head  1489.6000 [1482.0000, 1500.0000] med 1488.0000     -9.72%  DISJOINT  t=+25.31 p=7.58e-08
+
+raw runs + summary: /workspace/output/round6/v3/ab

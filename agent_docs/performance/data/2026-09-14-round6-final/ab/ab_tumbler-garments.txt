@@ -1,0 +1,77 @@
+arm  base: /workspace/output/round6/base/venv/bin/python
+           uipc at /workspace/output/round6/base/venv/lib/python3.11/site-packages/uipc/__init__.py
+           836a3bc94696f7a921393652dcb0454e  libuipc_backend_cuda.so
+           7f7758aecdcac2e19275331e7f734da1  libuipc_backend_none.so
+           c423795c7a83c8154dac218a635c3087  libuipc_constitution.so
+           8bdb0b3636a888dc9ec07a94064d5c6b  libuipc_core.so
+           a31955ec1e96433eb0849e4a0231922a  libuipc_geometry.so
+           8f8b25637f43c49574f9045a0ee7879e  libuipc_io.so
+           070aeb9554b268500264719b04b7de49  libuipc_sanity_check.so
+           2a9bf2af2566e8c57da2db7fd863800f  pyuipc.cpython-311-x86_64-linux-gnu.so
+arm  head: /workspace/deps/uipc-perf-env/bin/python
+           uipc at /workspace/deps/uipc-perf-env/lib/python3.11/site-packages/uipc/__init__.py
+           0cd75513ab87a1ee2286ac37f82be907  libuipc_backend_cuda.so
+           d02ab16d7710a054af704e2156a731d7  libuipc_backend_none.so
+           54c8c90756cf881c8e9a2b00485384ca  libuipc_constitution.so
+           1087358581870acea3c765ea36122b34  libuipc_core.so
+           daacc3a73e52bd2630d5ad524b254e35  libuipc_geometry.so
+           84a670716aa792e9d4cabf1ee8fa9990  libuipc_io.so
+           569513698533be7ad7eea456fd9c4549  libuipc_sanity_check.so
+           d70ba98e5fb084956f4aeb5efff640e3  pyuipc.cpython-311-x86_64-linux-gnu.so
+libraries identical between arms: []
+[   28.1s] warmup   base: 150.400 ms/frame (discarded)
+[   48.7s] warmup   head: 107.951 ms/frame (discarded)
+[   79.5s] rep  1  base:  164.754 ms/frame  median  151.944  Newton  1454  PCG  48070  peak 1946 MiB
+[   98.7s] rep  1  head:  100.595 ms/frame  median   90.442  Newton  1448  PCG  49905  peak 1248 MiB
+[  120.3s] rep  2  head:  113.998 ms/frame  median  105.740  Newton  1425  PCG  44755  peak 1456 MiB
+[  147.6s] rep  2  base:  146.208 ms/frame  median  140.426  Newton  1470  PCG  45505  peak 1464 MiB
+[  175.0s] rep  3  base:  146.353 ms/frame  median  141.197  Newton  1441  PCG  43315  peak 1758 MiB
+[  195.1s] rep  3  head:  105.798 ms/frame  median   97.106  Newton  1479  PCG  46225  peak 1124 MiB
+[  219.0s] rep  4  head:  126.879 ms/frame  median  115.963  Newton  1526  PCG  55805  peak 1460 MiB
+[  246.2s] rep  4  base:  145.217 ms/frame  median  135.100  Newton  1457  PCG  44440  peak 1238 MiB
+[  273.2s] rep  5  base:  144.249 ms/frame  median  131.764  Newton  1439  PCG  43900  peak 1310 MiB
+[  293.7s] rep  5  head:  107.625 ms/frame  median  100.402  Newton  1461  PCG  47955  peak 1128 MiB
+[  313.5s] rep  6  head:  103.780 ms/frame  median  100.565  Newton  1457  PCG  47670  peak 1122 MiB
+[  345.4s] rep  6  base:  171.787 ms/frame  median  154.954  Newton  1486  PCG  56565  peak 1764 MiB
+[  373.6s] rep  7  base:  150.818 ms/frame  median  141.510  Newton  1516  PCG  49745  peak 1218 MiB
+[  393.7s] rep  7  head:  105.778 ms/frame  median   97.386  Newton  1445  PCG  45305  peak 1154 MiB
+[  413.5s] rep  8  head:  104.174 ms/frame  median   99.354  Newton  1424  PCG  40785  peak 1236 MiB
+[  442.2s] rep  8  base:  153.243 ms/frame  median  139.164  Newton  1493  PCG  47025  peak 1252 MiB
+[  470.2s] rep  9  base:  149.885 ms/frame  median  141.404  Newton  1393  PCG  43860  peak 2336 MiB
+[  492.7s] rep  9  head:  119.133 ms/frame  median  106.980  Newton  1555  PCG  53950  peak 1216 MiB
+[  512.7s] rep 10  head:  105.055 ms/frame  median   96.928  Newton  1489  PCG  44840  peak 1076 MiB
+[  540.6s] rep 10  base:  149.092 ms/frame  median  139.985  Newton  1456  PCG  44340  peak 1640 MiB
+[  569.1s] rep 11  base:  152.358 ms/frame  median  142.628  Newton  1475  PCG  45745  peak 1360 MiB
+[  591.5s] rep 11  head:  117.949 ms/frame  median  110.756  Newton  1439  PCG  47170  peak 1456 MiB
+[  612.4s] rep 12  head:  110.382 ms/frame  median  102.405  Newton  1509  PCG  50040  peak 1208 MiB
+[  641.4s] rep 12  base:  155.281 ms/frame  median  144.617  Newton  1518  PCG  48750  peak 1542 MiB
+[  670.8s] rep 13  base:  157.635 ms/frame  median  152.736  Newton  1412  PCG  47915  peak 2316 MiB
+[  691.5s] rep 13  head:  108.909 ms/frame  median  100.624  Newton  1484  PCG  47405  peak 1104 MiB
+[  714.0s] rep 14  head:  119.129 ms/frame  median  108.282  Newton  1512  PCG  52815  peak 1168 MiB
+[  742.3s] rep 14  base:  151.323 ms/frame  median  145.668  Newton  1491  PCG  46075  peak 1406 MiB
+[  771.3s] rep 15  base:  155.294 ms/frame  median  149.862  Newton  1435  PCG  44810  peak 2176 MiB
+[  791.8s] rep 15  head:  108.222 ms/frame  median  100.142  Newton  1492  PCG  46595  peak 1128 MiB
+[  813.3s] rep 16  head:  113.480 ms/frame  median  107.194  Newton  1517  PCG  46415  peak 1114 MiB
+[  841.8s] rep 16  base:  152.411 ms/frame  median  139.557  Newton  1508  PCG  50360  peak 1540 MiB
+[  869.4s] rep 17  base:  147.764 ms/frame  median  133.157  Newton  1502  PCG  46990  peak 1314 MiB
+[  890.4s] rep 17  head:  110.832 ms/frame  median  104.596  Newton  1464  PCG  48115  peak 1128 MiB
+[  912.1s] rep 18  head:  114.053 ms/frame  median  102.706  Newton  1477  PCG  46885  peak 1178 MiB
+[  940.7s] rep 18  base:  153.244 ms/frame  median  149.403  Newton  1415  PCG  44030  peak 1836 MiB
+[  966.1s] rep 19  base:  135.402 ms/frame  median  127.106  Newton  1416  PCG  42170  peak 1238 MiB
+[  986.3s] rep 19  head:  105.676 ms/frame  median   97.658  Newton  1452  PCG  45620  peak 1250 MiB
+[ 1008.4s] rep 20  head:  117.014 ms/frame  median  110.921  Newton  1518  PCG  50860  peak 1144 MiB
+[ 1038.4s] rep 20  base:  160.952 ms/frame  median  148.764  Newton  1443  PCG  49005  peak 1972 MiB
+
+=== v3  tumbler-garments  n=20 per arm  (base -> head) ===
+         mean_ms: base   152.1635 [135.4023, 171.7869] med 151.8405   head   110.9231 [100.5954, 126.8792] med 109.6455    -27.10%  DISJOINT  t=+17.92 p=7.83e-20 MWU p=6.8e-08
+       median_ms: base   142.5473 [127.1060, 154.9543] med 141.4570   head   102.8075 [90.4424, 115.9629] med 101.5148    -27.88%  DISJOINT  t=+18.66 p=2.86e-20 MWU p=6.8e-08
+   ms_per_newton: base    18.7544 [17.2122, 20.8086] med 18.4223   head    13.4999 [12.5049, 14.9661] med 13.2349    -28.02%  DISJOINT  t=+19.43 p=9.41e-20
+      ms_per_pcg: base     0.5884 [0.5448, 0.6265] med 0.5912   head     0.4173 [0.3628, 0.4598] med 0.4144    -29.08%  DISJOINT  t=+22.56 p=1.43e-23
+          newton: base  1461.0000 [1393.0000, 1518.0000] med 1456.5000   head  1478.6500 [1424.0000, 1555.0000] med 1478.0000     +1.21%  overlapping  t=-1.53 p=0.135
+             pcg: base 46630.7500 [42170.0000, 56565.0000] med 45910.0000   head 47955.7500 [40785.0000, 55805.0000] med 47287.5000     +2.84%  overlapping  t=-1.24 p=0.224
+newton_per_frame: base     8.1167 [7.7389, 8.4333] med 8.0917   head     8.2147 [7.9111, 8.6389] med 8.2111     +1.21%  overlapping  t=-1.53 p=0.135
+   pcg_per_frame: base   259.0597 [234.2778, 314.2500] med 255.0556   head   266.4208 [226.5833, 310.0278] med 262.7083     +2.84%  overlapping  t=-1.24 p=0.224
+     line_search: base  1709.1000 [1623.0000, 1831.0000] med 1692.0000   head  1749.8500 [1631.0000, 2014.0000] med 1726.5000     +2.38%  overlapping  t=-1.60 p=0.118
+        peak_mib: base  1631.3000 [1218.0000, 2336.0000] med 1541.0000   head  1204.9000 [1076.0000, 1460.0000] med 1161.0000    -26.14%  overlapping  t=+4.95 p=5.29e-05
+
+raw runs + summary: /workspace/output/round6/v3/ab
