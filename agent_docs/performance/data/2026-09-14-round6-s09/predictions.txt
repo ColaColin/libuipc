@@ -1,0 +1,50 @@
+s09 predictions -- written 2026-09-14 BEFORE any arm ran, at head 53aa9712.
+Step: re-measure the K9 contact stream split (UIPC_CONTACT_SPLIT=0/1/2).
+
+Arms
+  a2 = 2 (shipped): part 1 (PT+EE) on a side stream, part 2 (PE+PP) on the default stream.
+  a1 = 1          : the same two launches, both on the default stream (serial).
+  a0 = 0          : one fused launch over all four pair types (pre-K9).
+
+Inputs I am predicting from (all pre-existing measurements, not mine)
+  * s08, under nsys, full-run totals: part1/part2 = 799/522 (cwc), 714/454 (rwb),
+    1660/1333 (c2), 2916/1266 ms (tum).  Part 1 is the longer stream in all four.
+    Those were taken with part 2 at Proj=5.
+  * 53aa9712 made Proj=1 the default, which s07 measured at -44 % per launch of part 2.
+    So at THIS head part 2 should be ~0.56x s08's numbers: ~292 (cwc), ~254 (rwb),
+    ~750 (c2), ~710 ms (tum).  The imbalance is therefore WORSE than s08 recorded:
+    part 1 is now ~2.7x part 2 on cwc, ~2.8x on rwb, ~4.1x on the tumbler, ~2.2x on case2.
+  * kernel-sum/wall without the profiler (s07): 1.005 cwc, 1.017 c2, 1.071 rwb.
+  * s07: a -45 % cut to part 2 bought 0.00 % of wall on rwb -> on that scene part 2 is
+    (nearly) fully hidden, i.e. the overlap the split achieves there is high.
+  * round 4 s16: these kernels are latency-bound at 255 registers / one 256-thread block
+    per SM; PT+EE fused (1.926 ms) is cheaper than PT alone + EE alone (2.815).  Fusing
+    more was the direction that data pointed in -- but that was with part 2 "lean".
+
+P1  a1 (serial) vs a2 (shipped): the split is worth roughly the share of part 2 that is
+    currently hidden.  Upper bound = part2_time/wall.  At this head that is
+    ~254/3466 = 7.3 % (rwb), ~292/6967 = 4.2 % (cwc), ~750/46700 = 1.6 % (c2),
+    ~710/27000 = 2.6 % (tum).  I predict the measured a1-a2 wall gap is roughly HALF of
+    those upper bounds, because the two kernels contend for the same SMs:
+      rwb +3.0 to +7.0 %,  cwc +1.5 to +4.0 %,  case2 +0.4 to +1.5 %,
+      tumbler +1 to +3 % (below that scene's ~4-6 % resolution -> expect "unreadable").
+P2  a0 (fused) vs a2: at this head part 2 is Proj=1 (s07: 154 registers) and part 1 is
+    255, so the fused kernel makes the PE+PP bulk pay 255 registers again -- the exact
+    cost K9 was built to remove, and it is LARGER now than when K9 measured it, because
+    the lean part is leaner.  I predict a0 is the worst arm: rwb +4 to +9 %, cwc +2 to
+    +6 %, case2 +0.5 to +2 %.  (If a0 instead wins, s16's latency-bound picture has
+    beaten the register picture and the split should be deleted -- that is the outcome
+    that would surprise me.)
+P3  Overlap actually achieved (cuda_gpu_trace, rwb): I predict the part-1 and part-2
+    intervals overlap for 50-90 % of part 2's duration in a2, and 0 % in a1/a0.
+P4  Re-partitioning: part 1 being 2.2-4.1x part 2 means a perfectly balanced split could
+    in principle cut the union to (p1+p2)/2, i.e. -18 to -33 % of part 1.  I predict this
+    is NOT achievable, because the overlap is limited by SM occupancy, not by scheduling:
+    with part 1 at 255 registers there is one block per SM and part 2's blocks only fill
+    the gaps.  The measurable test is whether a2's union wall is close to max(p1,p2)
+    (scheduling-limited -> rebalancing pays) or close to p1+p2 - epsilon
+    (throughput-limited -> rebalancing cannot pay).  I predict the latter on cwc/c2 and
+    something in between on rwb.
+P5  Newton/PCG counts: the split changes execution order and therefore atomic accumulation
+    order, so counts may drift within each scene's null envelope (cwc 1.6-2.4 %,
+    case2 +-0.15 %, rwb +-1.5 %).  I predict no arm moves counts beyond its envelope.

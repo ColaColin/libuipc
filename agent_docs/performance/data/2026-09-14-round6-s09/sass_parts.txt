@@ -1,0 +1,5 @@
+part1 <0,1,1,1,0,8> shipped        instr   28272  FP64  10563  LDL  2434  STL  2378  branch  2008
+part2 <0,2,0,0,1,1> shipped        instr    4848  FP64   1014  LDL    53  STL   413  branch   374
+fused <0,0,1,1,1,1> (SPLIT=0)      instr   27816  FP64   9678  LDL  2627  STL  2919  branch  1800
+part2 <0,2,0,0,1,5> pre-V2         instr   10728  FP64   3635  LDL   273  STL   888  branch   765
+part1 <0,1,1,1,0,0> pre-s08        instr   30952  FP64  12542  LDL  2944  STL  2799  branch  1950

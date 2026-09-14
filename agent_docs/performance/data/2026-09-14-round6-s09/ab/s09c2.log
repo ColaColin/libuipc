@@ -1,0 +1,78 @@
+[   44.9s] warmup     a2:  164.761 ms  Newton 1665
+[   90.1s] warmup   null:  165.651 ms  Newton 1657
+[  135.6s] warmup     a1:  167.342 ms  Newton 1663
+[  181.1s] warmup     a0:  167.192 ms  Newton 1663
+[  226.5s] rep  1     a2:  166.987 ms  Newton 1663  PCG 64780  LS 1799
+[  271.6s] rep  1   null:  165.604 ms  Newton 1663  PCG 63620  LS 1785
+[  316.9s] rep  1     a1:  166.908 ms  Newton 1662  PCG 63965  LS 1785
+[  362.2s] rep  1     a0:  166.730 ms  Newton 1663  PCG 64100  LS 1791
+[  407.4s] rep  2     a2:  166.525 ms  Newton 1667  PCG 64640  LS 1794
+[  452.7s] rep  2     a0:  166.572 ms  Newton 1667  PCG 63965  LS 1815
+[  498.1s] rep  2     a1:  166.651 ms  Newton 1656  PCG 63720  LS 1795
+[  543.3s] rep  2   null:  166.582 ms  Newton 1663  PCG 64615  LS 1813
+[  588.8s] rep  3     a1:  166.869 ms  Newton 1662  PCG 63855  LS 1790
+[  634.1s] rep  3     a0:  165.891 ms  Newton 1662  PCG 63795  LS 1803
+[  679.2s] rep  3     a2:  165.737 ms  Newton 1659  PCG 64015  LS 1780
+[  724.6s] rep  3   null:  166.607 ms  Newton 1663  PCG 64855  LS 1802
+[  770.3s] rep  4     a1:  167.977 ms  Newton 1664  PCG 64555  LS 1811
+[  815.7s] rep  4   null:  166.988 ms  Newton 1661  PCG 65055  LS 1789
+[  860.7s] rep  4     a2:  165.227 ms  Newton 1652  PCG 63945  LS 1764
+[  906.3s] rep  4     a0:  167.486 ms  Newton 1666  PCG 64960  LS 1811
+[  951.6s] rep  5     a2:  166.032 ms  Newton 1664  PCG 64095  LS 1815
+[  996.6s] rep  5   null:  165.141 ms  Newton 1662  PCG 63490  LS 1778
+[ 1042.1s] rep  5     a1:  167.809 ms  Newton 1658  PCG 64455  LS 1761
+[ 1087.5s] rep  5     a0:  166.831 ms  Newton 1662  PCG 64460  LS 1782
+[ 1132.4s] rep  6     a2:  165.323 ms  Newton 1657  PCG 63855  LS 1784
+[ 1177.7s] rep  6     a0:  166.007 ms  Newton 1661  PCG 63620  LS 1765
+[ 1223.1s] rep  6     a1:  167.145 ms  Newton 1664  PCG 63965  LS 1800
+[ 1268.4s] rep  6   null:  166.598 ms  Newton 1664  PCG 64505  LS 1782
+[ 1313.8s] rep  7     a1:  166.868 ms  Newton 1652  PCG 64160  LS 1770
+[ 1358.6s] rep  7     a0:  164.780 ms  Newton 1658  PCG 63060  LS 1767
+[ 1403.4s] rep  7     a2:  164.562 ms  Newton 1649  PCG 63735  LS 1763
+[ 1448.2s] rep  7   null:  163.984 ms  Newton 1661  PCG 62485  LS 1777
+
+=== s09c2  stiff-gipc-case2  n=7 per arm, 4 arms, baseline=a2 ===
+
+-- newton
+       a2: mean   1658.7143 sd   6.0643 [1649.0000, 1667.0000]    +0.00%  overlapping  t=+0.00 p=1
+     null: mean   1662.4286 sd   1.0498 [1661.0000, 1664.0000]    +0.22%  overlapping  t=-1.48 p=0.187
+       a1: mean   1659.7143 sd   4.1991 [1652.0000, 1664.0000]    +0.06%  overlapping  t=-0.33 p=0.746
+       a0: mean   1662.7143 sd   2.8140 [1658.0000, 1667.0000]    +0.24%  overlapping  t=-1.47 p=0.179
+
+-- pcg
+       a2: mean  64152.1429 sd 370.2302 [63735.0000, 64780.0000]    +0.00%  overlapping  t=+0.00 p=1
+     null: mean  64089.2857 sd 855.3380 [62485.0000, 65055.0000]    -0.10%  overlapping  t=+0.17 p=0.873
+       a1: mean  64096.4286 sd 287.2121 [63720.0000, 64555.0000]    -0.09%  overlapping  t=+0.29 p=0.776
+       a0: mean  63994.2857 sd 562.4210 [63060.0000, 64960.0000]    -0.25%  overlapping  t=+0.57 p=0.578
+
+-- line_search
+       a2: mean   1785.5714 sd  17.4262 [1763.0000, 1815.0000]    +0.00%  overlapping  t=+0.00 p=1
+     null: mean   1789.4286 sd  12.3850 [1777.0000, 1813.0000]    +0.22%  overlapping  t=-0.44 p=0.667
+       a1: mean   1787.4286 sd  15.9719 [1761.0000, 1811.0000]    +0.10%  overlapping  t=-0.19 p=0.851
+       a0: mean   1790.5714 sd  18.7148 [1765.0000, 1815.0000]    +0.28%  overlapping  t=-0.48 p=0.641
+
+-- mean_ms
+       a2: mean    165.7705 sd   0.7630 [164.5625, 166.9875]    +0.00%  overlapping  t=+0.00 p=1
+     null: mean    165.9290 sd   0.9974 [163.9843, 166.9876]    +0.10%  overlapping  t=-0.31 p=0.763
+       a1: mean    167.1753 sd   0.4749 [166.6515, 167.9768]    +0.85%  overlapping  t=-3.83 p=0.0033
+       a0: mean    166.3282 sd   0.8022 [164.7802, 167.4860]    +0.34%  overlapping  t=-1.23 p=0.241
+
+-- median_ms
+       a2: mean    168.1588 sd   0.3682 [167.6331, 168.6719]    +0.00%  overlapping  t=+0.00 p=1
+     null: mean    168.2104 sd   1.1955 [165.8069, 169.3461]    +0.03%  overlapping  t=-0.10 p=0.922
+       a1: mean    169.6249 sd   1.1989 [167.7710, 171.7152]    +0.87%  overlapping  t=-2.86 p=0.0238
+       a0: mean    168.4428 sd   1.2799 [166.1458, 169.9709]    +0.17%  overlapping  t=-0.52 p=0.618
+
+-- ms_per_newton
+       a2: mean     24.9847 sd   0.0525 [24.9431, 25.1033]    +0.00%  overlapping  t=+0.00 p=1
+     null: mean     24.9528 sd   0.1438 [24.6816, 25.1336]    -0.13%  overlapping  t=+0.51 p=0.624
+       a1: mean     25.1814 sd   0.0759 [25.1007, 25.3029]    +0.79%  overlapping  t=-5.22 p=0.000315
+       a0: mean     25.0084 sd   0.0900 [24.8462, 25.1329]    +0.09%  overlapping  t=-0.56 p=0.59
+
+-- ms_per_pcg
+       a2: mean      0.6460 sd   0.0013 [0.6440, 0.6476]    +0.00%  overlapping  t=+0.00 p=1
+     null: mean      0.6473 sd   0.0049 [0.6417, 0.6561]    +0.20%  overlapping  t=-0.64 p=0.544
+       a1: mean      0.6521 sd   0.0014 [0.6502, 0.6538]    +0.94%  DISJOINT  t=-7.72 p=5.51e-06
+       a0: mean      0.6498 sd   0.0028 [0.6446, 0.6533]    +0.59%  overlapping  t=-2.99 p=0.0161
+
+raw runs + summary: /workspace/output/round6/s09/ab

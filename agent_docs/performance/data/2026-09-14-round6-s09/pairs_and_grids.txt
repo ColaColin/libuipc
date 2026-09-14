@@ -1,0 +1,5 @@
+contact assembly launch geometry (cuda_gpu_trace, arm a2).  40 SMs, 32 warp slots/SM, 65536 reg/SM
+  rwb       part1    6144 threads (  24 blocks of 256, 255 reg)   part2   10368 threads (  27 blocks of 384, 154 reg)   pairs part2/part1 = 1.69
+  cwc       part1   14336 threads (  56 blocks of 256, 255 reg)   part2   24192 threads (  63 blocks of 384, 154 reg)   pairs part2/part1 = 1.69
+  c2(w60)   part1    2048 threads (   8 blocks of 256, 255 reg)   part2    8448 threads (  22 blocks of 384, 154 reg)   pairs part2/part1 = 4.12
+  tum(w60)  part1   12032 threads (  47 blocks of 256, 255 reg)   part2   14208 threads (  37 blocks of 384, 154 reg)   pairs part2/part1 = 1.18

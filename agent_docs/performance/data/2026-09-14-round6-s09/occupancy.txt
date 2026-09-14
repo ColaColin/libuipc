@@ -1,0 +1,3 @@
+cc 7.5: 65536 registers/SM, 32 warp slots/SM, 40 SMs
+  contact part1 Proj8        block  256 thr, 255 reg/thread -> 1 block/SM,  8 of 32 warp slots (25 % occupancy)   [456 launches]
+  contact part2 Proj1        block  384 thr, 154 reg/thread -> 1 block/SM, 12 of 32 warp slots (38 % occupancy)   [456 launches]

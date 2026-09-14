@@ -1,0 +1,24 @@
+s09 refined prediction -- the conversion model, fixed on rwb + cube-wall-cloth and then
+applied to the two scenes whose end-to-end arms had not yet been read.
+
+Written after the nsys scope sweep and the rwb + cwc end-to-end A/Bs, and after the
+stiff-gipc-case2 sweep had been LAUNCHED but before any of its numbers existed; the
+tumbler had not started.  Stated here so the case2/tumbler rows are checked against an
+arithmetic that was fixed, not fitted.
+
+Model: the contact assembly's contribution to the wall is its CRITICAL PATH, i.e.
+  a2 = union(part1, part2)        (measured: union/max(part1,part2) = 1.006 rwb,
+                                   1.035 cwc, 1.012 c2, 1.005 tum, from cuda_gpu_trace)
+  a1 = part1 + part2              (zero overlap, measured)
+  a0 = the single fused launch
+and delta_wall_% = (union_arm - union_a2) * launches_per_run / wall_ms_per_run.
+
+                    predicted            measured (ms/Newton, n per arm)
+  rwb   a1  +4.26 %              +3.25 %  (p=3.4e-10, n=20)
+        a0  -0.09 %              +0.07 %  (p=0.86,    n=20)
+  cwc   a1  +2.62 %              +2.66 %  (p=1.5e-10, n=20)
+        a0  +1.03 %              +1.30 %  (p=3.6e-05, n=20)
+  c2    a1  +0.88 %              ?
+        a0  +0.38 %              ?
+  tum   a1  +0.94 %              ?   (the tumbler cannot resolve below ~4-6 %)
+        a0  +0.72 %              ?

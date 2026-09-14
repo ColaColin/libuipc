@@ -1,0 +1,12 @@
+== mb  n=3 nsys full runs per arm
+arm     p0 ms    p1 ms    p2 ms  contactSum      d%  gpuSum ms      d%   wall ms      d%  sum/wall  launches
+a2        0.5      8.3      0.8         9.6   +0.00     6487.7   +0.00    6906.7   +0.00     0.939        21
+     raw wall [6910.0, 6900.0, 6910.0]  contact [9.6, 9.6, 9.6]
+a1        0.5      8.3      0.8         9.6   -0.11     6479.4   -0.13    6893.3   -0.19     0.940        21
+     raw wall [6890.0, 6900.0, 6890.0]  contact [9.6, 9.6, 9.6]
+a0       10.0      0.0      0.0        10.0   +3.68     6485.8   -0.03    6903.3   -0.05     0.940        38
+     raw wall [6890.0, 6910.0, 6910.0]  contact [10.0, 10.0, 10.0]
+  per-launch us:
+   a2: p0=    29.2 (17 launches)  p1=   394.7 (21 launches)  p2=    39.0 (21 launches)
+   a1: p0=    29.2 (17 launches)  p1=   394.3 (21 launches)  p2=    38.9 (21 launches)
+   a0: p0=   262.1 (38 launches)

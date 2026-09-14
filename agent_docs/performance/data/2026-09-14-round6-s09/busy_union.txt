@@ -1,0 +1,5 @@
+rigid-wrecking-balls, 120 frames, whole trace: GPU busy is the UNION of the kernel intervals,
+which is the number concurrency does not inflate (the kernel-duration SUM does).
+  a2 split   busy(union)   2905.3 ms   duration-sum   3079.6 ms (sum/union 1.060)   trace span   3371.1 ms   GPU busy  86.2 %
+  a1 serial  busy(union)   3211.5 ms   duration-sum   3211.5 ms (sum/union 1.000)   trace span   3658.7 ms   GPU busy  87.8 %
+  a0 fused   busy(union)   3114.2 ms   duration-sum   3114.2 ms (sum/union 1.000)   trace span   3581.9 ms   GPU busy  86.9 %
