@@ -1,0 +1,31 @@
+[   44.2s] warmup       old: 161.683 ms/frame (discarded)
+[   88.2s] warmup       u16: 160.846 ms/frame (discarded)
+[  132.7s] rep 1      old: 163.033 ms/frame  Newton 1662  PCG 64300
+[  179.6s] rep 1      u16: 172.522 ms/frame  Newton 1665  PCG 75760
+[  223.4s] rep 2      u16: 160.186 ms/frame  Newton 1659  PCG 63335
+[  267.8s] rep 2      old: 163.146 ms/frame  Newton 1661  PCG 64175
+[  311.9s] rep 3      old: 161.653 ms/frame  Newton 1654  PCG 63725
+[  356.0s] rep 3      u16: 161.181 ms/frame  Newton 1666  PCG 63995
+[  399.5s] rep 4      u16: 159.185 ms/frame  Newton 1658  PCG 62920
+[  443.9s] rep 4      old: 162.653 ms/frame  Newton 1663  PCG 63715
+[  488.2s] rep 5      old: 162.238 ms/frame  Newton 1658  PCG 63590
+[  532.1s] rep 5      u16: 161.217 ms/frame  Newton 1659  PCG 64225
+[  575.9s] rep 6      u16: 160.629 ms/frame  Newton 1661  PCG 63760
+[  620.3s] rep 6      old: 163.007 ms/frame  Newton 1659  PCG 64595
+[  664.9s] rep 7      old: 163.514 ms/frame  Newton 1669  PCG 64645
+[  709.1s] rep 7      u16: 161.597 ms/frame  Newton 1660  PCG 64315
+[  753.1s] rep 8      u16: 161.090 ms/frame  Newton 1657  PCG 64370
+[  798.0s] rep 8      old: 164.825 ms/frame  Newton 1664  PCG 65290
+
+=== s15_c2  stiff-gipc-case2  n=8 per arm ===
+       mean_ms: old   163.0085 [161.6531, 164.8247]   u16   162.2008 [159.1846, 172.5220]     -0.50%  overlapping  t=+0.53 p=0.614
+     median_ms: old   165.1940 [163.4724, 167.2055]   u16   162.2401 [158.2400, 164.4116]     -1.79%  overlapping
+ ms_per_newton: old    24.5309 [24.4337, 24.7633]   u16    24.4181 [24.0025, 25.9042]     -0.46%  overlapping  t=+0.52 p=0.621
+    ms_per_pcg: old     0.6342 [0.6309, 0.6382]   u16     0.6219 [0.5693, 0.6325]     -1.95%  overlapping  t=+1.63 p=0.147
+        newton: old  1661.2500 [1654.0000, 1669.0000]   u16  1660.6250 [1657.0000, 1666.0000]     -0.04%  overlapping
+           pcg: old 64254.3750 [63590.0000, 65290.0000]   u16 65335.0000 [62920.0000, 75760.0000]     +1.68%  overlapping
+   line_search: old  1782.3750 [1766.0000, 1805.0000]   u16  1776.3750 [1757.0000, 1802.0000]     -0.34%  overlapping
+
+!! pcg moved 1.68% against a 0.50% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+raw runs + summary: /workspace/output/round6/s15/ab/c2

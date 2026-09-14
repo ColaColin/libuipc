@@ -1,0 +1,29 @@
+[    7.2s] warmup       old: 59.393 ms/frame (discarded)
+[   14.1s] warmup       u16: 54.983 ms/frame (discarded)
+[   21.2s] rep 1      old: 58.395 ms/frame  Newton 517  PCG 20335
+[   28.2s] rep 1      u16: 56.534 ms/frame  Newton 507  PCG 19705
+[   35.3s] rep 2      u16: 57.850 ms/frame  Newton 517  PCG 19675
+[   42.8s] rep 2      old: 62.402 ms/frame  Newton 555  PCG 20605
+[   49.9s] rep 3      old: 57.670 ms/frame  Newton 514  PCG 19925
+[   56.8s] rep 3      u16: 56.220 ms/frame  Newton 504  PCG 19710
+[   63.9s] rep 4      u16: 58.074 ms/frame  Newton 518  PCG 20080
+[   70.8s] rep 4      old: 56.015 ms/frame  Newton 505  PCG 19620
+[   77.9s] rep 5      old: 57.631 ms/frame  Newton 510  PCG 20160
+[   85.0s] rep 5      u16: 58.250 ms/frame  Newton 521  PCG 20180
+[   92.1s] rep 6      u16: 57.435 ms/frame  Newton 515  PCG 19980
+[   99.2s] rep 6      old: 57.881 ms/frame  Newton 516  PCG 19920
+
+=== s15_cwc  cube-wall-cloth  n=6 per arm ===
+       mean_ms: old    58.3325 [56.0150, 62.4024]   u16    57.3940 [56.2199, 58.2502]     -1.61%  overlapping  t=+1.00 p=0.355
+     median_ms: old    52.3372 [49.0570, 60.9648]   u16    50.1451 [48.4619, 51.1779]     -4.19%  overlapping
+ ms_per_newton: old    11.2280 [11.0921, 11.3002]   u16    11.1732 [11.1508, 11.2112]     -0.49%  overlapping  t=+1.69 p=0.142
+    ms_per_pcg: old     0.2902 [0.2855, 0.3029]   u16     0.2886 [0.2852, 0.2940]     -0.57%  overlapping  t=+0.56 p=0.59
+        newton: old   519.5000 [505.0000, 555.0000]   u16   513.6667 [504.0000, 521.0000]     -1.12%  overlapping
+           pcg: old 20094.1667 [19620.0000, 20605.0000]   u16 19888.3333 [19675.0000, 20180.0000]     -1.02%  overlapping
+   line_search: old   541.8333 [525.0000, 586.0000]   u16   535.3333 [526.0000, 541.0000]     -1.20%  overlapping
+
+!! newton moved 1.12% against a 1.61% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+!! pcg moved 1.02% against a 1.61% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+raw runs + summary: /workspace/output/round6/s15/ab/cwc

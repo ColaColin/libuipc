@@ -1,0 +1,33 @@
+[    8.7s] warmup       old: 66.741 ms/frame (discarded)
+[   17.3s] warmup       u16: 65.714 ms/frame (discarded)
+[   26.0s] rep 1      old: 66.941 ms/frame  Newton 465  PCG 35235
+[   34.7s] rep 1      u16: 65.705 ms/frame  Newton 465  PCG 35200
+[   43.2s] rep 2      u16: 65.303 ms/frame  Newton 465  PCG 35220
+[   51.9s] rep 2      old: 66.549 ms/frame  Newton 465  PCG 35195
+[   60.6s] rep 3      old: 66.685 ms/frame  Newton 465  PCG 35215
+[   69.2s] rep 3      u16: 65.255 ms/frame  Newton 465  PCG 35220
+[   77.7s] rep 4      u16: 65.246 ms/frame  Newton 465  PCG 35200
+[   86.4s] rep 4      old: 66.467 ms/frame  Newton 465  PCG 35220
+[   95.1s] rep 5      old: 66.481 ms/frame  Newton 465  PCG 35195
+[  103.7s] rep 5      u16: 65.094 ms/frame  Newton 465  PCG 35190
+[  112.2s] rep 6      u16: 65.254 ms/frame  Newton 465  PCG 35215
+[  120.9s] rep 6      old: 66.465 ms/frame  Newton 465  PCG 35205
+[  129.6s] rep 7      old: 66.403 ms/frame  Newton 465  PCG 35180
+[  138.1s] rep 7      u16: 65.098 ms/frame  Newton 465  PCG 35230
+[  146.7s] rep 8      u16: 65.223 ms/frame  Newton 465  PCG 35185
+[  155.4s] rep 8      old: 66.507 ms/frame  Newton 465  PCG 35210
+[  164.1s] rep 9      old: 66.584 ms/frame  Newton 465  PCG 35210
+[  172.6s] rep 9      u16: 65.399 ms/frame  Newton 465  PCG 35190
+[  181.2s] rep 10      u16: 65.165 ms/frame  Newton 465  PCG 35200
+[  189.9s] rep 10      old: 66.581 ms/frame  Newton 465  PCG 35210
+
+=== s15_mb  mas-bunny  n=10 per arm ===
+       mean_ms: old    66.5663 [66.4034, 66.9408]   u16    65.2742 [65.0943, 65.7048]     -1.94%  DISJOINT  t=+17.44 p=1.42e-12
+     median_ms: old    73.3536 [73.0860, 73.7322]   u16    71.8449 [71.4425, 72.5212]     -2.06%  DISJOINT
+ ms_per_newton: old    14.3153 [14.2803, 14.3959]   u16    14.0375 [13.9988, 14.1301]     -1.94%  DISJOINT  t=+17.44 p=1.42e-12
+    ms_per_pcg: old     0.1891 [0.1887, 0.1900]   u16     0.1854 [0.1848, 0.1867]     -1.93%  DISJOINT  t=+17.94 p=3.28e-12
+        newton: old   465.0000 [465.0000, 465.0000]   u16   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+           pcg: old 35207.5000 [35180.0000, 35235.0000]   u16 35205.0000 [35185.0000, 35230.0000]     -0.01%  overlapping
+   line_search: old   465.0000 [465.0000, 465.0000]   u16   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+
+raw runs + summary: /workspace/output/round6/s15/ab/mb
