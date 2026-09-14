@@ -181,9 +181,12 @@ class MASPreconditionerEngine
     bool        z_fill_needed() const;
     void schwarz_local_solve(cuda_tool::CVarView<IndexT> converged,
                              cudaStream_t                stream = nullptr);
+    // rowdot2: -1 = from UIPC_MAS_ROWDOT2, 0 = the s12 row-dot kernel, >0 = s15 shape code.
     void schwarz_local_solve_into(cuda_tool::CVarView<IndexT> converged,
                                   cudaStream_t                stream,
-                                  bool                        use_rowdot);
+                                  bool                        use_rowdot,
+                                  int                         rowdot2 = -1);
+    static int rowdot2_mode();
     void collect_final_Z(cuda_tool::DenseVectorView<Float> Z,
                          cuda_tool::CVarView<IndexT>       converged,
                          cudaStream_t                      stream = nullptr);

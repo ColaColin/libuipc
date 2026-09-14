@@ -1467,6 +1467,108 @@ namespace
             z.z = acc;
     }
 
+
+    // ---- s15 (round 6): row-dot local solve, second shape ----------------------
+    // Same arithmetic as the s12 kernel above -- per column c the thread forms
+    // `m0*r0 + m1*r1 + m2*r2` (ptxas: FMUL, FFMA, FFMA) and adds it to `acc`
+    // (FADD), in the same column order -- but with three changes to how the
+    // operands are fetched:
+    //   * branch-free addressing: the s12 kernel's `if(c >= local_row)` diverges
+    //     inside every warp (lanes of different rows take different arms), so
+    //     both arms' loads are issued under predication -- 12 matrix LDG per
+    //     column pair for 6 live ones. Selecting the block index and the
+    //     element stride arithmetically issues 6.
+    //   * UNROLL: the s12 loop is unrolled x2 by ptxas; the factor is a
+    //     template parameter here so it can be swept.
+    //   * STAGE: the 16 residual vectors of a cluster are loaded once per block
+    //     into shared memory (float4-padded, one LDS.128 broadcast per column)
+    //     instead of 48 global loads per thread.
+    // PROBE (timing only, never shipped): every block reads the matrix of
+    // cluster `cluster_id & 63`, i.e. an L2-resident 313 KB instead of the
+    // whole 6.27 MB -- the DRAM-vs-latency bracket of PERF_METHOD 2.9.
+    template <int UNROLL, bool STAGE, bool PROBE>
+    __global__ void MASPreconditionerEngine_schwarz_local_solve_rowdot2_kernel(
+        cuda_tool::CBufferView<ClusterMatrixSymF> cluster_inv,
+        cuda_tool::CBufferView<Eigen::Vector3f>   multi_lr,
+        cuda_tool::BufferView<float3>             multi_lz,
+        cuda_tool::CDense<IndexT>                 converged,
+        int                                       N)  // 3 * node count
+    {
+        using namespace cuda_tool;
+
+        if(*converged != 0)
+            return;
+
+        constexpr int cluster_scalars = BANKSIZE * 3;  // 48
+        constexpr int CPB             = 2;             // clusters per block (96 threads)
+
+        __shared__ float4 s_rv[STAGE ? CPB * BANKSIZE : 1];
+
+        int  idx  = blockIdx.x * blockDim.x + threadIdx.x;
+        bool live = (idx < N);
+
+        int cluster_id = live ? idx / cluster_scalars : 0;
+        int rem        = live ? idx - cluster_id * cluster_scalars : 0;
+        int local_row  = rem / 3;
+        int comp       = rem - local_row * 3;
+        int cl         = threadIdx.x / cluster_scalars;  // cluster slot in the block
+        int col_base   = cluster_id * BANKSIZE;
+
+        if constexpr(STAGE)
+        {
+            // thread (row, comp) stages residual component `comp` of node `row`
+            if(live)
+            {
+                float v = multi_lr(col_base + local_row)[comp];
+                reinterpret_cast<float*>(&s_rv[cl * BANKSIZE + local_row])[comp] = v;
+            }
+            __syncthreads();
+        }
+        if(!live)
+            return;
+
+        // Eigen::Matrix3f is column-major: element (i, j) of block b is at 9*b + i + 3*j.
+        const float* Cp = reinterpret_cast<const float*>(
+            &cluster_inv(PROBE ? (cluster_id & 63) : cluster_id));
+
+        float acc = 0.0f;
+#pragma unroll UNROLL
+        for(int c = 0; c < BANKSIZE; ++c)
+        {
+            bool up   = (c >= local_row);
+            int  blk  = up ? sym_index(local_row, c) : sym_index(c, local_row);
+            int  base = 9 * blk + (up ? comp : 3 * comp);  // M(comp, k) or M(k, comp)
+            int  st   = up ? 3 : 1;
+            float m0  = Cp[base];
+            float m1  = Cp[base + st];
+            float m2  = Cp[base + 2 * st];
+            float r0, r1, r2;
+            if constexpr(STAGE)
+            {
+                float4 rv = s_rv[cl * BANKSIZE + c];
+                r0 = rv.x;
+                r1 = rv.y;
+                r2 = rv.z;
+            }
+            else
+            {
+                const Eigen::Vector3f& rv = multi_lr(col_base + c);
+                r0 = rv[0];
+                r1 = rv[1];
+                r2 = rv[2];
+            }
+            acc += m0 * r0 + m1 * r1 + m2 * r2;
+        }
+
+        float3& z = multi_lz(col_base + local_row);
+        if(comp == 0)
+            z.x = acc;
+        else if(comp == 1)
+            z.y = acc;
+        else
+            z.z = acc;
+    }
+
     // s12 verification probe: max |a - b| and max |b| over two float arrays
     // (the multi-level R / Z scratch buffers of the preconditioner apply).
     __global__ void MASPreconditionerEngine_compare_float_kernel(const float* a,
@@ -2262,11 +2364,63 @@ void MASPreconditionerEngine::schwarz_local_solve(cuda_tool::CVarView<IndexT> co
     schwarz_local_solve_into(converged, stream, local_solve_rowdot_enabled());
 }
 
+// s15: UIPC_MAS_ROWDOT2 = <unroll> + 100*<stage> + 1000*<probe>. Default 16 =
+// the fully unrolled rowdot2 kernel; 0 = the s12 row-dot kernel (rollback).
+// unroll in {2,4,8,16}; stage 1 (unroll 4 only) and probe 1 (unroll 2 only)
+// are the measured-and-rejected shapes, kept for the sweep record.
+int MASPreconditionerEngine::rowdot2_mode()
+{
+    static const int mode = []
+    {
+        const char* e = std::getenv("UIPC_MAS_ROWDOT2");
+        return e ? std::atoi(e) : 16;
+    }();
+    return mode;
+}
+
 void MASPreconditionerEngine::schwarz_local_solve_into(cuda_tool::CVarView<IndexT> converged,
                                                        cudaStream_t stream,
-                                                       bool         use_rowdot)
+                                                       bool         use_rowdot,
+                                                       int          rowdot2)
 {
     using namespace cuda_tool;
+
+    if(rowdot2 < 0)
+        rowdot2 = rowdot2_mode();
+
+    if(use_rowdot && rowdot2 > 0 && m_total_num_clusters >= BANKSIZE
+       && (m_total_num_clusters % BANKSIZE) == 0)
+    {
+        int N          = m_total_num_clusters * 3;
+        int block_size = BANKSIZE * 3 * 2;
+        int num_blocks = (N + block_size - 1) / block_size;
+        int unroll     = rowdot2 % 100;
+        int stage      = (rowdot2 / 100) % 10;
+        int probe      = (rowdot2 / 1000) % 10;
+        auto launch    = [&](auto kern)
+        {
+            kern<<<num_blocks, block_size, 0, stream>>>(cluster_inverses.cview(),
+                                                        multi_level_R.cview(),
+                                                        multi_level_Z.view(),
+                                                        converged.cviewer(),
+                                                        N);
+        };
+#define UIPC_S15_RD2(U, S, P) MASPreconditionerEngine_schwarz_local_solve_rowdot2_kernel<U, S, P>
+        if(probe)
+            launch(UIPC_S15_RD2(2, false, true));
+        else if(stage)
+            launch(UIPC_S15_RD2(4, true, false));
+        else if(unroll == 2)
+            launch(UIPC_S15_RD2(2, false, false));
+        else if(unroll == 4)
+            launch(UIPC_S15_RD2(4, false, false));
+        else if(unroll == 8)
+            launch(UIPC_S15_RD2(8, false, false));
+        else
+            launch(UIPC_S15_RD2(16, false, false));
+#undef UIPC_S15_RD2
+        return;
+    }
 
     if(use_rowdot && m_total_num_clusters >= BANKSIZE
        && (m_total_num_clusters % BANKSIZE) == 0)
@@ -2505,13 +2659,27 @@ void MASPreconditionerEngine::verify_apply(cuda_tool::CDenseVectorView<Float> r,
     // writes of build_multi_level_R, the coarse tail is an atomic accumulator
     // and must start at zero exactly as it does at the entry of a production
     // apply.
-    multi_level_R.view(0, n).fill(Eigen::Vector3f::Zero(), stream);
+    if(mode != 4)
+        multi_level_R.view(0, n).fill(Eigen::Vector3f::Zero(), stream);
+    else
+        // collect_final_Z has zeroed the coarse tail of multi_level_R since
+        // the snapshot; put the snapshot back so both solves see the same R.
+        multi_level_R.view(0, n).copy_from(m_apply_R_verify.view(0, n));
     multi_level_Z.view(0, n).fill(float3{0, 0, 0}, stream);
 
-    bool rowdot = (mode == 2) ? local_solve_rowdot_enabled() : !local_solve_rowdot_enabled();
+    // mode 1: the other local-solve kernel; mode 2: the same path (own noise);
+    // mode 3 (s15): the s12 row-dot kernel as the reference for rowdot2, with
+    // the restriction re-run (so R carries build_multi_level_R's own
+    // atomic-order noise); mode 4 (s15): the s12 row-dot kernel on the *same*
+    // multi_level_R -- the restriction is not re-run -- so the Z comparison
+    // isolates the local solve and must read exactly zero for a
+    // bit-identical kernel.
+    bool rowdot  = (mode == 1) ? !local_solve_rowdot_enabled() : local_solve_rowdot_enabled();
+    int  rowdot2 = (mode == 3 || mode == 4) ? 0 : -1;
 
-    build_multi_level_R(r, converged, stream);
-    schwarz_local_solve_into(converged, stream, rowdot);
+    if(mode != 4)
+        build_multi_level_R(r, converged, stream);
+    schwarz_local_solve_into(converged, stream, rowdot, rowdot2);
 
     const char* names[2] = {"R", "Z"};
     const float* newp[2] = {reinterpret_cast<const float*>(multi_level_R.data()),
