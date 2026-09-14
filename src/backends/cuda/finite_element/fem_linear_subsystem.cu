@@ -409,6 +409,43 @@ void FEMLinearSubsystem::Impl::_assemble_kinetic(IndexT& hess_offset,
     hess_offset += hess_count;
 }
 
+// perf round 6 (s12): why the FEM elastic G/H is NOT hoistable onto a side
+// stream the way s10/s11 hoisted the ABD body-local kinetic/shape G/H.
+//
+// The ABD prepass works because its four output buffers
+// (`body_id_to_{shape,kinetic}_{gradient,hessian}`) are **private, allocated
+// once in Impl::init(), and read by nothing but the assemble kernels that
+// follow the join**. The FEM reporters are not shaped like that. Only the
+// gradient half is private (`reporter_gradients`); the Hessian half is written
+// straight into `info.hessians()`, which is a subview of the **global**
+// `triplet_A`, and three separate things make that destination unavailable
+// before the contact phase has finished:
+//
+//   1. its size is not known. `report_extent` above adds
+//      `dytopo_effect_receiver->hessians().triplet_count()` to the FEM extent,
+//      so `GlobalLinearSystem::Impl::_update_subsystem_extent`
+//      (global_linear_system.cu:858) only calls `triplet_A.resize_triplets_discard`
+//      -- and, on growth, `reserve_triplets_discard`, which **reallocates** --
+//      after the contact count exists;
+//   2. its offset is not known. The region starts at
+//      `subsystem_triplet_offsets[triplet_i] + kinetic_count`
+//      (global_linear_system.cu:920), and that base includes every preceding
+//      subsystem's triplet count, contact included, on any scene with more than
+//      one diagonal subsystem;
+//   3. it is overwritten afterwards anyway. `_assemble_linear_system` opens with
+//      `triplet_A.row_indices().fill(-1)` / `col_indices().fill(-1)`
+//      (global_linear_system.cu:881-882) over the whole matrix, which runs on
+//      the default stream *after* the contact phase and would erase anything a
+//      prepass had written.
+//
+// The *inputs* are hoistable -- the elastic kernels read `xs`, `x_bars`,
+// `Dm_invs`, `rest_volumes`, the tet/tri indices and the per-element material
+// parameters, none of which the contact phase writes -- so the obstacle is the
+// destination, not the dependency. The only design that survives is ABD's:
+// stage the Hessian in a private triplet buffer during the prepass and copy it
+// into `info.hessians()` once that exists. `UIPC_FEM_GH_COST_PROBE=1` measures
+// what that copy would cost, by moving exactly its bytes into scratch nothing
+// reads. See agent_docs/performance/2026-09-13-perf-round6.md, step s12.
 void FEMLinearSubsystem::Impl::_assemble_reporters(IndexT& hess_offset,
                                                    GlobalLinearSystem::DiagInfo& info)
 {
@@ -420,6 +457,49 @@ void FEMLinearSubsystem::Impl::_assemble_reporters(IndexT& hess_offset,
     // Let reporters assemble their gradient and hessian
     auto reporter_gradient_view = reporter_gradients.view();
     auto reporter_hessian_view = info.hessians().subview(hess_offset, hess_count);
+
+    if(!gh_cost_probe_read) [[unlikely]]
+    {
+        const char* e      = std::getenv("UIPC_FEM_GH_COST_PROBE");
+        gh_cost_probe      = e && e[0] != '0';
+        gh_cost_probe_read = true;
+    }
+    if(gh_cost_probe && hess_count > 0) [[unlikely]]
+    {
+        // the staging copy the prepass design would have to pay, byte for byte:
+        // row indices (4 B), col indices (4 B) and the 3x3 block (72 B) per
+        // triplet, read once and written once. Destination is scratch; nothing
+        // reads it, so no computed quantity changes.
+        if(probe_vals.size() < (SizeT)hess_count)
+        {
+            probe_rows.resize(hess_count);
+            probe_cols.resize(hess_count);
+            probe_vals.resize(hess_count);
+        }
+        CUDA_TOOL_CHECK(cudaMemcpyAsync(probe_rows.data(),
+                                        reporter_hessian_view.row_indices().data(),
+                                        (size_t)hess_count * sizeof(int),
+                                        cudaMemcpyDeviceToDevice,
+                                        nullptr));
+        CUDA_TOOL_CHECK(cudaMemcpyAsync(probe_cols.data(),
+                                        reporter_hessian_view.col_indices().data(),
+                                        (size_t)hess_count * sizeof(int),
+                                        cudaMemcpyDeviceToDevice,
+                                        nullptr));
+        CUDA_TOOL_CHECK(cudaMemcpyAsync(probe_vals.data(),
+                                        reporter_hessian_view.values().data(),
+                                        (size_t)hess_count * sizeof(Matrix3x3),
+                                        cudaMemcpyDeviceToDevice,
+                                        nullptr));
+        if(probe_calls == 0)
+            std::fprintf(stderr,
+                         "[FEMGHCostProbe] staging copy of %lld reporter triplets "
+                         "(%.1f MB moved per Newton iteration, read+write)\n",
+                         (long long)hess_count,
+                         2.0 * (double)hess_count * (2 * sizeof(int) + sizeof(Matrix3x3)) / 1e6);
+        probe_triplets = hess_count;
+        ++probe_calls;
+    }
     for(auto& R : reporters.view())
     {
         AssembleInfo assemble_info{this, R->m_index, reporter_hessian_view, info.gradient_only()};

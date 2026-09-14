@@ -138,6 +138,26 @@ class FEMLinearSubsystem final : public DiagLinearSubsystem
 
         cuda_tool::DeviceDoubletVector<Float, 3> kinetic_gradients;
         cuda_tool::DeviceDoubletVector<Float, 3> reporter_gradients;
+
+        // perf round 6 (s12): DIAGNOSTIC ONLY, `UIPC_FEM_GH_COST_PROBE=1`.
+        // The FEM elastic gradient/Hessian cannot be hoisted onto a side stream
+        // the way s10/s11 hoisted the ABD body-local one, because its Hessian
+        // destination is the *global* triplet matrix, which does not exist until
+        // after the contact phase has produced its triplet count (see the long
+        // comment in `_assemble_reporters`). The only shape that could work is
+        // ABD's: compute into a private staging buffer, then copy the staged
+        // triplets into `info.hessians()` once it exists. This probe moves
+        // exactly the bytes that copy would move -- row indices, col indices and
+        // the 3x3 values of the whole reporter Hessian region -- into scratch
+        // that nothing reads, so the *cost floor* of that design can be measured
+        // without building it. It changes no computed quantity.
+        bool                                      gh_cost_probe = false;
+        bool                                      gh_cost_probe_read = false;
+        cuda_tool::DeviceBuffer<int>              probe_rows;
+        cuda_tool::DeviceBuffer<int>              probe_cols;
+        cuda_tool::DeviceBuffer<Matrix3x3>        probe_vals;
+        SizeT                                     probe_triplets = 0;
+        SizeT                                     probe_calls    = 0;
         cuda_tool::DeviceBuffer<Float>           diag_blocks_norm;
         cuda_tool::DeviceVar<Float>              reduced_diag_norm;
 
