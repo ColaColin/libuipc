@@ -140,7 +140,7 @@ class ARAP final : public AffineBodyConstitution
         if(n > 0)
         {
             auto k = arap_compute_gradient_hessian_kernel;
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, info.stream()>>>(
                 info.qs(),
                 info.volumes(),
                 info.gradients(),

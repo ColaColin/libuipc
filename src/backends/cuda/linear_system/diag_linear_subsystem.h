@@ -35,6 +35,25 @@ class DiagLinearSubsystem : public SimSystem
 
     virtual void do_report_extent(GlobalLinearSystem::DiagExtentInfo& info) = 0;
     virtual void do_assemble(GlobalLinearSystem::DiagInfo& info)            = 0;
+    // perf round 6 (s10): two optional hooks around the dytopo-effect (contact)
+    // gradient/hessian phase, called once per Newton iteration. A subsystem may
+    // use them to run the part of its assembly that depends only on the state
+    // frozen at the start of the iteration on a side stream, inside the shadow
+    // the contact assembly leaves on the SMs. Both default to nothing.
+    //
+    // The split into two phases is the whole point, and it was measured:
+    //   * `do_arm_assemble_prepass` runs BEFORE the contact phase and is where
+    //     the fork event must be recorded, because that is the last point at
+    //     which the default stream is not yet ordered behind contact part 1's
+    //     join;
+    //   * `do_launch_assemble_prepass` runs AFTER the contact launches have
+    //     been issued, and is where the kernels must actually be enqueued.
+    // Issuing them in the first hook instead puts the small blocks in front of
+    // contact part 1 in the work distributor's queue, and one 32-thread block
+    // at 192 registers denies a whole SM to a 256-thread block at 255 -- part 1
+    // then waits for them instead of covering them.
+    virtual void do_arm_assemble_prepass() {}
+    virtual void do_launch_assemble_prepass() {}
     virtual void do_accuracy_check(GlobalLinearSystem::AccuracyInfo& info)  = 0;
     virtual void do_retrieve_solution(GlobalLinearSystem::SolutionInfo& info) = 0;
 
@@ -52,6 +71,8 @@ class DiagLinearSubsystem : public SimSystem
     void receive_init_dof_info(GlobalLinearSystem::InitDofInfo& info);
 
     void report_extent(GlobalLinearSystem::DiagExtentInfo& info);
+    void arm_assemble_prepass();
+    void launch_assemble_prepass();
     void assemble(GlobalLinearSystem::DiagInfo& info);
     void accuracy_check(GlobalLinearSystem::AccuracyInfo& info);
     void retrieve_solution(GlobalLinearSystem::SolutionInfo& info);

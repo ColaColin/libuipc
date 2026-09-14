@@ -104,6 +104,8 @@ class AffineBodyKinetic : public SimSystem
         auto gradients() const noexcept { return base_info->gradients(); }
         auto hessians() const noexcept { return base_info->hessians(); }
         auto dt() const noexcept { return base_info->dt(); }
+        // perf round 6 (s10): launch stream (nullptr = legacy default stream)
+        auto stream() const noexcept { return base_info->stream(); }
 
       private:
         ABDLinearSubsystem::ComputeGradientHessianInfo* base_info = nullptr;

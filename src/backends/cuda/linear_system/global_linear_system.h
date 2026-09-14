@@ -383,6 +383,14 @@ class GlobalLinearSystem : public SimSystem
     // only be called by SimEngine::do_init();
     void init();
 
+    // perf round 6 (s10): only be called by SimEngine::do_advance(), once per
+    // Newton iteration, immediately before and immediately after the
+    // dytopo-effect phase. Lets every diag subsystem run the iteration-frozen
+    // part of its assembly on a side stream, inside the shadow of the contact
+    // assembly (see DiagLinearSubsystem::do_arm_assemble_prepass).
+    void arm_assembly_prepass();
+    void launch_assembly_prepass();
+
     // only be called by SimEngine::do_advance()
     void solve();
 

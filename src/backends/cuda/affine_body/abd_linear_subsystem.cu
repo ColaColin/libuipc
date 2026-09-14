@@ -13,6 +13,7 @@
 #include <affine_body/affine_body_constitution.h>
 #include <utils/report_extent_check.h>
 #include <cstdlib>
+#include <cstdio>
 
 namespace uipc::backend::cuda
 {
@@ -107,6 +108,40 @@ namespace
             .write(I * 4,          // begin row
                    I * 4,          // begin col
                    H12x12);
+    }
+
+    // perf round 6 (s10): UIPC_ABD_GH_PREPASS_VERIFY=1 -- compare the prepass
+    // result (a) against the in-place recompute (b), bit for bit.
+    __global__ void abd_gh_prepass_verify_kernel(
+        cuda_tool::CBufferView<Vector12>          a_sg,
+        cuda_tool::CBufferView<Vector12>          b_sg,
+        cuda_tool::CBufferView<Matrix12x12>       a_sh,
+        cuda_tool::CBufferView<Matrix12x12>       b_sh,
+        cuda_tool::CBufferView<Vector12>          a_kg,
+        cuda_tool::CBufferView<Vector12>          b_kg,
+        cuda_tool::CBufferView<Matrix12x12>       a_kh,
+        cuda_tool::CBufferView<Matrix12x12>       b_kh,
+        cuda_tool::BufferView<unsigned long long> counters,
+        int                                       n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        unsigned long long mismatch = 0;
+        auto cmp = [&](const void* pa, const void* pb, int words)
+        {
+            const unsigned long long* x = reinterpret_cast<const unsigned long long*>(pa);
+            const unsigned long long* y = reinterpret_cast<const unsigned long long*>(pb);
+            for(int k = 0; k < words; ++k)
+                mismatch += (x[k] != y[k]) ? 1 : 0;
+        };
+        cmp(a_sg(i).data(), b_sg(i).data(), 12);
+        cmp(a_sh(i).data(), b_sh(i).data(), 144);
+        cmp(a_kg(i).data(), b_kg(i).data(), 12);
+        cmp(a_kh(i).data(), b_kh(i).data(), 144);
+        atomicAdd(&counters(0), 312ull);
+        if(mismatch)
+            atomicAdd(&counters(1), mismatch);
     }
 
     __global__ void abd_linear_subsystem_assemble_reporters_k1_kernel(
@@ -680,6 +715,40 @@ namespace uipc::backend::cuda
 {
 namespace
 {
+    // s10 env switch, read once: UIPC_ABD_GH_PREPASS=0 restores the pre-s10
+    // order (the body-local kinetic/shape gradient+hessian runs in place, on
+    // the default stream, inside _assemble_kinetic_shape)
+    int abd_gh_prepass_mode()
+    {
+        static const int mode = []
+        {
+            // the s20/s24 spread verifiers stage their shadow copies and their
+            // comparison kernels on the default stream, so they cannot see a
+            // launch that ran on the prepass side stream: with the verifier on,
+            // the prepass is forced off so the verification still means what it
+            // says.
+            const char* v = std::getenv("UIPC_GRID_SPREAD_VERIFY");
+            if(v && v[0] != '0')
+                return 0;
+            const char* e = std::getenv("UIPC_ABD_GH_PREPASS");
+            if(!e)
+                return 1;
+            int m = std::atoi(e);
+            return (m == 0 || m == 1 || m == 2) ? m : 1;
+        }();
+        return mode;
+    }
+
+    bool abd_gh_prepass_verify()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_ABD_GH_PREPASS_VERIFY");
+            return e && e[0] != '0';
+        }();
+        return on;
+    }
+
     // s03 env switch, read once: UIPC_ABD_PAIR_REDUCE=0 restores the
     // 16-triplets-per-contact path
     bool abd_dytopo_pair_reduce_enabled()
@@ -743,6 +812,8 @@ void ABDLinearSubsystem::do_build(DiagLinearSubsystem::BuildInfo& info)
     UIPC_ASSERT(m_impl.dt_attr, "Scene config must have a 'dt' attribute.");
 
     m_impl.dytopo_effect_receiver  = find<ABDDyTopoEffectReceiver>();
+    m_impl.gh_prepass              = abd_gh_prepass_mode();
+    m_impl.gh_verify               = abd_gh_prepass_verify();
     m_impl.dytopo_pair_reduce      = abd_dytopo_pair_reduce_enabled();
     m_impl.dytopo_pair_warp        = abd_dytopo_pair_warp_enabled();
     m_impl.dytopo_pair_warp_rounds = abd_dytopo_pair_warp_rounds();
@@ -905,6 +976,168 @@ void ABDLinearSubsystem::Impl::assemble(GlobalLinearSystem::DiagInfo& info)
                 hess_offset);
 }
 
+// perf round 6 (s10): the body-local half of the kinetic/shape assembly, split
+// out so that it can be launched either in place (on the default stream, the
+// pre-s10 behaviour) or ahead of the contact phase on the prepass side stream.
+// The kernels and their arguments are byte-identical in both cases; only the
+// stream argument of the launch differs.
+void ABDLinearSubsystem::Impl::_compute_kinetic_shape(bool gradient_only, cudaStream_t stream)
+{
+    Float dt = dt_attr->view()[0];
+
+    // Collect Kinetic
+    ABDLinearSubsystem::ComputeGradientHessianInfo kin_info{
+        gradient_only, body_id_to_kinetic_gradient, body_id_to_kinetic_hessian, dt, stream};
+    abd().kinetic->compute_gradient_hessian(kin_info);
+
+    // Collect Shape
+    for(auto&& [i, cst] : enumerate(abd().constitutions.view()))
+    {
+        ABDLinearSubsystem::ComputeGradientHessianInfo this_info{
+            gradient_only,
+            abd().subview(body_id_to_shape_gradient, cst->m_index),
+            abd().subview(body_id_to_shape_hessian, cst->m_index),
+            dt,
+            stream};
+
+        cst->compute_gradient_hessian(this_info);
+    }
+}
+
+// Fork the prepass: everything the body-local gradient/hessian reads (qs,
+// q_prevs, q_tildes, masses, kappas, volumes, is_fixed) is frozen from the end
+// of the previous Newton iteration's line search until the next one, and
+// nothing reads its outputs before _assemble_kinetic_shape joins below. Called
+// once per Newton iteration from SimEngine, before compute_dytopo_effect().
+void ABDLinearSubsystem::Impl::arm_kinetic_shape_prepass()
+{
+    gh_prepass_armed = false;
+    if(!gh_prepass)
+        return;
+    if(abd().body_count() == 0)
+        return;
+
+    // a prepass that was never consumed (an empty global system, say) is
+    // joined and discarded before a new one is forked
+    _join_prepass();
+
+    if(!gh_prepass_stream)
+    {
+        CUDA_TOOL_CHECK(cudaStreamCreateWithFlags(&gh_prepass_stream, cudaStreamNonBlocking));
+        CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&gh_prepass_fork, cudaEventDisableTiming));
+        CUDA_TOOL_CHECK(cudaEventCreateWithFlags(&gh_prepass_join, cudaEventDisableTiming));
+    }
+
+    // record the fork here, while the default stream is still ahead of the
+    // contact phase: this is what keeps the side stream independent of contact
+    // part 1's join, and it is the only thing this hook does.
+    CUDA_TOOL_CHECK(cudaEventRecord(gh_prepass_fork, nullptr));
+    CUDA_TOOL_CHECK(cudaStreamWaitEvent(gh_prepass_stream, gh_prepass_fork, 0));
+    gh_prepass_armed = true;
+
+    if(gh_prepass == 2)
+        launch_kinetic_shape_prepass();
+}
+
+void ABDLinearSubsystem::Impl::launch_kinetic_shape_prepass()
+{
+    if(!gh_prepass_armed)
+        return;
+    gh_prepass_armed = false;
+
+    // the prepass always computes the full gradient AND hessian: it runs before
+    // the assembly is entered, so info.gradient_only() is not known yet. A
+    // gradient-only assemble re-runs the compute in place (see below), which is
+    // correct because the buffers are overwritten, not accumulated into.
+    _compute_kinetic_shape(/*gradient_only=*/false, gh_prepass_stream);
+
+    CUDA_TOOL_CHECK(cudaEventRecord(gh_prepass_join, gh_prepass_stream));
+    gh_prepass_pending = true;
+}
+
+void ABDLinearSubsystem::Impl::_join_prepass()
+{
+    if(!gh_prepass_pending)
+        return;
+    CUDA_TOOL_CHECK(cudaStreamWaitEvent(nullptr, gh_prepass_join, 0));
+    gh_prepass_pending = false;
+}
+
+// UIPC_ABD_GH_PREPASS_VERIFY=1: called right after the join, with the prepass
+// results live in the four buffers. Snapshot them, recompute in place on the
+// default stream, and count mismatching 64-bit words on device.
+void ABDLinearSubsystem::Impl::_verify_prepass()
+{
+    int n = (int)abd().body_count();
+    if(n <= 0)
+        return;
+    gh_ref_shape_g.resize(n);
+    gh_ref_shape_h.resize(n);
+    gh_ref_kin_g.resize(n);
+    gh_ref_kin_h.resize(n);
+    if(gh_verify_counters.size() != 2)
+    {
+        gh_verify_counters.resize(2);
+        CUDA_TOOL_CHECK(cudaMemset(gh_verify_counters.data(), 0, 2 * sizeof(unsigned long long)));
+    }
+    auto d2d = [](auto& dst, const auto& src)
+    {
+        using Elem = std::remove_cv_t<std::remove_reference_t<decltype(*src.data())>>;
+        CUDA_TOOL_CHECK(cudaMemcpyAsync(dst.data(),
+                                        src.data(),
+                                        (size_t)src.size() * sizeof(Elem),
+                                        cudaMemcpyDeviceToDevice,
+                                        nullptr));
+    };
+    d2d(gh_ref_shape_g, body_id_to_shape_gradient.view());
+    d2d(gh_ref_shape_h, body_id_to_shape_hessian.view());
+    d2d(gh_ref_kin_g, body_id_to_kinetic_gradient.view());
+    d2d(gh_ref_kin_h, body_id_to_kinetic_hessian.view());
+
+    // the reference: exactly the same work, in place, on the default stream
+    _compute_kinetic_shape(/*gradient_only=*/false, nullptr);
+
+    auto k = abd_gh_prepass_verify_kernel;
+    k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+        gh_ref_shape_g.cview(),
+        body_id_to_shape_gradient.cview(),
+        gh_ref_shape_h.cview(),
+        body_id_to_shape_hessian.cview(),
+        gh_ref_kin_g.cview(),
+        body_id_to_kinetic_gradient.cview(),
+        gh_ref_kin_h.cview(),
+        body_id_to_kinetic_hessian.cview(),
+        gh_verify_counters.view(),
+        n);
+
+    unsigned long long h[2] = {0, 0};
+    CUDA_TOOL_CHECK(cudaMemcpy(h, gh_verify_counters.data(), sizeof(h), cudaMemcpyDeviceToHost));
+    gh_verify_words += h[0];
+    gh_verify_mismatches += h[1];
+    CUDA_TOOL_CHECK(cudaMemset(gh_verify_counters.data(), 0, sizeof(h)));
+    if(h[1] != 0)
+        logger::warn("[ABDGHPrepassVerify] {} mismatching 64-bit words (cumulative {} of {})",
+                     h[1],
+                     gh_verify_mismatches,
+                     gh_verify_words);
+}
+
+ABDLinearSubsystem::Impl::~Impl()
+{
+    if(gh_verify)
+        std::fprintf(stderr,
+                     "[ABDGHPrepassVerify] total: %llu output words compared, %llu mismatching\n",
+                     gh_verify_words,
+                     gh_verify_mismatches);
+    // best effort: the CUDA context may already be gone at exit
+    if(gh_prepass_join)
+        cudaEventDestroy(gh_prepass_join);
+    if(gh_prepass_fork)
+        cudaEventDestroy(gh_prepass_fork);
+    if(gh_prepass_stream)
+        cudaStreamDestroy(gh_prepass_stream);
+}
+
 void ABDLinearSubsystem::Impl::_assemble_kinetic_shape(IndexT& hess_offset,
                                                        GlobalLinearSystem::DiagInfo& info)
 {
@@ -912,24 +1145,20 @@ void ABDLinearSubsystem::Impl::_assemble_kinetic_shape(IndexT& hess_offset,
 
     static cuda_tool::SpreadVerifier sv_kin_k1{"ABDLinearSubsystem::kinetic_shape_k1"};
     static cuda_tool::SpreadVerifier sv_kin_k2{"ABDLinearSubsystem::kinetic_shape_k2"};
-    Float dt = dt_attr->view()[0];
 
-    // Collect Kinetic
-    ABDLinearSubsystem::ComputeGradientHessianInfo this_info{
-        info.gradient_only(), body_id_to_kinetic_gradient, body_id_to_kinetic_hessian, dt};
-    abd().kinetic->compute_gradient_hessian(this_info);
+    // s10: if a prepass is in flight, join it. It carries the full gradient AND
+    // hessian, so it satisfies a full assemble outright; a gradient-only
+    // assemble still re-runs the compute in place after the join (the side
+    // stream must be drained before the default stream may write the same
+    // buffers).
+    const bool prepared = gh_prepass_pending;
+    _join_prepass();
 
-    // Collect Shape
-    for(auto&& [i, cst] : enumerate(abd().constitutions.view()))
-    {
-        ABDLinearSubsystem::ComputeGradientHessianInfo this_info{
-            info.gradient_only(),
-            abd().subview(body_id_to_shape_gradient, cst->m_index),
-            abd().subview(body_id_to_shape_hessian, cst->m_index),
-            dt};
+    if(prepared && gh_verify)
+        _verify_prepass();
 
-        cst->compute_gradient_hessian(this_info);
-    }
+    if(!prepared || info.gradient_only())
+        _compute_kinetic_shape(info.gradient_only(), nullptr);
 
     {
         auto k = abd_linear_subsystem_assemble_kinetic_shape_k1_kernel;
@@ -1317,6 +1546,16 @@ void ABDLinearSubsystem::do_report_extent(GlobalLinearSystem::DiagExtentInfo& in
 void ABDLinearSubsystem::do_assemble(GlobalLinearSystem::DiagInfo& info)
 {
     m_impl.assemble(info);
+}
+
+void ABDLinearSubsystem::do_arm_assemble_prepass()
+{
+    m_impl.arm_kinetic_shape_prepass();
+}
+
+void ABDLinearSubsystem::do_launch_assemble_prepass()
+{
+    m_impl.launch_kinetic_shape_prepass();
 }
 
 void ABDLinearSubsystem::do_accuracy_check(GlobalLinearSystem::AccuracyInfo& info)

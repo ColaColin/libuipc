@@ -70,6 +70,18 @@ void GlobalLinearSystem::_dump_x()
 }
 
 
+void GlobalLinearSystem::arm_assembly_prepass()
+{
+    for(auto&& subsystem : m_impl.diag_subsystems.view())
+        subsystem->arm_assemble_prepass();
+}
+
+void GlobalLinearSystem::launch_assembly_prepass()
+{
+    for(auto&& subsystem : m_impl.diag_subsystems.view())
+        subsystem->launch_assemble_prepass();
+}
+
 void GlobalLinearSystem::solve()
 {
     m_impl.last_solve_iterations = 0;

@@ -24,11 +24,13 @@ class ABDLinearSubsystem final : public DiagLinearSubsystem
         ComputeGradientHessianInfo(bool gradient_only,
                                    cuda_tool::BufferView<Vector12>    gradient,
                                    cuda_tool::BufferView<Matrix12x12> hessians,
-                                   Float dt) noexcept
+                                   Float        dt,
+                                   cudaStream_t stream = nullptr) noexcept
             : m_gradient_only(gradient_only)
             , m_gradients(gradient)
             , m_hessians(hessians)
             , m_dt(dt)
+            , m_stream(stream)
         {
         }
 
@@ -36,12 +38,18 @@ class ABDLinearSubsystem final : public DiagLinearSubsystem
         auto hessians() const noexcept { return m_hessians; }
         auto gradients() const noexcept { return m_gradients; }
         auto dt() const noexcept { return m_dt; }
+        // perf round 6 (s10): the launch stream of the body-local kinetic/shape
+        // gradient+hessian. nullptr = the legacy default stream; the s10
+        // prepass passes its side stream so these launches run inside the
+        // contact assembly's shadow.
+        auto stream() const noexcept { return m_stream; }
 
       private:
         bool                               m_gradient_only = false;
         cuda_tool::BufferView<Matrix12x12> m_hessians;
         cuda_tool::BufferView<Vector12>    m_gradients;
-        Float                              m_dt = 0.0;
+        Float                              m_dt     = 0.0;
+        cudaStream_t                       m_stream = nullptr;
     };
 
     class ReportExtentInfo
@@ -151,6 +159,49 @@ class ABDLinearSubsystem final : public DiagLinearSubsystem
         cuda_tool::DeviceVar<Float>          reduced_norm;
 
         S<const geometry::AttributeSlot<Float>> dt_attr;
+
+        // perf round 6 (s10): the body-local kinetic + shape gradient/hessian
+        // (bdf1 kinetic G/H and every AffineBodyConstitution, e.g.
+        // ortho_potential) depends only on qs / q_prevs / q_tildes / masses /
+        // material parameters -- all frozen for the whole Newton iteration --
+        // and writes only body_id_to_{shape,kinetic}_{gradient,hessian}, which
+        // nothing reads before assemble_kinetic_shape_k1/k2. So it can be
+        // launched on a side stream *before* the contact (dytopo effect) phase
+        // and joined inside _assemble_kinetic_shape, where it lands inside the
+        // shadow of contact G+H part 1 (24 blocks of 256 at 255 registers on a
+        // 40-SM part: one block per SM, ~990 us per launch with nothing else
+        // resident). UIPC_ABD_GH_PREPASS=0 = the old path (no side stream).
+        // 0 = off (pre-s10 order), 1 = enqueue after the contact launches
+        // (shipped), 2 = enqueue before them (measured, and it is a wash: see
+        // the comment on DiagLinearSubsystem::do_arm_assemble_prepass)
+        int          gh_prepass         = 1;
+        cudaStream_t gh_prepass_stream  = nullptr;
+        cudaEvent_t  gh_prepass_fork    = nullptr;
+        cudaEvent_t  gh_prepass_join    = nullptr;
+        bool         gh_prepass_armed   = false;
+        bool         gh_prepass_pending = false;
+
+        // UIPC_ABD_GH_PREPASS_VERIFY=1: after joining the prepass, snapshot its
+        // four output buffers, recompute them in place on the default stream,
+        // and count mismatching 64-bit words on device. The claim being tested
+        // is that moving these launches to a side stream changes nothing at
+        // all -- same kernels, same arguments, same geometry, one writer per
+        // output element -- so the expected count is exactly zero.
+        bool                                        gh_verify = false;
+        cuda_tool::DeviceBuffer<Vector12>           gh_ref_shape_g;
+        cuda_tool::DeviceBuffer<Matrix12x12>        gh_ref_shape_h;
+        cuda_tool::DeviceBuffer<Vector12>           gh_ref_kin_g;
+        cuda_tool::DeviceBuffer<Matrix12x12>        gh_ref_kin_h;
+        cuda_tool::DeviceBuffer<unsigned long long> gh_verify_counters;
+        unsigned long long                          gh_verify_words      = 0;
+        unsigned long long                          gh_verify_mismatches = 0;
+
+        void arm_kinetic_shape_prepass();
+        void launch_kinetic_shape_prepass();
+        void _compute_kinetic_shape(bool gradient_only, cudaStream_t stream);
+        void _join_prepass();
+        void _verify_prepass();
+        ~Impl();
     };
 
   private:
@@ -162,6 +213,8 @@ class ABDLinearSubsystem final : public DiagLinearSubsystem
 
     virtual void do_report_extent(GlobalLinearSystem::DiagExtentInfo& info) override;
     virtual void do_assemble(GlobalLinearSystem::DiagInfo& info) override;
+    virtual void do_arm_assemble_prepass() override;
+    virtual void do_launch_assemble_prepass() override;
     virtual void do_accuracy_check(GlobalLinearSystem::AccuracyInfo& info) override;
     virtual void do_retrieve_solution(GlobalLinearSystem::SolutionInfo& info) override;
     virtual Float do_diag_norm(GlobalLinearSystem::DiagNormInfo& info) override;

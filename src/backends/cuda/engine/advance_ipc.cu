@@ -468,11 +468,25 @@ void SimEngine::advance()
                 }
 
 
+                // perf round 6 (s10): arm the assembly prepass -- record the
+                // fork event while the default stream is still *ahead* of the
+                // contact phase, so the side stream is not ordered behind
+                // contact part 1's join. Nothing is enqueued yet.
+                // UIPC_ABD_GH_PREPASS=0 = the old order (no prepass at all).
+                m_global_linear_system->arm_assembly_prepass();
+
                 // 3) Compute Dynamic Topo Effect Gradient and Hessian => G:Vector3, H:Matrix3x3
                 //    - Contact Effect
                 //    - Other DyTopo Effects
                 m_state = SimEngineState::ComputeDyTopoEffect;
                 compute_dytopo_effect();
+
+                // s10: now that contact part 1 and part 2 have been issued,
+                // enqueue the prepass on its side stream. Order matters: the
+                // work distributor hands SMs out in submission order, so the
+                // big 255-register blocks must be queued first and the prepass
+                // fills what they leave.
+                m_global_linear_system->launch_assembly_prepass();
 
 
                 // 4) Solve Global Linear System => dx = A^-1 * b

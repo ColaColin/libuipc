@@ -64,6 +64,16 @@ void DiagLinearSubsystem::report_extent(GlobalLinearSystem::DiagExtentInfo& info
     do_report_extent(info);
 }
 
+void DiagLinearSubsystem::arm_assemble_prepass()
+{
+    do_arm_assemble_prepass();
+}
+
+void DiagLinearSubsystem::launch_assemble_prepass()
+{
+    do_launch_assemble_prepass();
+}
+
 void DiagLinearSubsystem::assemble(GlobalLinearSystem::DiagInfo& info)
 {
     UIPC_ASSERT(info.gradient_only()

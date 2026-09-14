@@ -126,7 +126,7 @@ class AffineBodyBDF1Kinetic final : public AffineBodyKinetic
                 k,
                 [&](int grid, int block)
                 {
-                    k<<<grid, block, 0, nullptr>>>(
+                    k<<<grid, block, 0, info.stream()>>>(
                     info.is_fixed().cview(),
                     info.qs().cview(),
                     info.q_prevs().cview(),

@@ -220,7 +220,7 @@ class OrthoPotential final : public AffineBodyConstitution
         int  n      = (int)N;
         auto launch = [&](auto k)
         {
-            k<<<cuda_tool::spread_grid_dim(n, k), cuda_tool::spread_block_dim(n, k), 0, nullptr>>>(
+            k<<<cuda_tool::spread_grid_dim(n, k), cuda_tool::spread_block_dim(n, k), 0, info.stream()>>>(
                 info.qs(),
                 info.volumes(),
                 info.gradients(),
@@ -236,7 +236,7 @@ class OrthoPotential final : public AffineBodyConstitution
         // s19 (solver choice) and s20 (launch shape) are composed.
         auto launch_ref = [&](auto k)
         {
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, info.stream()>>>(
                 info.qs(),
                 info.volumes(),
                 m_verify_g.view(),
@@ -269,7 +269,7 @@ class OrthoPotential final : public AffineBodyConstitution
             else
                 launch_ref(ortho_potential_compute_gradient_hessian_kernel<0>);
             auto vk = ortho_potential_spread_verify_kernel;
-            vk<<<cuda_tool::best_grid_dim(n, vk), cuda_tool::best_block_dim(vk), 0, nullptr>>>(
+            vk<<<cuda_tool::best_grid_dim(n, vk), cuda_tool::best_block_dim(vk), 0, info.stream()>>>(
                 info.gradients(),
                 m_verify_g.cview(),
                 info.hessians(),
