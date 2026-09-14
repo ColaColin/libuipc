@@ -1,0 +1,44 @@
+[   22.2s] warmup    off:  117.475 ms  Newton 1492
+[   44.8s] warmup  after:  119.966 ms  Newton 1495
+[   66.0s] rep  1    off:  111.918 ms  Newton 1455  PCG 46890  LS 1695
+[   88.6s] rep  1  after:  119.416 ms  Newton 1539  PCG 52975  LS 1868
+[  110.1s] rep  2    off:  114.011 ms  Newton 1525  PCG 50000  LS 1831
+[  131.6s] rep  2  after:  113.253 ms  Newton 1514  PCG 48680  LS 1718
+[  154.4s] rep  3    off:  120.582 ms  Newton 1495  PCG 48710  LS 1757
+[  175.1s] rep  3  after:  109.134 ms  Newton 1436  PCG 44740  LS 1676
+[  198.2s] rep  4    off:  122.795 ms  Newton 1484  PCG 49540  LS 1745
+[  219.6s] rep  4  after:  113.068 ms  Newton 1463  PCG 46045  LS 1715
+[  242.4s] rep  5    off:  120.653 ms  Newton 1463  PCG 45035  LS 1691
+[  265.8s] rep  5  after:  124.161 ms  Newton 1503  PCG 55495  LS 1816
+
+=== tum  tumbler-garments  n=5 per arm, 2 arms, baseline=off ===
+
+-- newton
+      off: mean   1484.4000 sd  24.8322 [1455.0000, 1525.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean   1491.0000 sd  36.8402 [1436.0000, 1539.0000]    +0.44%  overlapping  t=-0.30 p=0.775
+
+-- pcg
+      off: mean  48035.0000 sd 1838.0914 [45035.0000, 50000.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean  49587.0000 sd 4080.3144 [44740.0000, 55495.0000]    +3.23%  overlapping  t=-0.69 p=0.516
+
+-- line_search
+      off: mean   1743.8000 sd  50.8897 [1691.0000, 1831.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean   1758.6000 sd  71.6034 [1676.0000, 1868.0000]    +0.85%  overlapping  t=-0.34 p=0.746
+
+-- mean_ms
+      off: mean    117.9919 sd   4.2330 [111.9184, 122.7952]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    115.8063 sd   5.3174 [109.1336, 124.1614]    -1.85%  overlapping  t=+0.64 p=0.539
+
+-- median_ms
+      off: mean    108.8269 sd   4.9347 [103.0391, 116.0787]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    107.1438 sd   5.6258 [101.5466, 115.4815]    -1.55%  overlapping  t=+0.45 p=0.665
+
+-- ms_per_newton
+      off: mean     14.3119 sd   0.5681 [13.4571, 14.8943]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     13.9784 sd   0.4800 [13.4646, 14.8696]    -2.33%  overlapping  t=+0.90 p=0.397
+
+-- ms_per_pcg
+      off: mean      0.4428 sd   0.0236 [0.4104, 0.4822]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean      0.4217 sd   0.0164 [0.4027, 0.4420]    -4.78%  overlapping  t=+1.47 p=0.184
+
+raw runs + summary: ab/tum

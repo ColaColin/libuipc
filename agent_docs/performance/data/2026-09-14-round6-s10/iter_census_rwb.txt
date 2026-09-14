@@ -1,0 +1,7 @@
+counts p1,p2,ortho,kin,diag,ksh: 456 456 465 465 465 930
+ms totals: p1 622.4 p2 177.3 ortho 152.5 kin 7.4 diag 169.2
+iteration span us: median 6606.5 mean 6936.8
+trace span ms 3371.1 busy union ms 2905.3  (idle 13.8%)
+kernel duration sum ms 3079.6
+p1 median dur us 1374.8, median covered-by-others us 326.7 -> median empty shadow us 992.3
+sum p1 ms 622.4, sum covered ms 174.3, sum empty shadow ms 448.1

@@ -1,0 +1,22 @@
+== cwc: nsys kern_sum, full runs, n=3 per arm; totals in ms per run
+kernel                  c1       d%          c0       d%
+ortho G/H            187.9    +0.00       166.0   -11.63
+abd kin G/H           14.3    +0.00        13.0    -8.82
+contact p1           713.3    +0.00       719.7    +0.90
+contact p2           277.3    +0.00       286.3    +3.25
+abd_diag             238.4    +0.00       239.4    +0.40
+ks k1+k2              31.4    +0.00        30.8    -1.89
+dytopo warp           38.5    +0.00        38.7    +0.56
+SpMV                 607.8    +0.00       613.4    +0.92
+GPU total           5750.8    +0.00      5753.5    +0.05
+launch counts (mean):
+  ortho G/H      c1=502 c0=506
+  abd kin G/H    c1=502 c0=506
+  contact p1     c1=366 c0=370
+  contact p2     c1=366 c0=370
+  abd_diag       c1=502 c0=506
+  ks k1+k2       c1=1005 c0=1011
+  dytopo warp    c1=366 c0=370
+  SpMV           c1=19330 c0=19492
+  raw GPU total ms c1: [5767.7, 5833.2, 5651.5]
+  raw GPU total ms c0: [5949.5, 5782.3, 5528.9]

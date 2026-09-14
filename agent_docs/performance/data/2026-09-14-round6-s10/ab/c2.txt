@@ -1,0 +1,42 @@
+[   45.4s] warmup    off:  166.750 ms  Newton 1663
+[   90.7s] warmup  after:  166.424 ms  Newton 1665
+[  135.7s] rep  1    off:  165.268 ms  Newton 1661  PCG 63825  LS 1780
+[  181.3s] rep  1  after:  167.278 ms  Newton 1667  PCG 65040  LS 1821
+[  226.4s] rep  2    off:  165.789 ms  Newton 1668  PCG 64325  LS 1803
+[  271.6s] rep  2  after:  165.884 ms  Newton 1659  PCG 64150  LS 1798
+[  316.6s] rep  3    off:  165.437 ms  Newton 1661  PCG 63865  LS 1781
+[  361.7s] rep  3  after:  165.479 ms  Newton 1662  PCG 63825  LS 1788
+[  407.2s] rep  4    off:  167.132 ms  Newton 1668  PCG 64875  LS 1802
+[  452.3s] rep  4  after:  165.581 ms  Newton 1663  PCG 63460  LS 1774
+
+=== c2  stiff-gipc-case2  n=4 per arm, 2 arms, baseline=off ===
+
+-- newton
+      off: mean   1664.5000 sd   3.5000 [1661.0000, 1668.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean   1662.7500 sd   2.8614 [1659.0000, 1667.0000]    -0.11%  overlapping  t=+0.67 p=0.528
+
+-- pcg
+      off: mean  64222.5000 sd 424.8750 [63825.0000, 64875.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean  64118.7500 sd 585.2176 [63460.0000, 65040.0000]    -0.16%  overlapping  t=+0.25 p=0.813
+
+-- line_search
+      off: mean   1791.5000 sd  11.0114 [1780.0000, 1803.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean   1795.2500 sd  17.1373 [1774.0000, 1821.0000]    +0.21%  overlapping  t=-0.32 p=0.762
+
+-- mean_ms
+      off: mean    165.9068 sd   0.7319 [165.2683, 167.1320]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    166.0556 sd   0.7214 [165.4786, 167.2781]    +0.09%  overlapping  t=-0.25 p=0.81
+
+-- median_ms
+      off: mean    167.1644 sd   1.6199 [164.8654, 168.7273]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    169.3781 sd   1.2240 [167.6920, 170.7364]    +1.32%  overlapping  t=-1.89 p=0.112
+
+-- ms_per_newton
+      off: mean     24.9183 sd   0.0780 [24.8485, 25.0498]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     24.9669 sd   0.0815 [24.8915, 25.0867]    +0.20%  overlapping  t=-0.75 p=0.484
+
+-- ms_per_pcg
+      off: mean      0.6458 sd   0.0016 [0.6441, 0.6476]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean      0.6475 sd   0.0034 [0.6430, 0.6523]    +0.25%  overlapping  t=-0.76 p=0.485
+
+raw runs + summary: ab/c2

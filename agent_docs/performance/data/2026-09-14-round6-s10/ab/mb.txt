@@ -1,0 +1,44 @@
+[    8.7s] warmup    off:   66.596 ms  Newton 465
+[   17.4s] warmup  after:   66.508 ms  Newton 465
+[   26.1s] rep  1    off:   66.494 ms  Newton 465  PCG 35210  LS 465
+[   34.9s] rep  1  after:   66.736 ms  Newton 465  PCG 35220  LS 465
+[   43.5s] rep  2    off:   66.472 ms  Newton 465  PCG 35185  LS 465
+[   52.2s] rep  2  after:   66.795 ms  Newton 465  PCG 35230  LS 465
+[   60.9s] rep  3    off:   66.634 ms  Newton 465  PCG 35180  LS 465
+[   69.6s] rep  3  after:   66.409 ms  Newton 465  PCG 35200  LS 465
+[   78.3s] rep  4    off:   66.700 ms  Newton 465  PCG 35195  LS 465
+[   87.0s] rep  4  after:   66.680 ms  Newton 465  PCG 35225  LS 465
+/workspace/deps/uipc-perf-env/lib/python3.11/site-packages/scipy/stats/_axis_nan_policy.py:592: RuntimeWarning: Precision loss occurred in moment calculation due to catastrophic cancellation. This occurs when the data are nearly identical. Results may be unreliable.
+  res = hypotest_fun_out(*samples, **kwds)
+
+=== mb  mas-bunny  n=4 per arm, 2 arms, baseline=off ===
+
+-- newton
+      off: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+nan p=nan
+
+-- pcg
+      off: mean  35192.5000 sd  11.4564 [35180.0000, 35210.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean  35218.7500 sd  11.3880 [35200.0000, 35230.0000]    +0.07%  overlapping  t=-2.81 p=0.0306
+
+-- line_search
+      off: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean    465.0000 sd   0.0000 [465.0000, 465.0000]    +0.00%  overlapping  t=+nan p=nan
+
+-- mean_ms
+      off: mean     66.5748 sd   0.0951 [66.4723, 66.6996]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     66.6548 sd   0.1479 [66.4086, 66.7949]    +0.12%  overlapping  t=-0.79 p=0.466
+
+-- median_ms
+      off: mean     73.2791 sd   0.1299 [73.1250, 73.4247]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     73.2318 sd   0.0599 [73.1667, 73.3106]    -0.06%  overlapping  t=+0.57 p=0.596
+
+-- ms_per_newton
+      off: mean     14.3172 sd   0.0204 [14.2951, 14.3440]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean     14.3344 sd   0.0318 [14.2814, 14.3645]    +0.12%  overlapping  t=-0.79 p=0.466
+
+-- ms_per_pcg
+      off: mean      0.1892 sd   0.0003 [0.1888, 0.1895]    +0.00%  overlapping  t=+0.00 p=1
+    after: mean      0.1893 sd   0.0004 [0.1887, 0.1896]    +0.05%  overlapping  t=-0.32 p=0.76
+
+raw runs + summary: ab/mb

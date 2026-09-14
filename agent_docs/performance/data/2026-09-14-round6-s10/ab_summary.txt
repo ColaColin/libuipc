@@ -1,0 +1,44 @@
+s10 end-to-end, one build (build3), abn.py: rotated arm order + one discarded warm-up per arm.
+Arms: off = UIPC_ABD_GH_PREPASS=0, after = 1 (shipped), before = 2, null = "00" (atoi -> 0,
+i.e. a bit-identical twin of off, so its delta IS the scene's envelope measured in this sweep).
+
+rigid-wrecking-balls, n=8/arm (ab/rwb.txt)
+  metric        off        after            before           null
+  mean ms     27.2421   25.5958 -6.04% DISJOINT  25.4345 -6.64% DISJOINT  27.2609 +0.07% ovl
+  median ms   23.8534   22.7543 -4.61% ovl       22.5383 -5.51% DISJOINT  24.0533 +0.84% ovl
+  ms/Newton    6.9812    6.6270 -5.07% DISJOINT  6.5672 -5.93% DISJOINT   7.0013 +0.29% ovl
+                          p=8.7e-07             p=2.2e-07               p=0.564
+  ms/PCG       0.2567    0.2422 -5.64% DISJOINT  0.2405 -6.33% DISJOINT   0.2575 +0.31% ovl
+  Newton range  461-480   456-473              460-473                  457-473   (all overlap)
+
+cube-wall-cloth, n=8/arm (ab/cwc.txt)
+  mean ms     59.0205   57.0688 -3.31% p=0.145   57.0432 -3.35% p=0.161
+  ms/Newton   11.4261   11.3283 -0.86% p=0.155   11.2269 -1.74% p=0.019
+  ms/PCG       0.2966    0.2946 -0.68% p=0.368    0.2897 -2.33% p=0.012
+
+tumbler-garments, n=5/arm (ab/tum.txt)   -- this scene cannot resolve below ~4 % (round brief)
+  mean ms    117.9919  115.8063 -1.85% p=0.539
+  ms/Newton   14.3119   13.9784 -2.33% p=0.397
+  ms/PCG       0.4428    0.4217 -4.78% p=0.184
+
+mas-bunny, n=4/arm (ab/mb.txt)  -- CONTROL BY CONSTRUCTION: zero ABD G/H kernels in this scene
+  mean ms     66.5748   66.6548 +0.12% p=0.466
+  ms/Newton   14.3172   14.3344 +0.12% p=0.466   Newton 465 in all 8 runs, PCG matched to 0.1 %
+  This number IS the cost of the two extra host hooks per Newton iteration on a scene where the
+  prepass never launches anything: +0.12 %, not resolved, on the tightest scene in the suite.
+
+stiff-gipc-case2, n=4/arm (ab/c2.txt)  -- CONTROL BY CONSTRUCTION: zero ABD G/H kernels
+  mean ms    165.9068  166.0556 +0.09% p=0.810
+  ms/Newton   24.9183   24.9669 +0.20% p=0.484
+  ms/PCG       0.6458    0.6475 +0.25% p=0.485
+  Newton 1661-1668 (off) vs 1659-1667 (after), overlapping.
+
+VERDICT: ship arm `after` (UIPC_ABD_GH_PREPASS=1).
+ * rwb -5.07 % ms/Newton, disjoint, p=8.7e-07, and the scope corroborates it (busy union -5.2 %).
+ * `before` (=2) reads -5.93 % end to end -- statistically indistinguishable from `after`
+   (t=1.77, p~0.10, n=8 each) -- but its SCOPE measurement does not corroborate it at all:
+   under nsys it makes the ortho kernel 83 % slower, leaves the GPU busy union unchanged, and
+   delays contact part 1 by ~570 us. The two instruments disagree for `=2` and agree for `=1`,
+   so `=1` is the arm that is understood, and it is the one that ships. `=2` is kept behind the
+   switch for a future re-test (it may be an nsys artefact and is worth re-measuring on a box
+   where the host runs further ahead).

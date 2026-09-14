@@ -1,0 +1,28 @@
+s10 scope, rigid-wrecking-balls, nsys cuda_gpu_trace (one full 120-frame run per arm, build3).
+Ratios and unions are measured INSIDE one run, which is what a trace run is good for (s09).
+
+  arm                              c1 (after)   c0 (off)   c2 (before)
+  GPU busy union (ms)                 2934.2     3094.7      3094.8
+      vs c0                           -5.19 %       --        +0.00 %
+  trace span (ms)                     3381.7     3557.0      3560.6
+      vs c0                           -4.93 %       --        +0.10 %
+  kernel duration sum (ms)            3316.8     3327.5      3280.7
+  sum / union (concurrency)            1.130      1.075       1.060
+  ortho G/H  us/launch                 332.2      331.7       607.7   (+83 % in c2)
+  abd kin G/H us/launch                 16.1       15.8        15.8
+  contact part 1 us/launch            1440.1     1448.8      1400.2
+  contact part 2 us/launch             528.6      532.7       309.8
+  part 1 window / covered / EMPTY   643.7/231.8/411.9   663.6/232.9/430.7   637.1/9.0/628.1
+  part1 start -> kinetic_shape_k1     1895.2 us  2077.9 us   1667.6 us
+
+The prepass kernels (ortho + kinetic G/H, 158.8 ms) are concurrent with some other kernel for
+**95.0 % of their duration** in arm c1 (hidden_c1.txt). They are NOT inside contact part 1's
+window -- 0.0 % of them is -- they are inside the *post-contact* chain (friction assemble,
+dytopo pair key/sort/scatter, matrix converter). See the candidate list: part 1's own shadow is
+still 412 ms and still empty.
+
+nsys cuda_gpu_kern_sum, n=3 per arm (scope_rwb.txt): ortho G/H total 155.6 (c1) vs 155.6 (c0) ms
+-- the prepass costs the kernel itself NOTHING in this placement -- and contact part 1
+660.5 vs 666.4 ms (-0.9 %). The whole effect is overlap, not speed. The kern_sum GPU *total*
+is a duration sum and therefore DOUBLE-COUNTS the overlap (s09's lesson): it reads +0.9 % for c1
+against c0 while the union reads -5.2 %. Read the union, never the sum, on this step.

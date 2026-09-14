@@ -1,0 +1,25 @@
+s10 first arm (UIPC_ABD_GH_PREPASS=1, prepass issued BEFORE compute_dytopo_effect) -- rwb full trace
+
+  arm                     b1 (prepass ahead)   b0 (off, = shipped)
+  contact part 1 us/l          1382.4               1464.3
+  contact part 2 us/l           321.7                574.5
+  ortho G/H   us/l              622.3                335.1   <-- +86 %
+  ortho G/H   total ms          286.3                156.2
+  part 1 window covered by
+     other kernels (ms)           8.2                255.4   <-- part 2 stopped overlapping part 1
+  part1 start -> ks1 start     1682.1 us            2093.2 us
+  GPU busy union (ms)          3111.2               3106.6   <-- NO GAIN (+0.15 %)
+  trace span (ms)              3573.1               3571.5
+
+WHY: the prepass is issued to the GPU *ahead of* contact part 1, so the work distributor
+places ortho's 18 single-warp blocks first. At 192 reg x 32 threads they cost 6 144 of an SM's
+65 536 registers -- and part 1's block needs 65 280 of them (256 threads x 255 reg). One ortho
+warp therefore makes an SM unusable for part 1 for ortho's whole duration. Measured: part 1
+starts 567 us later than its fork event allows and ends 2.3 us after ortho does.
+The assembly critical path shortens by 411 us/iteration and the wall does not move at all,
+because the 411 us were simply moved in front of part 1 instead of under it.
+
+FIX TO TEST: keep the fork event where it is (before the contact phase, which is what makes
+the side stream independent of part 1's join) but ISSUE the prepass kernels *after*
+compute_dytopo_effect() has issued part 1 and part 2. Then part 1's blocks are dispatched
+first and ortho fills what part 1 leaves, which is the shadow this step is aiming at.

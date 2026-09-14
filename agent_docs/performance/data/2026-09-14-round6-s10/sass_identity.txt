@@ -1,0 +1,5 @@
+ortho_potential            common functions  28 ( 15240 instructions)  differing 0  base-only 0  head-only 0
+affine_body_bdf1_kinetic   common functions  17 (   888 instructions)  differing 0  base-only 0  head-only 0
+arap                       common functions  17 (  1784 instructions)  differing 0  base-only 0  head-only 0
+abd_linear_subsystem       common functions  59 ( 37584 instructions)  differing 0  base-only 0  head-only 1
+   head-only (new): __nv_static_X__X_23_abd_linear_subsystem_cu_X_X__ZN4uipc7backend4cuda64_GLOBAL__N__X_23_abd_linear_subsystem_c

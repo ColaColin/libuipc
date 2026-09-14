@@ -1,0 +1,36 @@
+# trace/rwb_c1_cuda_gpu_trace.csv
+  p1     n=  447 total    643.7 ms  per-launch   1440.1 us  streams ['14']
+  p2     n=  447 total    236.3 ms  per-launch    528.6 us  streams ['7']
+  ortho  n=  456 total    151.5 ms  per-launch    332.2 us  streams ['15']
+  kin    n=  456 total      7.4 ms  per-launch     16.1 us  streams ['15']
+  ks1    n=  456 total      1.2 ms  per-launch      2.6 us  streams ['7']
+  diag   n=  456 total    165.9 ms  per-launch    363.9 us  streams ['13']
+  trace span   3381.7 ms   busy union   2934.2 ms   duration sum   3316.8 ms   sum/union 1.130
+  ortho  hidden inside contact part 1:      0.0 ms of    151.5 ms =   0.0 %
+  kin    hidden inside contact part 1:      0.0 ms of      7.4 ms =   0.0 %
+  part 1 window    643.7 ms, covered by other kernels    231.8 ms, EMPTY SHADOW    411.9 ms
+  contact part1 start -> next kinetic_shape_k1 start: median   1895.2 us  mean   1897.9 us  (n=447)
+# trace/rwb_c0_cuda_gpu_trace.csv
+  p1     n=  458 total    663.6 ms  per-launch   1448.8 us  streams ['14']
+  p2     n=  458 total    244.0 ms  per-launch    532.7 us  streams ['7']
+  ortho  n=  467 total    154.9 ms  per-launch    331.7 us  streams ['7']
+  kin    n=  467 total      7.4 ms  per-launch     15.8 us  streams ['7']
+  ks1    n=  467 total      0.9 ms  per-launch      2.0 us  streams ['7']
+  diag   n=  467 total    170.1 ms  per-launch    364.2 us  streams ['13']
+  trace span   3557.0 ms   busy union   3094.7 ms   duration sum   3327.5 ms   sum/union 1.075
+  ortho  hidden inside contact part 1:      0.0 ms of    154.9 ms =   0.0 %
+  kin    hidden inside contact part 1:      0.0 ms of      7.4 ms =   0.0 %
+  part 1 window    663.6 ms, covered by other kernels    232.9 ms, EMPTY SHADOW    430.7 ms
+  contact part1 start -> next kinetic_shape_k1 start: median   2077.9 us  mean   2061.8 us  (n=458)
+# trace/rwb_c2_cuda_gpu_trace.csv
+  p1     n=  455 total    637.1 ms  per-launch   1400.2 us  streams ['14']
+  p2     n=  455 total    141.0 ms  per-launch    309.8 us  streams ['7']
+  ortho  n=  464 total    282.0 ms  per-launch    607.7 us  streams ['15']
+  kin    n=  464 total      7.3 ms  per-launch     15.8 us  streams ['15']
+  ks1    n=  464 total      1.2 ms  per-launch      2.5 us  streams ['7']
+  diag   n=  464 total    169.0 ms  per-launch    364.2 us  streams ['13']
+  trace span   3560.6 ms   busy union   3094.8 ms   duration sum   3280.7 ms   sum/union 1.060
+  ortho  hidden inside contact part 1:      0.0 ms of    282.0 ms =   0.0 %
+  kin    hidden inside contact part 1:      0.0 ms of      7.3 ms =   0.0 %
+  part 1 window    637.1 ms, covered by other kernels      9.0 ms, EMPTY SHADOW    628.1 ms
+  contact part1 start -> next kinetic_shape_k1 start: median   1667.6 us  mean   1658.8 us  (n=455)

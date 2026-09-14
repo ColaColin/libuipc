@@ -1,0 +1,121 @@
+[
+ {
+  "file": "tum_tumbler-garments_after_r1.json",
+  "arm": "after",
+  "mean_ms": 119.41551397257071,
+  "median_ms": 115.48146203858778,
+  "newton": 1539,
+  "pcg": 52975,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "1"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_after_r2.json",
+  "arm": "after",
+  "mean_ms": 113.25260526953369,
+  "median_ms": 103.71993348235264,
+  "newton": 1514,
+  "pcg": 48680,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "1"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_after_r3.json",
+  "arm": "after",
+  "mean_ms": 109.13360661555392,
+  "median_ms": 101.54661902925,
+  "newton": 1436,
+  "pcg": 44740,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "1"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_after_r4.json",
+  "arm": "after",
+  "mean_ms": 113.06842323457305,
+  "median_ms": 102.71877096965909,
+  "newton": 1463,
+  "pcg": 46045,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "1"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_after_r5.json",
+  "arm": "after",
+  "mean_ms": 124.16137342354179,
+  "median_ms": 112.25244658999145,
+  "newton": 1503,
+  "pcg": 55495,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "1"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_off_r1.json",
+  "arm": "off",
+  "mean_ms": 111.91838049627323,
+  "median_ms": 103.52837451500818,
+  "newton": 1455,
+  "pcg": 46890,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "0"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_off_r2.json",
+  "arm": "off",
+  "mean_ms": 114.0113568916503,
+  "median_ms": 103.03912952076644,
+  "newton": 1525,
+  "pcg": 50000,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "0"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_off_r3.json",
+  "arm": "off",
+  "mean_ms": 120.58160602917067,
+  "median_ms": 111.09335446963087,
+  "newton": 1495,
+  "pcg": 48710,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "0"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_off_r4.json",
+  "arm": "off",
+  "mean_ms": 122.79522287167816,
+  "median_ms": 110.39503250503913,
+  "newton": 1484,
+  "pcg": 49540,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "0"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_off_r5.json",
+  "arm": "off",
+  "mean_ms": 120.65302832052112,
+  "median_ms": 116.07871699379757,
+  "newton": 1463,
+  "pcg": 45035,
+  "env": {
+   "UIPC_ABD_GH_PREPASS": "0"
+  }
+ },
+ {
+  "file": "tum_tumbler-garments_summary.json",
+  "arm": "tumbler-garments",
+  "mean_ms": null,
+  "median_ms": null,
+  "newton": 0,
+  "pcg": 0,
+  "env": {}
+ }
+]
