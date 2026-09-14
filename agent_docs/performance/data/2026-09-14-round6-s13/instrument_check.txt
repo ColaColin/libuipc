@@ -1,0 +1,19 @@
+s13 instrument check: nsys --cuda-graph-trace=node inflates the wall, and it inflates the
+capacity-grid arm MORE than the fitted-grid arm. That inflation is the same size as the
+gap between the scope prediction and the measured end-to-end effect.
+
+arm                    nsys ms/fr ab.py ms/fr profiling
+mas-bunny off              69.500     66.676    +4.24%
+mas-bunny fit              68.600     66.640    +2.94%
+case2 off                 168.800    165.815    +1.80%
+case2 fit                 166.500    164.469    +1.23%
+
+profiling overhead, off - fit:  mas-bunny +1.29 pp   case2 +0.57 pp
+scope-predicted wall gain (per-launch delta x launches / wall):  mas-bunny -0.83 %, case2 -1.46 %
+measured end-to-end (ab.py):                                     mas-bunny -0.05 %, case2 -0.81 %
+shortfall:                                                       mas-bunny  0.78 pp, case2  0.65 pp
+
+The shortfall and the differential profiling overhead agree to ~0.1 pp on both scenes.
+Conclusion: nsys kernel durations over-credit a change that reduces the number of blocks
+launched. Per-kernel kern_sum stays a valid RANKING instrument; it is not a wall forecast
+for a launch-geometry change. Only the un-instrumented benchmark decides those.

@@ -1,0 +1,20 @@
+##### --scene mas-bunny --n 8 --label s13r7mb --out /workspace/output/round6/s13/ab --arm nofold UIPC_PCG_FOLD=0 --arm fold1 UIPC_PCG_FOLD=1 UIPC_PCG_FOLD_MAXGRID=0
+[    8.8s] warmup    nofold: 66.835 ms/frame (discarded)
+[   17.5s] warmup     fold1: 66.888 ms/frame (discarded)
+[   26.2s] rep 1   nofold: 66.550 ms/frame  Newton 465  PCG 35200
+[   34.9s] rep 1    fold1: 66.858 ms/frame  Newton 465  PCG 35185
+[   43.7s] rep 2    fold1: 66.653 ms/frame  Newton 465  PCG 35185
+[   52.4s] rep 2   nofold: 66.618 ms/frame  Newton 465  PCG 35210
+[   61.1s] rep 3   nofold: 66.618 ms/frame  Newton 465  PCG 35230
+[   69.8s] rep 3    fold1: 66.666 ms/frame  Newton 465  PCG 35200
+[   78.5s] rep 4    fold1: 66.671 ms/frame  Newton 465  PCG 35195
+[   87.2s] rep 4   nofold: 66.653 ms/frame  Newton 465  PCG 35215
+[   95.9s] rep 5   nofold: 66.715 ms/frame  Newton 465  PCG 35225
+[  104.6s] rep 5    fold1: 66.676 ms/frame  Newton 465  PCG 35210
+[  113.3s] rep 6    fold1: 66.682 ms/frame  Newton 465  PCG 35205
+[  121.9s] rep 6   nofold: 66.575 ms/frame  Newton 465  PCG 35210
+[  130.7s] rep 7   nofold: 66.692 ms/frame  Newton 465  PCG 35215
+[  139.4s] rep 7    fold1: 66.702 ms/frame  Newton 465  PCG 35175
+[  148.1s] rep 8    fold1: 66.925 ms/frame  Newton 465  PCG 35230
+[  156.8s] rep 8   nofold: 66.663 ms/frame  Newton 465  PCG 35195
+

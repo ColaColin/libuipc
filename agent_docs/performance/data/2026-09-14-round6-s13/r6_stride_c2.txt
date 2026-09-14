@@ -1,0 +1,16 @@
+##### --scene stiff-gipc-case2 --n 6 --label s13r6c2 --out /workspace/output/round6/s13/ab --arm cap UIPC_SPMV_GRID_FIT=0 UIPC_SPMV_GRID_STRIDE=0 --arm stride UIPC_SPMV_GRID_FIT=0 UIPC_SPMV_GRID_STRIDE=1
+[   44.9s] warmup       cap: 164.728 ms/frame (discarded)
+[   89.9s] warmup    stride: 165.323 ms/frame (discarded)
+[  135.2s] rep 1      cap: 166.308 ms/frame  Newton 1661  PCG 64360
+[  179.9s] rep 1   stride: 163.830 ms/frame  Newton 1662  PCG 63285
+[  224.7s] rep 2   stride: 164.291 ms/frame  Newton 1660  PCG 63820
+[  269.6s] rep 2      cap: 164.748 ms/frame  Newton 1657  PCG 63045
+[  314.6s] rep 3      cap: 165.145 ms/frame  Newton 1659  PCG 63355
+[  359.5s] rep 3   stride: 164.471 ms/frame  Newton 1660  PCG 63805
+[  404.6s] rep 4   stride: 165.692 ms/frame  Newton 1668  PCG 64305
+[  449.5s] rep 4      cap: 164.512 ms/frame  Newton 1650  PCG 63630
+[  494.6s] rep 5      cap: 165.202 ms/frame  Newton 1660  PCG 63430
+[  539.6s] rep 5   stride: 164.960 ms/frame  Newton 1662  PCG 63825
+[  584.8s] rep 6   stride: 165.376 ms/frame  Newton 1662  PCG 64135
+[  630.0s] rep 6      cap: 165.918 ms/frame  Newton 1664  PCG 64360
+

@@ -1,0 +1,6 @@
+stiff-gipc-case2, the two independent n=8 sweeps pooled: n=16 per arm, one build, ABBA
+mean ms/frame      off   165.9038 [164.5811, 167.5585]  fit   164.2869 [162.5875, 165.5184]   -0.97%  overlapping  t=+5.73 p=2.97e-06
+ms per Newton it   off    24.9667 [24.7735, 25.1892]  fit    24.7345 [24.6196, 24.8385]   -0.93%  overlapping  t=+6.96 p=2.93e-07
+ms per PCG it      off     0.6479 [0.6381, 0.6553]  fit     0.6414 [0.6345, 0.6477]   -1.00%  overlapping  t=+4.62 p=0.000112
+Newton             off  1661.2500 [1653.0000, 1666.0000]  fit  1660.5000 [1649.0000, 1667.0000]   -0.05%  overlapping  t=+0.45 p=0.659
+PCG                off 64020.9375 [62945.0000, 65440.0000]  fit 64032.8125 [62900.0000, 65030.0000]   +0.02%  overlapping  t=-0.06 p=0.956
