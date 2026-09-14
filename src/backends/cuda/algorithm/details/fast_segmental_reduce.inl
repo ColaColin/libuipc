@@ -2,6 +2,7 @@
 #include <cuda_tool/cub.h>
 #include <cuda_tool/cuda_tool.h>
 #include <cstdio>
+#include <cstring>
 #include <cstdlib>
 #include <limits>
 #include <type_traits>
@@ -59,6 +60,60 @@ namespace details::fast_segmental_reduce
             return std::numeric_limits<T>::signaling_NaN();
         else
             return std::numeric_limits<T>::max();
+    }
+
+    // perf/round6 (s17): the matrix reduce's warp tree stops at the first
+    // level no lane of the warp needs. UIPC_SEG_REDUCE2=0 launches the
+    // round-4 (s10) kernel, whose SASS is untouched -- the A/B arm and the
+    // rollback.
+    inline bool reduce2_enabled()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_SEG_REDUCE2");
+            return !(e && e[0] == '0');
+        }();
+        return on;
+    }
+
+    // UIPC_SEG_VERIFY=1: after the production launch, re-run the old kernel
+    // into a scratch copy and count mismatching 64-bit words, split by whether
+    // the slot's segment spans three or more warps (the only slots whose
+    // result depends on atomic arrival order in BOTH kernels). Diagnostic.
+    inline bool verify_enabled()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_SEG_VERIFY");
+            return e && e[0] == '1';
+        }();
+        return on;
+    }
+
+    // UIPC_SEG_PROBE=1: after the production launch, time two stubs of the
+    // new kernel into scratch nothing reads -- Probe=1 no warp tree (gather +
+    // store floor), Probe=2 no gather (tree + store floor). Timing only.
+    inline bool probe_enabled()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_SEG_PROBE");
+            return e && e[0] == '1';
+        }();
+        return on;
+    }
+
+    // UIPC_SEG_HIST=k: every k-th call, histogram the warps of the launch by
+    // the number of tree levels they execute (0..5 = ceil(log2(longest
+    // in-warp run))) and print it. Diagnostic.
+    inline int hist_every()
+    {
+        static const int k = []
+        {
+            const char* e = std::getenv("UIPC_SEG_HIST");
+            return e ? std::atoi(e) : 0;
+        }();
+        return k;
     }
 }  // namespace details::fast_segmental_reduce
 
@@ -273,6 +328,201 @@ namespace
         }
     }
 
+    // perf/round6 (s17): the same reduce with a warp tree that stops early.
+    //
+    // cub's HeadSegmentedReduce runs five shuffle levels (offsets 1, 2, 4, 8,
+    // 16) and at each level every lane executes `if(lane + offset <= last_lane)
+    // v = op(other, v)`: the add is predicated per lane, so a level at which
+    // NO lane of the warp qualifies still costs the warp one FP64 instruction
+    // per matrix entry -- 9 x 16 clocks on a 1/32-rate part -- for nothing.
+    // The predicate is monotone in the offset (a lane that fails at 2^d fails
+    // at 2^(d+1)), so a warp may stop at the first level where `__any_sync`
+    // of the predicate is false, and every lane's sequence of executed adds is
+    // exactly the one cub would have executed: same operands, same order,
+    // same `add.f64` -- bit-identical to the old kernel for every slot the old
+    // kernel stores, and the same multiset of atomic operands for the slots it
+    // accumulates. `last_lane` is computed the way cub's SegmentedReduce does
+    // (ballot of the head flags, shifted to tail flags, masked to lanes >= the
+    // caller, the last lane of the warp forced in). The tail lanes past
+    // `in_size` take i = -1 and a zero value, as in the old kernel.
+    //
+    // Probe: 0 = production; 1 = no tree (gather + store only); 2 = no gather
+    // (value synthesised from the key). Probes are timing stubs launched into
+    // scratch under UIPC_SEG_PROBE.
+    template <int BlockSize, int WarpSize, typename T, int M, int N, typename FlagsT, typename GetKeyOp, typename GetValueOp, typename ReduceOp, int Probe>
+    __global__ void fast_segmental_reduce_matrix_k2_kernel(BufferView<Eigen::Matrix<T, M, N>> out,
+                                                           size_t     in_size,
+                                                           GetKeyOp   get_key_op,
+                                                           GetValueOp get_value_op,
+                                                           ReduceOp   op)
+    {
+        using namespace details::fast_segmental_reduce;
+        using Matrix             = Eigen::Matrix<T, M, N>;
+        using Flags              = FlagsT;
+        constexpr int warp_size  = WarpSize;
+        constexpr int warp_count = BlockSize / WarpSize;
+        static_assert(warp_size == 32, "the k2 tree assumes a full physical warp");
+
+        using WarpReduceInt = cub::WarpReduce<int, warp_size>;
+
+        __shared__ typename WarpReduceInt::TempStorage index_storage[warp_count];
+
+        auto global_thread_id   = blockDim.x * blockIdx.x + threadIdx.x;
+        auto thread_id_in_block = threadIdx.x;
+        auto warp_id            = thread_id_in_block / warp_size;
+        auto lane_id            = thread_id_in_block & (warp_size - 1);
+
+        int    prev_i = -1;
+        int    next_i = -1;
+        int    i      = -1;
+        Flags  flags;
+        Matrix value;
+        flags.is_cross_warp = 0;
+
+        if(global_thread_id > 0 && global_thread_id < in_size)
+        {
+            prev_i = get_key_op(global_thread_id - 1);
+        }
+
+        if(global_thread_id < in_size - 1)
+        {
+            next_i = get_key_op(global_thread_id + 1);
+        }
+
+        if(global_thread_id < in_size)
+        {
+            i              = get_key_op(global_thread_id);
+            if constexpr(Probe == 2)
+                value.setConstant(static_cast<T>(i));
+            else
+                value = get_value_op(global_thread_id);
+            flags.is_valid = 1;
+        }
+        else
+        {
+            i = -1;
+            value.setZero();
+            flags.is_valid      = 0;
+            flags.is_cross_warp = 0;
+        }
+
+        if(lane_id == 0)
+        {
+            flags.is_head       = 1;
+            flags.is_cross_warp = b2i(prev_i == i);
+        }
+        else
+        {
+            flags.is_head = b2i(prev_i != i);
+
+            if(lane_id == warp_size - 1)
+            {
+                flags.is_cross_warp = b2i(next_i == i);
+            }
+        }
+
+        const unsigned full_mask = 0xffffffffu;
+
+        // cub SegmentedReduce<HEAD_SEGMENTED=true>: last lane of this lane's segment
+        unsigned warp_flags = __ballot_sync(full_mask, flags.is_head != 0);
+        warp_flags >>= 1;                      // head flags -> tail flags
+        warp_flags &= (~0u << lane_id);        // lanes >= this one
+        warp_flags |= 1u << (warp_size - 1);   // the warp's last lane
+        const int last_lane = __clz(__brev(warp_flags));
+
+        flags.flags = WarpReduceInt(index_storage[warp_id])
+                          .HeadSegmentedReduce(flags.flags, flags.is_head, op);
+
+        if constexpr(Probe != 1)
+        {
+#pragma unroll
+            for(int step = 0; step < 5; ++step)
+            {
+                const int  offset = 1 << step;
+                const bool active = (lane_id + offset) <= last_lane;
+                if(!__any_sync(full_mask, active))
+                    break;  // warp-uniform: no lane needs this level or any above it
+#pragma unroll
+                for(int j = 0; j < M; j++)
+                {
+#pragma unroll
+                    for(int k = 0; k < N; k++)
+                    {
+                        T other = __shfl_down_sync(full_mask, value(j, k), offset);
+                        if(active)
+                            value(j, k) = op(other, value(j, k));
+                    }
+                }
+            }
+        }
+
+        if(flags.is_head && flags.is_valid)
+        {
+            if(flags.is_cross_warp)
+            {
+                auto& out_value = out(i);
+                eigen::atomic_add(out_value, value);
+            }
+            else
+            {
+                out(i) = value;
+            }
+        }
+    }
+
+    // diagnostic (UIPC_SEG_HIST): per-warp histogram of the tree levels the k2
+    // kernel executes = ceil(log2(longest in-warp run of equal keys)).
+    template <int WarpSize, typename GetKeyOp>
+    __global__ void fast_segmental_reduce_level_hist_kernel(size_t in_size, GetKeyOp get_key_op, unsigned int* hist)
+    {
+        auto g    = blockDim.x * blockIdx.x + threadIdx.x;
+        int  lane = threadIdx.x & (WarpSize - 1);
+        int  prev_i = -1, i = -1;
+        if(g > 0 && g < in_size)
+            prev_i = get_key_op(g - 1);
+        if(g < in_size)
+            i = get_key_op(g);
+        int is_head = (lane == 0) ? 1 : (prev_i != i ? 1 : 0);
+        unsigned wf = __ballot_sync(0xffffffffu, is_head != 0);
+        wf >>= 1;
+        wf &= (~0u << lane);
+        wf |= 1u << (WarpSize - 1);
+        int run = __clz(__brev(wf)) - lane + 1;  // lanes this lane's segment still covers
+        for(int o = 16; o > 0; o >>= 1)
+            run = max(run, __shfl_xor_sync(0xffffffffu, run, o));
+        if(lane == 0)
+        {
+            int levels = 0;
+            while((1 << levels) < run)
+                ++levels;
+            atomicAdd(hist + levels, 1u);
+        }
+    }
+
+    // diagnostic (UIPC_SEG_VERIFY): mark the slots whose segment spans >= 3
+    // warps -- those accumulate >= 3 atomic operands in BOTH kernels and are
+    // arrival-order dependent; every other slot must match bit for bit.
+    template <int WarpSize, typename GetKeyOp>
+    __global__ void fast_segmental_reduce_mark_multi_warp_kernel(size_t in_size, GetKeyOp get_key_op, unsigned char* mark, int n_boundary)
+    {
+        int t = blockIdx.x * blockDim.x + threadIdx.x;
+        if(t >= n_boundary)
+            return;
+        size_t g = (size_t)(t + 1) * (size_t)WarpSize;
+        if(g >= in_size)
+            return;
+        int key = get_key_op((int)g);
+        if(get_key_op((int)(g - 1)) != key)
+            return;  // no segment crosses this boundary
+        // crosses this boundary: >= 3 warps iff it also crosses the next one.
+        // (A segment that ends in a ragged tail has two atomic operands -- the
+        // tail's zero lanes are inside the second warp's partial -- and a + b
+        // is commutative, so it stays in the strict class.)
+        size_t g2 = g + (size_t)WarpSize;
+        if(g2 < in_size && get_key_op((int)(g2 - 1)) == key && get_key_op((int)g2) == key)
+            mark[key] = 1;
+    }
+
     // diagnostic (UIPC_SEG_FILL_POISON=2): count output slots still poisoned
     // after the reduce -- the slots the narrow fill did not cover and the
     // reduce kernel never wrote.
@@ -286,6 +536,40 @@ namespace
         else
             return a == b;
     }
+
+    template <typename S, int M, int N>
+    __global__ void fast_segmental_reduce_compare_kernel(CBufferView<Eigen::Matrix<S, M, N>> a,
+                                                         CBufferView<Eigen::Matrix<S, M, N>> b,
+                                                         const unsigned char* mark,
+                                                         unsigned long long*  stats)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= (int)a.size())
+            return;
+        const S* pa = a(i).data();
+        const S* pb = b(i).data();
+        int      c  = 0;
+        double   md = 0.0;
+        for(int k = 0; k < M * N; ++k)
+        {
+            if(!fsr_bits_equal(pa[k], pb[k]))
+            {
+                ++c;
+                double d = fabs((double)pa[k] - (double)pb[k]);
+                double r = d / fmax(fabs((double)pa[k]), 1e-300);
+                md       = fmax(md, r);
+            }
+        }
+        if(c)
+        {
+            atomicAdd(stats + (mark[i] ? 1 : 0), (unsigned long long)c);
+            atomicAdd(stats + 2, 1ull);
+            atomicMax(stats + 3, (unsigned long long)__double_as_longlong(md));
+        }
+        if(mark[i])
+            atomicAdd(stats + 4, 1ull);
+    }
+
 
     template <typename S>
     __global__ void fast_segmental_reduce_poison_count_scalar_kernel(
@@ -545,8 +829,92 @@ FastSegmentalReduce<BlockSize, WarpSize>& FastSegmentalReduce<BlockSize, WarpSiz
 
     int block_count = (size + block_dim - 1) / block_dim;
     if(block_count > 0)
-        fast_segmental_reduce_matrix_kernel<BlockSize, WarpSize, T, M, N, Flags>
-            <<<block_count, block_dim, 0, this->stream()>>>(out, size, get_key_op, get_value_op, op);
+    {
+        if constexpr(WarpSize == 32)
+        {
+            if(fsr::reduce2_enabled())
+                fast_segmental_reduce_matrix_k2_kernel<BlockSize, WarpSize, T, M, N, Flags, GetKeyOp, GetValueOp, ReduceOp, 0>
+                    <<<block_count, block_dim, 0, this->stream()>>>(out, size, get_key_op, get_value_op, op);
+            else
+                fast_segmental_reduce_matrix_kernel<BlockSize, WarpSize, T, M, N, Flags>
+                    <<<block_count, block_dim, 0, this->stream()>>>(out, size, get_key_op, get_value_op, op);
+        }
+        else
+        {
+            fast_segmental_reduce_matrix_kernel<BlockSize, WarpSize, T, M, N, Flags>
+                <<<block_count, block_dim, 0, this->stream()>>>(out, size, get_key_op, get_value_op, op);
+        }
+    }
+
+    if constexpr(WarpSize == 32)
+    {
+        if(block_count > 0 && fsr::hist_every() > 0)
+        {
+            static int calls = 0;
+            if(calls++ % fsr::hist_every() == 0)
+            {
+                static DeviceBuffer<unsigned int> hist;
+                hist.resize_discard(8);
+                unsigned int zero[8]{};
+                cudaMemcpyAsync(hist.data(), zero, sizeof(zero), cudaMemcpyHostToDevice, this->stream());
+                fast_segmental_reduce_level_hist_kernel<WarpSize, GetKeyOp>
+                    <<<block_count, block_dim, 0, this->stream()>>>(size, get_key_op, hist.data());
+                unsigned int h[8]{};
+                cudaMemcpyAsync(h, hist.data(), sizeof(h), cudaMemcpyDeviceToHost, this->stream());
+                cudaStreamSynchronize(this->stream());
+                std::fprintf(stderr,
+                             "[seg-hist] matrix<%d,%d> in=%zu out=%d warps=%u levels0..5= %u %u %u %u %u %u\n",
+                             M, N, (size_t)size, (int)out.size(),
+                             h[0] + h[1] + h[2] + h[3] + h[4] + h[5],
+                             h[0], h[1], h[2], h[3], h[4], h[5]);
+            }
+        }
+
+        if(block_count > 0 && fsr::probe_enabled())
+        {
+            static DeviceBuffer<Matrix> scratch;
+            scratch.resize_discard(out.size());
+            BufferLaunch(this->stream()).fill<Matrix>(scratch.view(), Matrix::Zero().eval());
+            fast_segmental_reduce_matrix_k2_kernel<BlockSize, WarpSize, T, M, N, Flags, GetKeyOp, GetValueOp, ReduceOp, 1>
+                <<<block_count, block_dim, 0, this->stream()>>>(scratch.view(), size, get_key_op, get_value_op, op);
+            fast_segmental_reduce_matrix_k2_kernel<BlockSize, WarpSize, T, M, N, Flags, GetKeyOp, GetValueOp, ReduceOp, 2>
+                <<<block_count, block_dim, 0, this->stream()>>>(scratch.view(), size, get_key_op, get_value_op, op);
+        }
+
+        if(block_count > 0 && fsr::verify_enabled() && out.size() > 0)
+        {
+            static DeviceBuffer<Matrix>             ref;
+            static DeviceBuffer<unsigned char>      mark;
+            static DeviceBuffer<unsigned long long> vstats;
+            ref.resize_discard(out.size());
+            mark.resize_discard(out.size());
+            vstats.resize_discard(5);
+            BufferLaunch(this->stream()).fill<Matrix>(ref.view(), Matrix::Zero().eval());
+            BufferLaunch(this->stream()).fill<unsigned char>(mark.view(), (unsigned char)0);
+            // the reference is the OLD kernel (its SASS is main's), every slot
+            // zeroed first so stored and accumulated slots come out as production's
+            fast_segmental_reduce_matrix_kernel<BlockSize, WarpSize, T, M, N, Flags>
+                <<<block_count, block_dim, 0, this->stream()>>>(ref.view(), size, get_key_op, get_value_op, op);
+            int n_boundary = (int)((size + WarpSize - 1) / WarpSize) - 1;
+            if(n_boundary > 0)
+                fast_segmental_reduce_mark_multi_warp_kernel<WarpSize, GetKeyOp>
+                    <<<(n_boundary + 255) / 256, 256, 0, this->stream()>>>(size, get_key_op, mark.data(), n_boundary);
+            unsigned long long zero[5]{};
+            cudaMemcpyAsync(vstats.data(), zero, sizeof(zero), cudaMemcpyHostToDevice, this->stream());
+            int n = (int)out.size();
+            fast_segmental_reduce_compare_kernel<T, M, N><<<(n + 255) / 256, 256, 0, this->stream()>>>(
+                out.cview(), ref.cview(), mark.data(), vstats.data());
+            unsigned long long h[5]{};
+            cudaMemcpyAsync(h, vstats.data(), sizeof(h), cudaMemcpyDeviceToHost, this->stream());
+            cudaStreamSynchronize(this->stream());
+            double maxrel;
+            std::memcpy(&maxrel, &h[3], sizeof(double));
+            std::fprintf(stderr,
+                         "[seg-verify] matrix<%d,%d> in=%zu out=%d words=%zu mismatch_words=%llu "
+                         "(in_multiwarp_slots=%llu, elsewhere=%llu) slots=%llu multiwarp_slots=%llu maxrel=%.3e\n",
+                         M, N, (size_t)size, n, (size_t)n * M * N, h[0] + h[1], h[1], h[0], h[2], h[4], maxrel);
+        }
+    }
 
     if(poison_check && out.size() > 0)
     {
