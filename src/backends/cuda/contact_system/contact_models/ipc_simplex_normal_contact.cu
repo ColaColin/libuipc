@@ -348,10 +348,10 @@ namespace
     //       iteration-count drift to the branch that causes them.
     // A template parameter, not a runtime flag, so one instantiation does not
     // carry another's stack frame (the s14 lesson). `UIPC_CONTACT_RANK1`
-    // selects it; **the default is 5** (s07) -- the only mode that is exact up
-    // to rounding. `UIPC_CONTACT_RANK1=0` restores the eigen-solve on every
-    // branch. Round 6 measured 1, 2, 3 and 6 and adopted none of them by
-    // default, see the round record.
+    // selects it; **the default is 1** (V2) -- PE + PP, the modes whose closed
+    // form was validated against a perturbed-exact control at n=20/arm.
+    // `UIPC_CONTACT_RANK1=0` restores the eigen-solve on every branch. Round 6
+    // measured 2, 3 and 6 and adopted none of them, see the round record.
     template <bool GradientOnly, int Part, bool EEReducedRange, bool SpdTql = false, bool Spd2 = false, int Proj = 0>
     __global__ void do_assemble_kernel(cuda_tool::CDense2D<ContactCoeff> table,
                                        cuda_tool::CBufferView<IndexT> contact_ids,
@@ -718,14 +718,19 @@ class IPCSimplexNormalContact final : public SimplexNormalContact
     // Frobenius error over 140 470 randomised samples against the real device
     // functions). `UIPC_CONTACT_RANK1=0` restores the exact eigen-solve on
     // every branch -- that is the A/B instrument and the rollback.
-    // `=1` adds the PE branch (a real approximation: PE keeps rank 2 of 9, so
-    // the closed form drops one direction of curvature). s07 measured the
-    // Newton drift that held `=1` back and it is NOT real -- but `=1` also
-    // moves the tumbler's membrane-stretch extreme, so it stays opt-in; see
-    // the round record. `=2` all four branches, `=3` the plain Gauss-Newton
-    // coefficient, `=4` the no-projection stage stub, `=6` the PE branch
-    // alone.
-    int                             m_proj             = 5;
+    // `=1` -- the default since V2 -- adds the PE branch. PE keeps rank 2 of 9,
+    // so this one *is* an approximation, and it was gated accordingly: s07
+    // measured out the Newton drift that held it back (n=50/arm; the largest
+    // Newton count in a 250-run sweep is on the *exact* path), and V2 then
+    // measured the membrane statistics that blocked it at n=20/arm against a
+    // perturbed-exact control -- all Holm p = 1.00, and `=1` is the *tightest*
+    // of the four arms on the extreme that flagged it. The dropped mode is
+    // 96.6 % along the edge (the slide) and 2.4 % along the contact normal, so
+    // it does not soften penetration resistance; 0 of 151 425 samples with a
+    // >1 % relative error drop an eigenvalue worth >1 % of a real contact's.
+    // `=2` all four branches, `=3` the plain Gauss-Newton coefficient, `=4` the
+    // no-projection stage stub, `=5` PP alone (exact, s07), `=6` PE alone.
+    int                             m_proj             = 1;
     // round-6 (s08): contact part 1's (PT + un-mollified EE) reduced PSD
     // projection on s31's basis-free form, extended from M <= 3 to the M = 4
     // branch those two pair types take in 100 % of the measured pairs.
