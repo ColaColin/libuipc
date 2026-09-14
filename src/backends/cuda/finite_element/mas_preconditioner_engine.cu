@@ -1569,6 +1569,293 @@ namespace
             z.z = acc;
     }
 
+    // ---- s16 (round 6): the fine-level restriction folded into the local solve
+    //
+    // build_multi_level_R does two things per fine node: it gathers the FP64
+    // residual through part_to_real into the float `multi_lr` -- whose fine
+    // entries are read by nothing but the local solve -- and it pushes the
+    // per-aggregate sums up the going_next chain into the coarse tail of
+    // `multi_lr` with global atomics. Round 4 (s12/s13) measured the kernel
+    // latency-bound (0.77 MB in 13.3 us on 640 warps), 54 % of it in the fine
+    // part. Here every fine-cluster block of the row-dot solve gathers its own
+    // 32 residual vectors (the same static_cast<float> of the same doubles =
+    // the same bits) into shared memory, and warp 0 of the block does the
+    // coarse push for those 32 nodes with a shuffle reduction -- no shared
+    // atomics, no intra-warp race -- while the block's 9.8 KB of matrix loads
+    // are in flight. The coarse clusters need every fine push to have landed,
+    // so they run as a second, small launch of the same kernel (RESTRICT =
+    // false) over [map_nodes/16, total/16): the kernel boundary is the barrier,
+    // not a grid sync (round 4's s13 rejected the single-kernel fusion on that
+    // count). Three launches per apply, as before.
+    //
+    // Numerics: the fine Z is bit-identical to rowdot2<16> (same operands, the
+    // same FMUL/FFMA/FFMA/FADD per column). The coarse tail is an atomic
+    // accumulator in both paths (order-dependent, rounding-level); the in-bank
+    // group sum is a fixed increasing-lane order here instead of shared
+    // atomics in arbitrary order. UIPC_MAS_APPLY_VERIFY=5 measures it.
+    //
+    // ORDER (fine launch only): 0 = warp 0 pushes before its row-dots (118
+    // registers: the 48 matrix operands stay live across the push); 1 = push
+    // after the row-dots (72 registers, the chain's latency lands after the
+    // solve); 2 = the chain (prefix_orig, fine_conn, going_next x levels --
+    // none of which depends on r) is walked before the barrier into a few
+    // registers and only the shuffle sum + atomics run after the solve.
+    template <bool RESTRICT, int ORDER>
+    __global__ void MASPreconditionerEngine_schwarz_local_solve_fused_R_kernel(
+        cuda_tool::CBufferView<ClusterMatrixSymF> cluster_inv,
+        cuda_tool::CDenseVectorView<Float>        R_view,
+        cuda_tool::CBufferView<int>               part_to_real,
+        cuda_tool::CBufferView<int>               prefix_orig,
+        cuda_tool::CBufferView<unsigned int>      fine_conn,
+        cuda_tool::CBufferView<int>               going_next,
+        cuda_tool::CBufferView<Int2>              level_size,
+        cuda_tool::BufferView<Eigen::Vector3f>    multi_lr,
+        cuda_tool::BufferView<float3>             multi_lz,
+        cuda_tool::CDense<IndexT>                 converged,
+        int                                       level_num,
+        int                                       first,  // first output scalar
+        int                                       N)      // one past the last
+    {
+        using namespace cuda_tool;
+
+        if(*converged != 0)
+            return;
+
+        constexpr int cluster_scalars = BANKSIZE * 3;    // 48
+        constexpr int CPB             = 2;               // clusters per block
+        constexpr int NODES           = CPB * BANKSIZE;  // 32 = one warp
+
+        int  idx  = first + blockIdx.x * blockDim.x + threadIdx.x;
+        bool live = (idx < N);
+
+        int cluster_id = live ? idx / cluster_scalars : 0;
+        int rem        = live ? idx - cluster_id * cluster_scalars : 0;
+        int local_row  = rem / 3;
+        int comp       = rem - local_row * 3;
+        int cl         = threadIdx.x / cluster_scalars;
+        int col_base   = cluster_id * BANKSIZE;
+
+        // Eigen::Matrix3f is column-major: element (i, j) of block b is at 9*b + i + 3*j.
+        const float* Cp = reinterpret_cast<const float*>(&cluster_inv(cluster_id));
+
+        if constexpr(!RESTRICT)
+        {
+            // Coarse clusters: the rowdot2<16> body on the accumulated tail.
+            if(!live)
+                return;
+            float acc = 0.0f;
+#pragma unroll
+            for(int c = 0; c < BANKSIZE; ++c)
+            {
+                bool  up   = (c >= local_row);
+                int   blk  = up ? sym_index(local_row, c) : sym_index(c, local_row);
+                int   base = 9 * blk + (up ? comp : 3 * comp);
+                int   st   = up ? 3 : 1;
+                float m0   = Cp[base];
+                float m1   = Cp[base + st];
+                float m2   = Cp[base + 2 * st];
+                const Eigen::Vector3f& rv = multi_lr(col_base + c);
+                acc += m0 * rv[0] + m1 * rv[1] + m2 * rv[2];
+            }
+            float3& z = multi_lz(col_base + local_row);
+            if(comp == 0)
+                z.x = acc;
+            else if(comp == 1)
+                z.y = acc;
+            else
+                z.z = acc;
+            return;
+        }
+        else
+        {
+            __shared__ float4 s_rv[NODES];
+            __shared__ int    s_idx[NODES];
+
+            // 1. gather: thread (row, comp) loads component `comp` of fine node
+            //    `row` -- the same double build_multi_level_R converts.
+            int   pdx  = col_base + local_row;
+            int   ridx = live ? part_to_real(pdx) : -1;
+            float r    = 0.0f;
+            if(ridx >= 0)
+                r = static_cast<float>(R_view(3 * ridx + comp));
+            if(live)
+            {
+                reinterpret_cast<float*>(&s_rv[cl * BANKSIZE + local_row])[comp] = r;
+                if(comp == 0)
+                    s_idx[cl * BANKSIZE + local_row] = ridx;
+            }
+
+            // 2. this thread's 48 matrix operands, issued before the barrier so
+            //    their latency covers the restriction's dependent chain.
+            float m[BANKSIZE][3];
+            if(live)
+            {
+#pragma unroll
+                for(int c = 0; c < BANKSIZE; ++c)
+                {
+                    bool up   = (c >= local_row);
+                    int  blk  = up ? sym_index(local_row, c) : sym_index(c, local_row);
+                    int  base = 9 * blk + (up ? comp : 3 * comp);
+                    int  st   = up ? 3 : 1;
+                    m[c][0]   = Cp[base];
+                    m[c][1]   = Cp[base + st];
+                    m[c][2]   = Cp[base + 2 * st];
+                }
+            }
+
+            // 3a. the row-dot (all live threads)
+            auto solve = [&]()
+            {
+                if(!live)
+                    return;
+                float acc = 0.0f;
+#pragma unroll
+                for(int c = 0; c < BANKSIZE; ++c)
+                {
+                    float4 rv = s_rv[cl * BANKSIZE + c];
+                    acc += m[c][0] * rv.x + m[c][1] * rv.y + m[c][2] * rv.z;
+                }
+                float3& z = multi_lz(col_base + local_row);
+                if(comp == 0)
+                    z.x = acc;
+                else if(comp == 1)
+                    z.y = acc;
+                else
+                    z.z = acc;
+            };
+
+            // 3b. the coarse push (warp 0: lane t = fine node t of the block).
+            //     Same aggregation rule as build_multi_level_R: a bank whose
+            //     prefix_orig is 1 is one aggregate pushed by its lane 0; else
+            //     each connected component (fine_conn, transitively closed and
+            //     self-inclusive) is pushed by its lowest lane.
+            constexpr int CHAIN = MASPreconditionerEngine::MAX_LEVELS - 1;
+            __shared__ int      s_tgt[ORDER == 2 ? NODES * CHAIN : 1];
+            __shared__ unsigned s_msk[ORDER == 2 ? NODES : 1];
+
+            const bool in_warp0 = (threadIdx.x < NODES);
+            const int  t        = threadIdx.x;
+            const int  node     = first / 3 + blockIdx.x * NODES + t;
+            const bool nlive    = in_warp0 && (node * 3 < N);
+            const int  bank     = t >> 4;
+            const int  lane16   = t & (BANKSIZE - 1);
+
+            // aggregation mask of this lane's group; bit 16 = this lane pushes
+            auto group_mask = [&](int ridx_n) -> unsigned
+            {
+                int      prefix = nlive ? prefix_orig(node / BANKSIZE) : 0;
+                unsigned conn   = (ridx_n >= 0) ? fine_conn(ridx_n) : 0u;
+                unsigned msk    = (prefix == 1) ? 0xffffu : conn;
+                bool push = (ridx_n >= 0) && ((msk & lanemask_lt(lane16)) == 0);
+                return msk | (push ? 0x10000u : 0u);
+            };
+            auto group_sum = [&](unsigned msk, float& s0, float& s1, float& s2)
+            {
+                float4 rv = nlive ? s_rv[t] : make_float4(0.f, 0.f, 0.f, 0.f);
+                s0 = s1 = s2 = 0.0f;
+#pragma unroll
+                for(int b = 0; b < BANKSIZE; ++b)
+                {
+                    int   src = (bank << 4) | b;
+                    float v0  = __shfl_sync(0xffffffffu, rv.x, src);
+                    float v1  = __shfl_sync(0xffffffffu, rv.y, src);
+                    float v2  = __shfl_sync(0xffffffffu, rv.z, src);
+                    if(msk & (1u << b))
+                    {
+                        s0 += v0;
+                        s1 += v1;
+                        s2 += v2;
+                    }
+                }
+            };
+            auto check_level = [&](int cur, int l)
+            {
+                UIPC_KERNEL_ASSERT(cur >= level_size(l + 1).y && cur < level_size(l + 2).y,
+                                   "fused_R: cur=%d not in level %d [%d, %d)",
+                                   cur,
+                                   l + 1,
+                                   level_size(l + 1).y,
+                                   level_size(l + 2).y);
+            };
+            // ORDER 0 / 1: walk and push in one pass (after the barrier).
+            auto restrict_push = [&]()
+            {
+                unsigned msk = group_mask(nlive ? s_idx[t] : -1);
+                float    s0, s1, s2;
+                group_sum(msk, s0, s1, s2);
+                if(msk & 0x10000u)
+                {
+                    int cur = s_idx[t];
+                    for(int l = 0; l < level_num - 1; l++)
+                    {
+                        cur = going_next(cur);
+                        check_level(cur, l);
+                        atomicAdd(&(multi_lr(cur)[0]), s0);
+                        atomicAdd(&(multi_lr(cur)[1]), s1);
+                        atomicAdd(&(multi_lr(cur)[2]), s2);
+                    }
+                }
+            };
+
+            if constexpr(ORDER == 2)
+            {
+                // The chain does not depend on r: walk it before the barrier
+                // into shared memory (warp 0's lane t needs node t's real id,
+                // which is thread (t, comp 0)'s gather -- reload it, L1).
+                if(in_warp0)
+                {
+                    int      ridx_n = nlive ? part_to_real(node) : -1;
+                    unsigned msk    = group_mask(ridx_n);
+                    s_msk[t]        = msk;
+                    if(msk & 0x10000u)
+                    {
+                        int cur = ridx_n;
+                        for(int l = 0; l < level_num - 1; l++)
+                        {
+                            cur = going_next(cur);
+                            check_level(cur, l);
+                            s_tgt[t * CHAIN + l] = cur;
+                        }
+                    }
+                }
+            }
+            __syncthreads();
+
+            if constexpr(ORDER == 0)
+            {
+                if(in_warp0)
+                    restrict_push();
+                solve();
+            }
+            else if constexpr(ORDER == 1)
+            {
+                solve();
+                if(in_warp0)
+                    restrict_push();
+            }
+            else
+            {
+                solve();
+                if(in_warp0)
+                {
+                    unsigned msk = s_msk[t];
+                    float    s0, s1, s2;
+                    group_sum(msk, s0, s1, s2);
+                    if(msk & 0x10000u)
+                    {
+                        for(int l = 0; l < level_num - 1; l++)
+                        {
+                            int cur = s_tgt[t * CHAIN + l];
+                            atomicAdd(&(multi_lr(cur)[0]), s0);
+                            atomicAdd(&(multi_lr(cur)[1]), s1);
+                            atomicAdd(&(multi_lr(cur)[2]), s2);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // s12 verification probe: max |a - b| and max |b| over two float arrays
     // (the multi-level R / Z scratch buffers of the preconditioner apply).
     __global__ void MASPreconditionerEngine_compare_float_kernel(const float* a,
@@ -2461,6 +2748,81 @@ void MASPreconditionerEngine::schwarz_local_solve_into(cuda_tool::CVarView<Index
         N);
 }
 
+// s16: UIPC_MAS_FUSED_R: 0 = the two-kernel path (build_multi_level_R +
+// rowdot2); 1 / 2 / 3 = fine restriction folded into the local solve with
+// kernel ORDER 0 / 1 / 2 (see the kernel comment). Default 2 (push after the
+// row-dots): measured 26.4 / 28.7 / 31.6 us per fine launch on the bunny for
+// ORDER 1 / 0 / 2 (78 / 118 / 92 registers) against rowdot2's 24.2 plus the
+// 13.4 us restriction kernel it absorbs.
+int MASPreconditionerEngine::fused_restriction_mode()
+{
+    static const int mode = []
+    {
+        const char* e = std::getenv("UIPC_MAS_FUSED_R");
+        return e ? std::atoi(e) : 2;
+    }();
+    return mode;
+}
+
+bool MASPreconditionerEngine::fused_restriction_active() const
+{
+    if(fused_restriction_mode() <= 0)
+        return false;
+    // Probe modes 1/3/4 compare a local solve against the s12 kernel on the
+    // production multi_level_R, whose fine entries the fused path never
+    // writes; they need the two-kernel path.
+    int v = apply_verify_mode();
+    if(v == 1 || v == 3 || v == 4)
+        return false;
+    return local_solve_rowdot_enabled() && rowdot2_mode() > 0 && m_level_num >= 1
+           && m_total_map_nodes >= BANKSIZE && (m_total_map_nodes % BANKSIZE) == 0
+           && m_total_num_clusters >= m_total_map_nodes
+           && (m_total_num_clusters % BANKSIZE) == 0;
+}
+
+void MASPreconditionerEngine::restrict_and_solve_fused(cuda_tool::CDenseVectorView<Float> R,
+                                                       cuda_tool::CVarView<IndexT> converged,
+                                                       cudaStream_t stream,
+                                                       int          mode)
+{
+    using namespace cuda_tool;
+
+    constexpr int block  = BANKSIZE * 3 * 2;  // two clusters per block
+    int           fine_N = m_total_map_nodes * 3;
+    int           N      = m_total_num_clusters * 3;
+
+    auto launch = [&](auto kern, int first, int last)
+    {
+        int nb = (last - first + block - 1) / block;
+        kern<<<nb, block, 0, stream>>>(cluster_inverses.cview(),
+                                       R,
+                                       part_to_real.cview(),
+                                       prefix_original.cview(),
+                                       fine_connect_masks.cview(),
+                                       going_next.cview(0, m_total_num_clusters),
+                                       level_sizes.cview(),
+                                       multi_level_R.view(),
+                                       multi_level_Z.view(),
+                                       converged.cviewer(),
+                                       m_level_num,
+                                       first,
+                                       last);
+    };
+#define UIPC_S16_FR(R_, O_) MASPreconditionerEngine_schwarz_local_solve_fused_R_kernel<R_, O_>
+    // fine clusters: gather + push + solve
+    if(mode == 1)
+        launch(UIPC_S16_FR(true, 0), 0, fine_N);
+    else if(mode == 2)
+        launch(UIPC_S16_FR(true, 1), 0, fine_N);
+    else
+        launch(UIPC_S16_FR(true, 2), 0, fine_N);
+    // coarse clusters: solve on the accumulated tail (the launch boundary is
+    // the barrier between the pushes and their consumers)
+    if(N > fine_N)
+        launch(UIPC_S16_FR(false, 0), fine_N, N);
+#undef UIPC_S16_FR
+}
+
 // ---------------------------------------------------------------------------
 // Prolongate: sum Z contributions from all levels for each fine node
 // ---------------------------------------------------------------------------
@@ -2562,11 +2924,20 @@ void MASPreconditionerEngine::apply(cuda_tool::CDenseVectorView<Float> r,
             multi_level_R.cview(m_total_map_nodes, tn), tn);
     }
 
-    // 1. Restrict: accumulate residual down through levels
-    build_multi_level_R(r, converged, stream);
+    if(fused_restriction_active())
+    {
+        // s16: 1 + 2 in two launches (fine clusters with the restriction
+        // folded in, then the coarse clusters). UIPC_MAS_FUSED_R=0 = below.
+        restrict_and_solve_fused(r, converged, stream, fused_restriction_mode());
+    }
+    else
+    {
+        // 1. Restrict: accumulate residual down through levels
+        build_multi_level_R(r, converged, stream);
 
-    // 2. Local solve: Z = cluster_inverse * R at each level
-    schwarz_local_solve(converged, stream);
+        // 2. Local solve: Z = cluster_inverse * R at each level
+        schwarz_local_solve(converged, stream);
+    }
 
     // s12 verification probe: UIPC_MAS_APPLY_VERIFY=1 re-runs the restrict +
     // local-solve phases with the *other* code path into the same scratch
@@ -2676,26 +3047,76 @@ void MASPreconditionerEngine::verify_apply(cuda_tool::CDenseVectorView<Float> r,
     // bit-identical kernel.
     bool rowdot  = (mode == 1) ? !local_solve_rowdot_enabled() : local_solve_rowdot_enabled();
     int  rowdot2 = (mode == 3 || mode == 4) ? 0 : -1;
+    // mode 5 (s16): the two-kernel path (build_multi_level_R + the s12 row-dot
+    // kernel) as the reference for the fused path, compared per region: the
+    // fine Z must read exactly zero (same gather bits, same FMA order); the
+    // coarse R tail and the coarse Z are atomic accumulations in both paths
+    // and read at the rounding level -- compare with mode 2, the fused path's
+    // own re-run noise.
+    bool fused = fused_restriction_active();
+    bool split = fused || mode == 5;
 
-    if(mode != 4)
+    if(mode == 5)
+    {
         build_multi_level_R(r, converged, stream);
-    schwarz_local_solve_into(converged, stream, rowdot, rowdot2);
+        schwarz_local_solve_into(converged, stream, true, 0);
+    }
+    else if(fused)
+    {
+        restrict_and_solve_fused(r, converged, stream, fused_restriction_mode());
+    }
+    else
+    {
+        if(mode != 4)
+            build_multi_level_R(r, converged, stream);
+        schwarz_local_solve_into(converged, stream, rowdot, rowdot2);
+    }
 
-    const char* names[2] = {"R", "Z"};
-    const float* newp[2] = {reinterpret_cast<const float*>(multi_level_R.data()),
-                            reinterpret_cast<const float*>(multi_level_Z.data())};
-    const float* refp[2] = {reinterpret_cast<const float*>(m_apply_R_verify.data()),
-                            reinterpret_cast<const float*>(m_apply_Z_verify.data())};
+    const float* Rn = reinterpret_cast<const float*>(multi_level_R.data());
+    const float* Zn = reinterpret_cast<const float*>(multi_level_Z.data());
+    const float* Rr = reinterpret_cast<const float*>(m_apply_R_verify.data());
+    const float* Zr = reinterpret_cast<const float*>(m_apply_Z_verify.data());
+
+    struct Slot
+    {
+        const char*  name;
+        const float* a;
+        const float* b;
+        int          off;
+        int          cnt;
+        int          stat;
+    };
+    int  fine3 = m_total_map_nodes * 3;
+    int  all3  = n * 3;
+    Slot slots[4];
+    int  nslots = 0;
+    if(!split)
+    {
+        slots[nslots++] = {"R", Rn, Rr, 0, all3, 0};
+        slots[nslots++] = {"Z", Zn, Zr, 0, all3, 1};
+    }
+    else
+    {
+        // the fused production path never writes the fine R entries, so the
+        // snapshot's fine R is stale: compare R on the coarse tail only.
+        slots[nslots++] = {"Z_fine", Zn, Zr, 0, fine3, 2};
+        slots[nslots++] = {"Z_coarse", Zn, Zr, fine3, all3 - fine3, 3};
+        slots[nslots++] = {"R_coarse", Rn, Rr, fine3, all3 - fine3, 4};
+    }
 
     ++m_apply_verify_count;
-    for(int a = 0; a < 2; ++a)
+    for(int si = 0; si < nslots; ++si)
     {
+        const Slot& sl = slots[si];
+        int         a  = sl.stat;
+        if(sl.cnt <= 0)
+            continue;
         CUDA_TOOL_CHECK(cudaMemsetAsync(
             m_verify_stat.data(), 0, sizeof(unsigned long long) * 2, stream));
-        int  cnt = n * 3;
+        int  cnt = sl.cnt;
         auto k   = MASPreconditionerEngine_compare_float_kernel;
         k<<<cuda_tool::best_grid_dim(cnt, k), cuda_tool::best_block_dim(k), 0, stream>>>(
-            newp[a], refp[a], m_verify_stat.data(), cnt);
+            sl.a + sl.off, sl.b + sl.off, m_verify_stat.data(), cnt);
         unsigned long long h[2] = {0, 0};
         m_verify_stat.view(0, 2).copy_to(h);
         double dmax = 0.0, rmax = 0.0;
@@ -2710,7 +3131,7 @@ void MASPreconditionerEngine::verify_apply(cuda_tool::CDenseVectorView<Float> r,
             "[MAS apply verify] mode={} arr={} n={} max|diff|={:.6e} max|ref|={:.6e} "
             "rel={:.6e} worst_abs={:.6e} worst_rel={:.6e}",
             mode,
-            names[a],
+            sl.name,
             m_apply_verify_count,
             dmax,
             rmax,

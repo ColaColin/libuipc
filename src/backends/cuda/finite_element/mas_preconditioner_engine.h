@@ -187,6 +187,16 @@ class MASPreconditionerEngine
                                   bool                        use_rowdot,
                                   int                         rowdot2 = -1);
     static int rowdot2_mode();
+    // s16: fine-level restriction folded into the local solve (UIPC_MAS_FUSED_R:
+    // 0 = two-kernel path; 1 / 2 / 3 = fused with the coarse push before the
+    // row-dots / after them / chain prefetched before the barrier and the
+    // push after). Two launches: fine clusters, then coarse.
+    static int fused_restriction_mode();
+    bool       fused_restriction_active() const;
+    void restrict_and_solve_fused(cuda_tool::CDenseVectorView<Float> R,
+                                  cuda_tool::CVarView<IndexT>        converged,
+                                  cudaStream_t                       stream,
+                                  int                                mode);
     void collect_final_Z(cuda_tool::DenseVectorView<Float> Z,
                          cuda_tool::CVarView<IndexT>       converged,
                          cudaStream_t                      stream = nullptr);
@@ -249,7 +259,8 @@ class MASPreconditionerEngine
     cuda_tool::DeviceBuffer<Eigen::Vector3f> m_apply_R_verify;
     cuda_tool::DeviceBuffer<float3>          m_apply_Z_verify;
     int                                      m_apply_verify_count = 0;
-    double                                   m_apply_worst_abs[2] = {0.0, 0.0};
-    double                                   m_apply_worst_rel[2] = {0.0, 0.0};
+    // slots: 0 R, 1 Z (whole), 2 Z fine, 3 Z coarse, 4 R coarse (s16 split)
+    double m_apply_worst_abs[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
+    double m_apply_worst_rel[5] = {0.0, 0.0, 0.0, 0.0, 0.0};
 };
 }  // namespace uipc::backend::cuda
