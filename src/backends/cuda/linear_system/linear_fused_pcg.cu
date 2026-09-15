@@ -113,6 +113,32 @@ namespace
         // model, and present only to price the fence. Never ship 0.
         int dot_fence = 1;
     };
+    // PCG-stall diagnostic (2026-09-15): round 6 recorded a one-frame ~100x
+    // PCG-iteration spike on stiff-gipc-case2 (~1 run in 48; frame solved to
+    // ~36.6k iterations across 7 Newton iterations against ~300, converged,
+    // neighbours normal). UIPC_PCG_TRACE=<path> appends one line per host
+    // convergence check of the block-replay loop plus per-solve start/end
+    // lines, so a reproduced stall shows both its per-Newton distribution and
+    // its convergence-curve shape (stagnation vs oscillation vs slow decay).
+    // Host reads of scalars the loop already reads; nothing on the device
+    // changes, numerics unaffected. Absent/empty env var = off. The full-GPU
+    // while-loop mode (graph_mode 2) bypasses the host loop and is not
+    // traced; the block-replay and plain paths are.
+    FILE* pcg_trace_file()
+    {
+        static FILE* f = []
+        {
+            const char* path = std::getenv("UIPC_PCG_TRACE");
+            if(!path || !*path)
+                return (FILE*)nullptr;
+            FILE* file = std::fopen(path, "a");
+            if(!file)
+                std::fprintf(stderr, "UIPC_PCG_TRACE: cannot open %s\n", path);
+            return file;
+        }();
+        return f;
+    }
+
     const PcgSmallEnv& pcg_small_env()
     {
         static const PcgSmallEnv env = []
@@ -1521,6 +1547,15 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
         return 0;
 
     Float rz_tol = global_tol_rate * abs_rz0;
+
+    if(FILE* f = pcg_trace_file()) [[unlikely]]
+        std::fprintf(f,
+                     "S frame=%llu newton=%llu n=%llu max_iter=%llu rz0=%.17e\n",
+                     (unsigned long long)engine().frame(),
+                     (unsigned long long)engine().newton_iter(),
+                     (unsigned long long)x.size(),
+                     (unsigned long long)max_iter,
+                     rz_host);
     // synchronous upload: an async copy on the default stream would race with
     // the graph launch stream (blocking streams do not wait for
     // legacy-stream work), letting the converged kernel read a stale/uninit
@@ -1579,6 +1614,13 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
 
         // host convergence check, same cadence as the plain loop
         Float rz_new_host = d_rz_new;
+        if(FILE* f = pcg_trace_file()) [[unlikely]]
+            std::fprintf(f,
+                         "C frame=%llu newton=%llu iter=%llu rz=%.17e\n",
+                         (unsigned long long)engine().frame(),
+                         (unsigned long long)engine().newton_iter(),
+                         (unsigned long long)iter_done,
+                         rz_new_host);
         check_iter_rz_nan_inf(rz_new_host, iter_done);
         if((std::abs(rz_new_host) / abs_rz0) <= global_tol_rate)
         {
@@ -1589,6 +1631,14 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
             break;
     }
 
-    return converged ? iter_done : max_iter;
+    SizeT reported_iters = converged ? iter_done : max_iter;
+    if(FILE* f = pcg_trace_file()) [[unlikely]]
+        std::fprintf(f,
+                     "E frame=%llu newton=%llu iters=%llu conv=%d\n",
+                     (unsigned long long)engine().frame(),
+                     (unsigned long long)engine().newton_iter(),
+                     (unsigned long long)reported_iters,
+                     converged ? 1 : 0);
+    return reported_iters;
 }
 }  // namespace uipc::backend::cuda
