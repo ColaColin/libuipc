@@ -1,0 +1,47 @@
+=== crease-press kernel ranking (full 130-frame run, nsys cuda_gpu_kern_sum,
+    fresh prefix; nsys wall +11% over the unprofiled run) ===
+
+total GPU kernel time 34746.5 ms over 1087990 launches
+ #   share   total ms  launches  us/launch  kernel
+  1  20.27%    7043.2   106560      66.1  void uipc::backend::cuda::<unnamed>::Spmv_rbk_sym_spmv_dot_chunked_kernel<(int)1, (int)0>(double, co
+  2   8.67%    3010.9      553    5444.6  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<(bool)0, (int)1, (bool)1, (bool)1, (bool)0, 
+  3   7.31%    2541.7   107116      23.7  void uipc::backend::cuda::<unnamed>::MASPreconditionerEngine_schwarz_local_solve_fused_R_kernel<(boo
+  4   7.04%    2446.9      556    4400.9  uipc::backend::cuda::<unnamed>::DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel(
+  5   4.08%    1418.0      556    2550.4  uipc::backend::cuda::<unnamed>::StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel
+  6   4.03%    1400.2      556    2518.3  uipc::backend::cuda::<unnamed>::StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel
+  7   3.77%    1309.9      556    2355.8  uipc::backend::cuda::<unnamed>::NeoHookeanShell2D_do_compute_gradient_hessian_kernel(uipc::backend::
+  8   3.28%    1138.5      549    2073.8  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<(bool)0>(uipc::backend::cuda_tool::Dense2DBa
+  9   3.15%    1093.8      556    1967.3  void uipc::backend::cuda::<unnamed>::InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<(b
+ 10   2.59%     899.4      694    1295.9  void uipc::backend::cuda::<unnamed>::InfoStacklessBVH_pairFilter_kernel<(bool)1, uipc::backend::cuda
+ 11   2.56%     890.0   106560       8.4  uipc::backend::cuda::<unnamed>::fused_update_xr_kernel(uipc::backend::cuda_tool::CDense<double>, uip
+ 12   2.37%     821.9      694    1184.3  void uipc::backend::cuda::<unnamed>::InfoStacklessBVH_stacklessSelf_kernel<(bool)1, (bool)0, uipc::b
+ 13   2.19%     760.8   107116       7.1  uipc::backend::cuda::<unnamed>::fused_dot_kernel(uipc::backend::cuda_tool::DenseVectorViewT<(bool)1,
+ 14   2.01%     697.8      553    1261.8  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<(bool)0, (int)2, (bool)0, (bool)0, (bool)1, 
+ 15   1.93%     670.2      553    1212.0  void uipc::backend::cuda::<unnamed>::matrix_converter_radix_sort_indices_and_blocks_k3_kernel<double
+
+=== family shares ===
+  pcg kernels                   26.14%    9082.5 ms
+  contact assemble              14.60%    5071.4 ms
+  BVH+CCD                       12.90%    4480.7 ms
+  preconditioners               12.51%    4346.0 ms
+  converter/sort/compact         7.29%    2534.1 ms
+  dahl bending (G/H + energy)    7.19%    2497.5 ms
+  membrane                       5.30%    1840.7 ms
+  strain-plastic bending         4.23%    1468.8 ms
+  stress-plastic bending         4.12%    1433.1 ms
+  other                          2.71%     942.5 ms
+  energy                         2.61%     906.5 ms
+  abd ortho                      0.39%     136.9 ms
+  dahl TimeIntegrator commit     0.02%       5.7 ms
+
+=== the round's three target kernels (mandatory check) ===
+     556 launches    4400.9 us/launch   7.04%  uipc::backend::cuda::<unnamed>::DahlFrictionDiscreteShellBending_do_compute_grad
+     556 launches    2550.4 us/launch   4.08%  uipc::backend::cuda::<unnamed>::StrainPlasticDiscreteShellBending_do_compute_gra
+     556 launches    2518.3 us/launch   4.03%  uipc::backend::cuda::<unnamed>::StressPlasticDiscreteShellBending_do_compute_gra
+     130 launches      43.6 us/launch   0.02%  uipc::backend::cuda::<unnamed>::DahlFrictionDiscreteShellBendingTimeIntegrator_d
+     130 launches      41.2 us/launch   0.02%  uipc::backend::cuda::<unnamed>::StressPlasticDiscreteShellBendingTimeIntegrator_
+     130 launches      33.5 us/launch   0.01%  uipc::backend::cuda::<unnamed>::StrainPlasticDiscreteShellBendingTimeIntegrator_
+
+per-hinge cost at this mesh (dahl 28557 / strain 9506 / stress 9506 hinges):
+  dahl 154 ns/hinge . strain 268 ns/hinge . stress 265 ns/hinge
+  (round-6 plain hinge after s02: ~128-145 ns/hinge; before s02 it was ~1.1 us/hinge)
