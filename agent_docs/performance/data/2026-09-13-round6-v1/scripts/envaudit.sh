@@ -14,9 +14,9 @@ prof () {  # $1 tag  $2 scene-dir  $3 frames  rest: env assignments
   local p="$OUT/$tag"
   rm -f "$p".nsys-rep "$p"_cuda_gpu_kern_sum.csv
   ( cd "$REPO/libuipc-samples/examples/$dir" && \
-    env "$@" /workspace/deps/nsight/bin/nsys profile -t cuda --cuda-graph-trace=node -f true -o "$p" \
+    env "$@" /workspace/deps/nsight/nsight-systems/2024.6.2/bin/nsys profile -t cuda --cuda-graph-trace=node -f true -o "$p" \
       "$UIPC_PERF_PY" main.py --headless "$frames" > "$OUT/$tag.stdout" 2>&1 )
-  /workspace/deps/nsight/bin/nsys stats --report cuda_gpu_kern_sum --format csv --force-export=true \
+  /workspace/deps/nsight/nsight-systems/2024.6.2/bin/nsys stats --report cuda_gpu_kern_sum --format csv --force-export=true \
       -o "$p" "$p.nsys-rep" > "$OUT/$tag.stats.log" 2>&1
   if [ ! -s "$p"_cuda_gpu_kern_sum.csv ]; then
     echo "FAIL: no kern_sum csv for $tag"; return 1
