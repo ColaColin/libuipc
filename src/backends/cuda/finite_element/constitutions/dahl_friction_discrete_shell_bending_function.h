@@ -415,5 +415,105 @@ namespace sym::dahl_friction_discrete_shell_bending
 
         H = dthetadx * ddEddtheta * dthetadx.transpose() + dEdtheta * ddthetaddx;
     }
+
+    // perf/round7 (s03): the Gauss-Newton dahl Hessian -- the friction-hinge
+    // analogue of sym::discrete_shell_bending::ddEddx_gauss_newton (round 6
+    // s02). With w = L0 / h_bar,
+    //
+    //   ddEddtheta = 2*kappa*w + ddWdd,
+    //   ddWdd       = ((M_e - s*F_commit) / ell_e) * exp(-|d| / ell_e),
+    //
+    // and BOTH terms are non-negative on every state the simulator can reach:
+    // kappa >= 0, L0 > 0 and h_bar > 0 for a valid rest mesh, and the
+    // committed friction moment is written only by commit_friction_state() --
+    // a convex combination of F_commit and s*M_e, explicitly clamped to
+    // [-M_e, M_e] -- so |F_commit| <= M_e and M_e - s*F_commit >= 0 for
+    // s = +-1 (at d == 0, s = 0 gives ddWdd = M_e / ell_e >= 0). Proved on
+    // device over 2x200 000 randomised reachable hinges (chained commits,
+    // in-box and boundary F_commit, theta across +-pi): 0 samples with
+    // ddEddtheta < 0; the minimum is the elastic term 2*kappa*w at saturated
+    // friction where exp(-|d|/ell_e) has decayed (agent_docs/performance/
+    // data/2026-09-15-round7-s03/).
+    //
+    // So ddEddtheta * dthetadx dthetadx^T is PSD by construction and the
+    // indefinite dEdtheta * hess(theta) term -- the hinge Hessian's only
+    // source of indefiniteness -- can be dropped exactly as on the plain
+    // hinge: same energy, same gradient, different Newton search direction.
+    // dihedral_angle_hessian() is never evaluated and no eigen-solve runs.
+    //
+    // The max(ddEddtheta, 0) clamp is inert on the reachable state space (the
+    // two summands are non-negative in floating point, so their sum cannot
+    // cancel); it only guards the imported-history path (the
+    // dahl_friction_commit edge attribute), which is validated for finiteness
+    // alone and can therefore carry |F_commit| > M_e, where the friction
+    // branch alone can go negative (measured: 1.2 % of such imports).
+    //
+    // G is computed by the identical expressions, in the same order, as
+    // dEdx_ddEddx() above, so the gradient is exact and bit-identical; only
+    // the Hessian model changes. `scale` (V_bar * dt^2) is folded into the
+    // rank-1 coefficient instead of scaling the assembled matrix afterwards,
+    // and the fill is an explicit mirrored loop so H is *exactly* symmetric.
+    inline UIPC_GENERIC void dEdx_ddEddx_gauss_newton(Vector12&      G,
+                                                      Matrix12x12&   H,
+                                                      const Vector3& x0,
+                                                      const Vector3& x1,
+                                                      const Vector3& x2,
+                                                      const Vector3& x3,
+                                                      Float          L0,
+                                                      Float          h_bar,
+                                                      Float          theta_bar,
+                                                      Float          kappa,
+                                                      Float          M_e,
+                                                      Float          ell_e,
+                                                      Float          theta_commit,
+                                                      Float          F_commit,
+                                                      Float          scale)
+    {
+        namespace DFDSB = sym::dahl_friction_discrete_shell_bending;
+        Float theta     = 0.0;
+        if(!DFDSB::safe_dihedral_angle(x0, x1, x2, x3, theta))
+        {
+            G.setZero();
+            H.setZero();
+            return;
+        }
+
+        const Float del = DFDSB::angle_delta(theta, theta_bar);
+        const Float d   = DFDSB::angle_delta(theta, theta_commit);
+
+        Float W     = 0.0;
+        Float dWdd  = 0.0;
+        Float ddWdd = 0.0;
+        if(!DFDSB::friction_response(d, F_commit, M_e, ell_e, W, dWdd, ddWdd))
+        {
+            G.setZero();
+            H.setZero();
+            return;
+        }
+
+        const Float w          = L0 / h_bar;
+        const Float dEdtheta   = 2.0 * kappa * w * del + dWdd;
+        const Float ddEddtheta = 2.0 * kappa * w + ddWdd;
+
+        Vector12 dthetadx;
+        dihedral_angle_gradient(x0, x1, x2, x3, dthetadx);
+
+        G = dEdtheta * dthetadx;
+
+        const Float c = DFDSB::max_value(ddEddtheta, Float(0)) * scale;
+#pragma unroll
+        for(int i = 0; i < 12; ++i)
+        {
+            const Float ci = c * dthetadx(i);
+            H(i, i)        = ci * dthetadx(i);
+#pragma unroll
+            for(int j = i + 1; j < 12; ++j)
+            {
+                const Float v = ci * dthetadx(j);
+                H(i, j)       = v;
+                H(j, i)       = v;
+            }
+        }
+    }
 }  // namespace sym::dahl_friction_discrete_shell_bending
 }  // namespace uipc::backend::cuda

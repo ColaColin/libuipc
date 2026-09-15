@@ -1,0 +1,10 @@
+=== dahl GN premise N=200000 used=200000 zeroH=0 guardKilled=0
+classes: R(chained-commit) 89848  B(in-box) 69966  Z(fresh) 20067  X(out-of-box) 20119
+friction regime: |d|/ell<0.1 4377  0.1..10 134953  >10 60670
+[1] ddEddtheta<0 on REACHABLE (R+B+Z): 0   min ddEddtheta 8.041679e-06   min margin ddEdd/(2kw+Me/ell) 2.751517e-04
+[1] argmin sample: |d|/ell 18.778  |F|/M_e 1.000  elastic share of scale 0.000  ddEdd 2.965e-05  margin 2.752e-04
+[1] clamp activations reachable 0   out-of-box 243 / 20119 (min ddEddtheta -2.119758e-02)
+[2] ||H_full-(ddEdd*g*g'+dEdt*hess)||/||H_full|| max 1.669e-16
+[3] GN fill: max asym 0.000e+00   min eig/||H|| -6.776e-16   max ||Hgn*t||/||Hgn|| 6.585e-16
+[4] ||dEdt*hess||/||H_full||: med 0.9542 p99 1.0354 max 1.1177 | fresh 0.9454 mid 1.0184 sat 0.3200 | |del|>0.5rad 0.9728
+[4] relFro(old shipped projected <1,1>, GN): med 0.8570 p1 0.0292 p99 0.9874 max 1.0301  [THE A/B HESSIAN DELTA]

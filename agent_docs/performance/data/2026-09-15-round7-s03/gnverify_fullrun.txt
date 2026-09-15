@@ -1,0 +1,3 @@
+TOTAL frames=130 mean=257.4ms median=98.5ms p95=746.0ms
+[SpreadVerify] DahlFrictionDiscreteShellBending::gauss_newton_hessian 3266920800 output words (32-bit) compared, 2937935530 mismatching
+[SpreadVerify] DahlFrictionDiscreteShellBending::gauss_newton_gradient 457368912 output words (32-bit) compared, 0 mismatching
