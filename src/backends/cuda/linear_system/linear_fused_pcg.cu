@@ -5,6 +5,11 @@
 #include <uipc/common/timer.h>
 #include <cub/warp/warp_reduce.cuh>
 #include <cuda_tool/cub.h>
+// for SpreadVerifier (the fusion A/B verify path below) and, via it,
+// best_block_dim/best_grid_dim/device_sm_count — launch_spread itself has
+// no call site in linear_system/ (round 6 s15 measured the two small MAS
+// kernels parallelism-limited; the four PCG vector-kernel sites here were
+// never checked for spreading)
 #include <cuda_tool/spread_launch.h>
 #include <algorithm>
 #include <optional>

@@ -600,11 +600,14 @@ namespace
 
     // UIPC_BCOO_HASH=<n>: order-independent 64-bit hash of the assembled BCOO
     // (nnz, every row/col index and the raw bits of every value) for the first
-    // <n> conversions. The first conversion of a run depends only on the
-    // deterministic initial state, so its hash is a direct byte-level A/B of
-    // the whole assemble+convert pipeline between two runs. (Later ones are
-    // not: the gradient is accumulated with atomics, so the trajectory
-    // diverges from the first solve on.)
+    // <n> conversions. NOT a bit-identity proof: the comment below long
+    // claimed the first conversion "depends only on the deterministic
+    // initial state", but at the round-6 head two identical mas-bunny runs
+    // give DIFFERENT first-conversion hashes at the same nnz (s14,
+    // bcoo_hash_repeat.txt) — something on the first assembly's path is
+    // order-dependent now. A mismatch between two runs of the same build
+    // therefore proves nothing; use the hash only as a coarse sanity
+    // signal, and a device-side word comparison for any real A/B.
     __global__ void gls_bcoo_hash_kernel(const Matrix3x3* __restrict__ values,
                                          const int* __restrict__ row,
                                          const int* __restrict__ col,

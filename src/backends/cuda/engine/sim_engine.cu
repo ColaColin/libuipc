@@ -61,6 +61,11 @@ SimEngine::SimEngine(EngineCreateInfo* info)
         logger::info("Compute Capability: {}.{}", prop.major, prop.minor);
         logger::info("Total Global Memory: {} MB", prop.totalGlobalMem / 1024 / 1024);
 
+        // Every Timer scope boundary waits for the whole device, so WB_TIMER
+        // serialises the pipeline it is timing: fine for attributing
+        // sequential time, unusable for any concurrency/overlap question
+        // (round 6 s11 retired it for exactly that — see
+        // agent_docs/performance/2026-09-13-perf-round6.md).
         Timer::set_sync_func([] { cuda_tool::wait_device(); });
 
         say_hello_from_cuda();

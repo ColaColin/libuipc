@@ -364,15 +364,25 @@ namespace
         // count lives on device: a graph capturing this kernel then stays
         // valid when the matrix nnz changes within the reserved capacity
         const int triplet_count = (int)(*d_triplet_count);
-        // perf/round4 (s02): the grid covers the reserved capacity, which is
-        // sized from the raw (unreduced) triplet count — ABD contact blocks
-        // expand 16x before the reduce, so the capacity can exceed the
-        // reduced count by two orders of magnitude (wrecking balls: <= 32k
-        // unique triplets, > 4M capacity). A block entirely past the count
-        // holds no triplet: leave before the shared-memory reductions
-        // instead of running three empty warp reductions, a block barrier
-        // and an atomicAdd(+0.0). Uniform per block, so no barrier is
-        // skipped by a subset of threads. UIPC_SPMV_SKIP_IDLE_BLOCKS=0 = old.
+        // perf/round4 (s02), figures corrected by round 6 (s13's census):
+        // the grid covers the reserved capacity, which is sized from the
+        // raw (unreduced) triplet count — 3-9x the nnz on the ABD/FEM
+        // scenes (mas-bunny 3 518 blocks for 503 holding a triplet, case2
+        // 9 815 / 1 120). Round 4's "two orders of magnitude (wrecking
+        // balls: <= 32k unique triplets, > 4M capacity)" was wrong:
+        // rigid-wrecking-balls' capacity grid is 112-184 blocks, ~29-47k
+        // triplet slots against ~32k unique triplets — a ratio of ~1-1.5,
+        // so the idle-block exit buys nothing there. A block entirely past
+        // the count holds no triplet: leave before the shared-memory
+        // reductions instead of running three empty warp reductions, a
+        // block barrier and an atomicAdd(+0.0). Uniform per block, so no
+        // barrier is skipped by a subset of threads.
+        // UIPC_SPMV_SKIP_IDLE_BLOCKS=0 = old. This per-triplet kernel is
+        // the UIPC_SPMV_CHUNK=0 / verify arm; the shipped chunked kernel
+        // no longer launches on the capacity grid — round 5 s22 caps it
+        // at the resident blocks with a virtual-block loop and round 6
+        // s13 fits it to the nnz (UIPC_SPMV_GRID_FIT), see the launch
+        // site.
         if(skip_idle_blocks && (int)(blockIdx.x * blockDim.x) >= triplet_count)
             return;
         constexpr int warp_size = 32;

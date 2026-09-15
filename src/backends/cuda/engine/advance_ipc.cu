@@ -36,7 +36,9 @@ void SimEngine::advance()
     }
 
     // ---- FEATURE: certified DCD candidate reuse
-    // (collision_detection/dcd_candidate_reuse, default off) ----
+    // (collision_detection/dcd_candidate_reuse, default ON: the schema
+    // default is 1, so every scene runs the reuse path unless it opts
+    // out) ----
     // For newton_iter > 0, keep the candidate buffers as filled by the
     // previous iteration's line-search trajectory detection instead of
     // re-running the DCD detection. Certification (why this is exact, not
