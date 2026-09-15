@@ -59,6 +59,11 @@ bool IterativeSolver::accuracy_statisfied(cuda_tool::DenseVectorView<Float> r)
     return m_system->m_impl.accuracy_statisfied(r);
 }
 
+void IterativeSolver::dump_A_b()
+{
+    m_system->_dump_A_b();
+}
+
 cuda_tool::LinearSystemContext& IterativeSolver::ctx() const
 {
     return m_system->m_impl.ctx;

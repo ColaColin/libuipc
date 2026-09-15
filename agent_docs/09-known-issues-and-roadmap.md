@@ -359,6 +359,31 @@ assertions).
 
 ## Open issues
 
+- **One-frame PCG stall on `stiff-gipc-case2`: MAS apply loses PSD on rare
+  transiently-stiff systems (diagnosed 2026-09-15, fix open)**: roughly 1 run in
+  40–140 lands one Newton iteration whose linear solve takes 12 k–256 k PCG
+  iterations against ~300 for the frame (the 256 k flavour runs to the
+  `max_iter = 2n` cap unconverged; the others converge ~100× slow). Newton
+  counts, line search and frame convergence are unaffected — it is a
+  robustness/measurement hazard, not an outcome change. Reproduced and
+  classified with two default-off probes (`UIPC_PCG_TRACE`,
+  `UIPC_PCG_STALL_DUMP`): the dumped system at the broken solve is **SPD**
+  (κ ≈ 4.6e6, λ_max ≈ 1195 vs ~4.1 normal; plain unpreconditioned CG solves
+  it in 809 iterations) while the trace shows `rz0 = r0ᵀz0 < 0` — the applied
+  preconditioner is indefinite — and the iteration oscillates, with the
+  relative tolerance `1e-4·|rz0|` collapsing to a near-absolute target when a
+  near-annihilated `rz0` (≈1e-6 vs ~1e-3 typical) makes the test unreachable.
+  Level-0 float Gauss-Jordan cluster inversion and float storage of the
+  inverses are exonerated by offline replication (0 of 4 168 surrogate
+  clusters lose PSD, worst κ 7.7e5); the indefiniteness enters through the
+  multi-level float pipeline (restriction/coarse accumulations), which the
+  engine's own `UIPC_MAS_APPLY_VERIFY` modes cannot see (self-comparison
+  only, never inside captured replays). All three recorded events are on
+  round-6-era trees; 0 in ~350 pre-s13 full runs vs 3 in ~278 after —
+  suggestive, not conclusive (s13's own ~54-run sweeps were clean). Full
+  evidence and fix directions (tolerance floor / rz0≤0 fallback to the
+  diagonal preconditioner / fix the apply):
+  `agent_docs/performance/2026-09-15-pcg-stall-diagnosis.md`.
 - **Published wheels through 0.0.27 need the CUDA 12 cuBLAS runtime; current
   source removes it**: package
   installation and `import uipc` succeed, but `Engine("cuda", ...)` fails on
