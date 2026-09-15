@@ -1,0 +1,27 @@
+=== dahl G/H kernel resource usage, main 11dd35af vs branch perf/round7-s03-dahl-gn
+(build-perf Release/bin/libuipc_backend_cuda.so, cuobjdump -res-usage; the main
+binary rebuilt in the same build dir via stash -> rm .o -> rebuild -> unstash,
+same compiler/flags, so this is a same-toolchain comparison)
+
+main = branch figures for all six pre-existing instantiations (s02's shipped set):
+  dahl <0,0>      REG:255 STACK:7664  cmem 472+736
+  dahl <0,1>      REG:255 STACK:3920  cmem 472+736
+  dahl <1,0>      REG:255 STACK:3712  cmem 624+736
+  dahl <1,1>      REG:255 STACK:4064  cmem 672+736   [s02's shipped default = the old arm]
+  dahl <2,0>      REG:255 STACK:6896  cmem 520+736
+  dahl <2,1>      REG:255 STACK:5472  cmem 520+736
+branch adds:
+  dahl <3,1>      REG:210 STACK:1248  cmem 464+736   [GN -- this step's default]
+
+210 registers < 255, so the GN kernel's best_block_dim may differ from the
+exact arms' (same situation as the plain hinge's <3,1> at 208). Stack 1248 B
+vs 4064 B shipped / 11 704 B pre-round-7.
+
+whole-binary figure diff (names normalised over the TU hash):
+  kernels main=2478 branch=2479 common=2478 identical=2478 CHANGED=0 onlyMain=0 onlyBranch=1
+CHANGED=0: every kernel present in both binaries has identical REG/STACK/cmem
+figures -- all 7 plain-hinge instantiations (<3,1> 208/1248, <1,1> 255/3104 ...),
+all 12 plastic instantiations (strain <1,1> 255/2912, stress <1,1> 255/3600 ...)
+and the 14 non-G/H dahl kernels match main exactly. onlyBranch=1 is the new
+dahl <3,1>. The old arm (UIPC_DAHL_GAUSS_NEWTON=0 -> <1,1>) is figure-identical
+to s02's shipped set, as required.

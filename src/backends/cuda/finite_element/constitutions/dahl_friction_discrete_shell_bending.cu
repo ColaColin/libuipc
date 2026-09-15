@@ -4,6 +4,7 @@
 #include <uipc/builtin/attribute_name.h>
 #include <finite_element/constitutions/dahl_friction_discrete_shell_bending_function.h>
 #include <utils/make_spd.h>
+#include <cuda_tool/spread_launch.h>
 #include <cstdlib>
 #include <utils/matrix_assembler.h>
 #include <utils/dump_utils.h>
@@ -103,6 +104,14 @@ namespace
     // committed state (theta_commit, F_commit) is a per-edge constant within a
     // frame -- and theta goes through vertex differences only, so H t = 0
     // exactly and the translation-free projection applies verbatim.
+    // s03 (round 7): Proj = 3 is the Gauss-Newton dahl Hessian --
+    // ddEddtheta * grad(theta) grad(theta)^T with the indefinite
+    // dEdtheta * hess(theta) term dropped (see
+    // dahl_friction_discrete_shell_bending_function.h for the PSD proof).
+    // Unlike Proj 0/1/2 this is an algorithmic approximation, not a
+    // rearrangement: same energy, same gradient, different search direction.
+    // It runs no eigen-solve and never evaluates dihedral_angle_hessian.
+    // UIPC_DAHL_GAUSS_NEWTON=0 restores the exact Hessian + projection path.
     // UIPC_DAHL_REDUCED_SPD=0 restores the 12x12 eigen-solve;
     // UIPC_DAHL_BLOCKED_PROJ=0 uses the dense 12x9 basis products of K7
     // instead of the K16 block assembly; UIPC_DAHL_TQL2=0 restores Eigen's
@@ -162,19 +171,53 @@ namespace
 
         // one evaluation of the dihedral angle / friction response / angle
         // gradient for both G and H (bit-identical to dEdx + ddEddx)
-        DFDSB::dEdx_ddEddx(
-            G12, H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit);
+        if constexpr(Proj == 3)
+        {
+            // s03: Gauss-Newton -- G through the identical expressions of the
+            // fused exact path (bit-identical gradient), H as the PSD rank-1
+            // ddEddtheta * grad(theta) grad(theta)^T with Vdt2 folded into
+            // the coefficient. No projection, no hess(theta).
+            DFDSB::dEdx_ddEddx_gauss_newton(
+                G12,
+                H12x12,
+                x0,
+                x1,
+                x2,
+                x3,
+                L0,
+                h_bar,
+                theta_bar,
+                kappa,
+                M_e,
+                ell_e,
+                theta_commit,
+                F_commit,
+                Vdt2);
+        }
+        else
+        {
+            DFDSB::dEdx_ddEddx(
+                G12, H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit);
+        }
         G12 *= Vdt2;
         DoubletVectorAssembler DVA{G3s};
         DVA.segment<StencilSize>(I * StencilSize).write(stencil, G12);
 
-        H12x12 *= Vdt2;
-        if constexpr(Proj == 1)
-            make_spd_translation_free_4x3_blocked<Solver>(H12x12);  // K16: block-assembled K7 projection
-        else if constexpr(Proj == 2)
-            make_spd_translation_free_4x3<Solver>(H12x12);  // K7: 9x9 eigen-solve
+        if constexpr(Proj == 3)
+        {
+            // PSD by construction (see the function header comment): no
+            // eigen-solve at all.
+        }
         else
-            make_spd<12, Solver>(H12x12);
+        {
+            H12x12 *= Vdt2;
+            if constexpr(Proj == 1)
+                make_spd_translation_free_4x3_blocked<Solver>(H12x12);  // K16: block-assembled K7 projection
+            else if constexpr(Proj == 2)
+                make_spd_translation_free_4x3<Solver>(H12x12);  // K7: 9x9 eigen-solve
+            else
+                make_spd<12, Solver>(H12x12);
+        }
 
         TripletMatrixAssembler TMA{H3x3s};
         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
@@ -274,12 +317,18 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
     // of all three projection paths' stack frames). Defaults on =
     // <Proj=1 blocked, Solver=1 QL>; all three knobs =0 is the historical
     // dense 12x12 Eigen path.
+    // s03 (round 7): Gauss-Newton dahl Hessian (ddEddtheta * grad(theta)
+    // grad(theta)^T, PSD by construction, no eigen-solve, no hess(theta) --
+    // the plain hinge's round-6 s02 analogue). UIPC_DAHL_GAUSS_NEWTON=0
+    // restores the exact Hessian followed by the 9x9 PSD projection, and then
+    // the three switches below select which projection.
     // UIPC_DAHL_REDUCED_SPD=0 restores the 12x12 eigen-solve;
     // UIPC_DAHL_BLOCKED_PROJ=0 = the dense 12x9 basis products of K7;
     // UIPC_DAHL_TQL2=0 restores Eigen's SelfAdjointEigenSolver.
     bool m_reduced_spd  = true;
     bool m_blocked_proj = true;
     bool m_tql2         = true;
+    bool m_gauss_newton = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -289,6 +338,8 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
         m_blocked_proj = !(b && b[0] == '0');
         const char* t  = std::getenv("UIPC_DAHL_TQL2");
         m_tql2         = !(t && t[0] == '0');
+        const char* gn = std::getenv("UIPC_DAHL_GAUSS_NEWTON");
+        m_gauss_newton = !(gn && gn[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -536,9 +587,51 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
                 n);
         };
 
+        // s03 (round 7): UIPC_DAHL_GN_VERIFY=1 is the numerics probe for the
+        // Gauss-Newton path, the plain hinge's UIPC_DSB_GN_VERIFY shape: it
+        // runs the *real* shipped kernel <Proj=1, Solver=1> first, snapshots
+        // the gradient doublets AND the Hessian triplets it wrote, then runs
+        // <Proj=3, Solver=1> over the same inputs and counts the mismatching
+        // 32-bit words on device. The gradient is supposed to be bit-identical
+        // between the two instantiations (only the Hessian is approximated) --
+        // that is proved on the binary, not by reading the source; the Hessian
+        // word count is the deviation census of the controlled perturbation
+        // (its relative size is measured by this step's standalone verifier).
+        // The live state after the pair is the Gauss-Newton launch's, so the
+        // run continues on the shipped path while it is being checked.
+        static const bool gn_verify = []
+        {
+            const char* v = std::getenv("UIPC_DAHL_GN_VERIFY");
+            return v && v[0] != '0';
+        }();
+        if(m_gauss_newton && gn_verify)
+        {
+            static cuda_tool::SpreadVerifier sv_gn{
+                "DahlFrictionDiscreteShellBending::gauss_newton_gradient"};
+            static cuda_tool::SpreadVerifier sv_gnh{
+                "DahlFrictionDiscreteShellBending::gauss_newton_hessian"};
+            sv_gn.begin();
+            sv_gn.add_doublet(info.gradients());
+            sv_gnh.begin();
+            sv_gnh.add_triplet(info.hessians());
+            launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>);
+            sv_gn.snapshot();
+            sv_gnh.snapshot();
+            launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>);
+            sv_gn.compare();
+            sv_gnh.compare();
+            return;
+        }
+
         // s02 (round 7): the plain hinge's dispatch shape -- only the
         // instantiations the knobs can reach, each launched by name.
-        if(m_tql2)
+        // s03: the Gauss-Newton arm first (Solver is irrelevant there --
+        // Proj = 3 runs no eigen-solve).
+        if(m_gauss_newton)
+        {
+            launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>);
+        }
+        else if(m_tql2)
         {
             if(!m_reduced_spd)
                 launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 1>);

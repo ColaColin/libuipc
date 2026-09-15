@@ -1,0 +1,65 @@
+[    7.0s] warmup       old: 57.402 ms/frame (discarded)
+[   14.2s] warmup       new: 58.625 ms/frame (discarded)
+[   21.3s] rep 1      old: 57.138 ms/frame  Newton 510  PCG 19755
+[   28.2s] rep 1      new: 55.583 ms/frame  Newton 501  PCG 19080
+[   35.2s] rep 2      new: 56.898 ms/frame  Newton 508  PCG 19600
+[   42.1s] rep 2      old: 56.055 ms/frame  Newton 505  PCG 19365
+[   49.0s] rep 3      old: 55.187 ms/frame  Newton 499  PCG 19045
+[   55.9s] rep 3      new: 55.521 ms/frame  Newton 502  PCG 19140
+
+=== s03null_cwc  cube-wall-cloth  n=3 per arm ===
+       mean_ms: old    56.1269 [55.1868, 57.1385]   new    56.0007 [55.5208, 56.8981]     -0.22%  overlapping  t=+0.18 p=0.87
+     median_ms: old    51.1704 [50.3536, 51.8740]   new    50.6697 [50.2929, 50.9494]     -0.98%  overlapping
+ ms_per_newton: old    11.1211 [11.0595, 11.2036]   new    11.1183 [11.0599, 11.2004]     -0.03%  overlapping  t=+0.05 p=0.965
+    ms_per_pcg: old     0.2895 [0.2892, 0.2898]   new     0.2906 [0.2901, 0.2913]     +0.37%  DISJOINT  t=-2.60 p=0.0913
+        newton: old   504.6667 [499.0000, 510.0000]   new   503.6667 [501.0000, 508.0000]     -0.20%  overlapping
+           pcg: old 19388.3333 [19045.0000, 19755.0000]   new 19273.3333 [19080.0000, 19600.0000]     -0.59%  overlapping
+   line_search: old   526.3333 [519.0000, 534.0000]   new   524.0000 [521.0000, 526.0000]     -0.44%  overlapping
+
+!! pcg moved 0.59% against a 0.22% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+!! effect is 0.22% at n=3. Below ~2% use n>=5 (PERF_METHOD §2.4).
+
+raw runs + summary: /workspace/output/round7/s03/abnull_cwc
+[   21.2s] warmup       old: 112.136 ms/frame (discarded)
+[   42.0s] warmup       new: 109.524 ms/frame (discarded)
+[   63.7s] rep 1      old: 114.137 ms/frame  Newton 1531  PCG 52710
+[   84.6s] rep 1      new: 110.048 ms/frame  Newton 1498  PCG 48930
+[  104.3s] rep 2      new: 103.162 ms/frame  Newton 1445  PCG 45295
+[  126.0s] rep 2      old: 115.032 ms/frame  Newton 1488  PCG 45840
+[  146.2s] rep 3      old: 105.790 ms/frame  Newton 1500  PCG 49215
+[  167.0s] rep 3      new: 109.605 ms/frame  Newton 1504  PCG 49685
+
+=== s03null_tum  tumbler-garments  n=3 per arm ===
+       mean_ms: old   111.6530 [105.7902, 115.0320]   new   107.6049 [103.1618, 110.0480]     -3.63%  overlapping  t=+1.10 p=0.338
+     median_ms: old   103.5449 [96.8107, 107.8178]   new   101.1539 [98.2150, 104.5843]     -2.31%  overlapping
+ ms_per_newton: old    13.3430 [12.6948, 13.9152]   new    13.0639 [12.8506, 13.2234]     -2.09%  overlapping  t=+0.75 p=0.519
+    ms_per_pcg: old     0.4095 [0.3869, 0.4517]   new     0.4040 [0.3971, 0.4100]     -1.34%  overlapping  t=+0.26 p=0.82
+        newton: old  1506.3333 [1488.0000, 1531.0000]   new  1482.3333 [1445.0000, 1504.0000]     -1.59%  overlapping
+           pcg: old 49255.0000 [45840.0000, 52710.0000]   new 47970.0000 [45295.0000, 49685.0000]     -2.61%  overlapping
+   line_search: old  1785.6667 [1737.0000, 1879.0000]   new  1743.0000 [1620.0000, 1846.0000]     -2.39%  overlapping
+
+!! pcg moved 2.61% against a 3.63% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+raw runs + summary: /workspace/output/round7/s03/abnull_tumbler
+[    8.3s] warmup       old: 61.912 ms/frame (discarded)
+[   16.5s] warmup       new: 61.970 ms/frame (discarded)
+[   24.8s] rep 1      old: 61.992 ms/frame  Newton 465  PCG 35185
+[   33.0s] rep 1      new: 62.031 ms/frame  Newton 465  PCG 35195
+[   41.2s] rep 2      new: 62.143 ms/frame  Newton 465  PCG 35230
+[   49.5s] rep 2      old: 62.051 ms/frame  Newton 465  PCG 35215
+[   57.8s] rep 3      old: 61.909 ms/frame  Newton 465  PCG 35215
+[   66.1s] rep 3      new: 62.096 ms/frame  Newton 465  PCG 35175
+
+=== s03null_mas  mas-bunny  n=3 per arm ===
+       mean_ms: old    61.9838 [61.9089, 62.0509]   new    62.0900 [62.0306, 62.1432]     +0.17%  overlapping  t=-2.02 p=0.117
+     median_ms: old    68.0421 [67.9621, 68.1172]   new    68.0725 [67.9389, 68.1646]     +0.04%  overlapping
+ ms_per_newton: old    13.3299 [13.3137, 13.3443]   new    13.3527 [13.3399, 13.3641]     +0.17%  overlapping  t=-2.02 p=0.117
+    ms_per_pcg: old     0.1761 [0.1758, 0.1762]   new     0.1764 [0.1762, 0.1765]     +0.19%  DISJOINT  t=-2.10 p=0.116
+        newton: old   465.0000 [465.0000, 465.0000]   new   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+           pcg: old 35205.0000 [35185.0000, 35215.0000]   new 35200.0000 [35175.0000, 35230.0000]     -0.01%  overlapping
+   line_search: old   465.0000 [465.0000, 465.0000]   new   465.0000 [465.0000, 465.0000]     +0.00%  overlapping
+
+!! effect is 0.17% at n=3. Below ~2% use n>=5 (PERF_METHOD §2.4).
+
+raw runs + summary: /workspace/output/round7/s03/abnull_mas
