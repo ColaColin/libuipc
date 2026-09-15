@@ -1,5 +1,21 @@
 # Handoff — Current State of the Repo
 
+> **One-frame PCG stall on `stiff-gipc-case2` diagnosed (2026-09-15,
+> `diag/pcg-stall-trace`)**: the round-6 "1 run in 48" linear-solver stall was
+> reproduced (140-run sweep, 1 event) and classified as a **preconditioner
+> breakdown**, not a stiff system and not a line-search interaction: the dumped
+> matrix of the broken solve is SPD (plain CG: 809 iterations) while the
+> MAS apply turns indefinite on it (`rz0 < 0`), the iteration oscillates, and
+> the relative tolerance collapses to a near-absolute target when `rz0` is
+> nearly annihilated. Level-0 float GJ inversion exonerated offline; the
+> indefiniteness enters through the multi-level float apply. Two default-off
+> probes landed (`UIPC_PCG_TRACE`, `UIPC_PCG_STALL_DUMP`); evidence and fix
+> directions in
+> [performance/2026-09-15-pcg-stall-diagnosis.md](performance/2026-09-15-pcg-stall-diagnosis.md),
+> open issue tracked in `09-known-issues-and-roadmap.md`. Fix is **not**
+> implemented — sweeps should flag per-frame `linear_solver_iterations > 2000`
+> and exclude those runs.
+
 > **Revolute-joint external-torque device trap fixed (2026-09-11,
 > `fix/revolute-joint-sm75`)**: `torque_to_F` (`affine_body/utils.cu`) evaluated
 > `A.inverse().transpose()` in device code; Eigen 3.4.0's
