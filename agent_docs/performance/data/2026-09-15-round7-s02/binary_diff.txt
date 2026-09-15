@@ -1,0 +1,29 @@
+=== dahl G/H kernel resource usage, main 58a23165 vs branch perf/round7-s02-dahl-proj (build-perf Release/bin/libuipc_backend_cuda.so, cuobjdump -res-usage)
+
+main (single runtime-bool instantiation, union of all three Eigen paths):
+  dahl G/H          REG:255 STACK:11704 SHARED:0 LOCAL:0 CONSTANT[2]:728 CONSTANT[0]:736   [signature ...dbbbi: dt, gradient_only, reduced_spd, blocked_proj, n]
+
+branch (6 knob-reachable instantiations):
+  dahl <0,0>      REG:255 STACK:7664 SHARED:0 LOCAL:0 CONSTANT[2]:472 CONSTANT[0]:736
+  dahl <0,1>      REG:255 STACK:3920 SHARED:0 LOCAL:0 CONSTANT[2]:472 CONSTANT[0]:736
+  dahl <1,0>      REG:255 STACK:3712 SHARED:0 LOCAL:0 CONSTANT[2]:624 CONSTANT[0]:736
+  dahl <1,1>      REG:255 STACK:4064 SHARED:0 LOCAL:0 CONSTANT[2]:672 CONSTANT[0]:736
+  dahl <2,0>      REG:255 STACK:6896 SHARED:0 LOCAL:0 CONSTANT[2]:520 CONSTANT[0]:736
+  dahl <2,1>      REG:255 STACK:5472 SHARED:0 LOCAL:0 CONSTANT[2]:520 CONSTANT[0]:736
+
+The 11704 B frame is the UNION of the three Eigen projection paths (dense 12x12
+7664 + blocked 3712 + dense-basis 6896, not fully overlapped by nvcc) -- the
+union-of-frames cost of runtime-bool dispatch (s14/s19 lesson), removed by the
+template. No instantiation can carry it; the all-off arm <0,0> lands at 7664 B.
+Registers are 255 in every arm, so launch geometry (best_block_dim) is unchanged.
+
+whole-binary diff: kernels main=2422 branch=2427 identical=2407 CHANGED=0 onlyMain=15 onlyBranch=20
+CHANGED=0: every kernel present in both binaries has identical REG/STACK/cmem figures,
+including all 7 plain-hinge instantiations (<3,1> 208/1248, <1,1> 255/3104, <1,0> 255/3472,
+<2,0> 255/6688, <2,1> 255/3840, <0,0> 255/6976, <0,1> 255/3328) and all 12 plastic
+instantiations (strain <0,0> 255/6912, <1,1> 255/2912 ...; stress <0,0> 255/6944, <1,1> 255/3600 ...)
+-- exactly s01's branch table, so this step perturbed no shared code.
+The onlyMain/onlyBranch entries are all in the dahl TU (its __nv_static init hash changed
+with the file): the 14 non-G/H dahl kernels (energy, commit, registration stubs) match
+pairwise by figures (16/452, 11/432, 20/516, 14/428, 10/428, 9/404, 18/460, 24/412,
+72/464+652, 12/428, 12/428, 18/460, 24/412, 57/384+500) in both binaries.

@@ -91,6 +91,24 @@ namespace
         energies(I) = E * V_bar * dt * dt;
     }
 
+    // s02 (round 7): Proj = 0 dense 12x12 eigen-solve (this kernel's
+    // historical fallback), 1 = K16 block-assembled translation-free 9x9
+    // projection, 2 = K7 dense 12x9 basis products. The projection used to be
+    // selected by runtime bools, so the single instantiation carried the union
+    // of all three paths' stack frames (11 704 B) and Eigen's solver
+    // (Solver = 0); it is a template parameter now, exactly like the plain
+    // hinge's (rounds 5/6) and the plastic variants' (round 7 s01), so each
+    // instantiation carries only its own frame. The dahl energy is
+    // P(theta) = kappa*w*del^2 + W(d) of the dihedral angle alone -- the
+    // committed state (theta_commit, F_commit) is a per-edge constant within a
+    // frame -- and theta goes through vertex differences only, so H t = 0
+    // exactly and the translation-free projection applies verbatim.
+    // UIPC_DAHL_REDUCED_SPD=0 restores the 12x12 eigen-solve;
+    // UIPC_DAHL_BLOCKED_PROJ=0 uses the dense 12x9 basis products of K7
+    // instead of the K16 block assembly; UIPC_DAHL_TQL2=0 restores Eigen's
+    // SelfAdjointEigenSolver inside the 9x9 (or 12x12) PSD projection.
+    // All three off is the pre-round-7 dense 12x12 Eigen path.
+    template <int Proj, int Solver>
     __global__ void DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel(
         cuda_tool::BufferView<Vector4i>        stencils,
         cuda_tool::BufferView<Float>           bending_stiffnesses,
@@ -107,8 +125,6 @@ namespace
         cuda_tool::TripletMatrixView<Float, 3> H3x3s,
         Float                                  dt,
         bool                                   gradient_only,
-        bool                                   reduced_spd,
-        bool                                   blocked_proj,
         int                                    n)
     {
         int I = blockIdx.x * blockDim.x + threadIdx.x;
@@ -153,12 +169,12 @@ namespace
         DVA.segment<StencilSize>(I * StencilSize).write(stencil, G12);
 
         H12x12 *= Vdt2;
-        if(reduced_spd && blocked_proj)
-            make_spd_translation_free_4x3_blocked(H12x12);  // K16: block-assembled K7 projection
-        else if(reduced_spd)
-            make_spd_translation_free_4x3(H12x12);  // K7: 9x9 eigen-solve
+        if constexpr(Proj == 1)
+            make_spd_translation_free_4x3_blocked<Solver>(H12x12);  // K16: block-assembled K7 projection
+        else if constexpr(Proj == 2)
+            make_spd_translation_free_4x3<Solver>(H12x12);  // K7: 9x9 eigen-solve
         else
-            make_spd(H12x12);
+            make_spd<12, Solver>(H12x12);
 
         TripletMatrixAssembler TMA{H3x3s};
         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
@@ -252,12 +268,18 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
     cuda_tool::DeviceBuffer<Float>    F_commits;
     cuda_tool::DeviceBuffer<Float>    V_bars;
 
-    // perf/kernels (K7): translation-free 9x9 PSD projection of the hinge
-    // Hessian (UIPC_DAHL_REDUCED_SPD=0 restores the 12x12 eigen-solve)
-    bool m_reduced_spd = true;
-    // perf/kernels (K16): K7 projection assembled from 3x3 blocks
-    // (UIPC_DAHL_BLOCKED_PROJ=0 = the dense 12x9 basis products)
+    // s02 (round 7): translation-free 9x9 PSD projection of the hinge
+    // Hessian, now dispatched at compile time like the plain hinge's and the
+    // plastic variants' (the runtime bools cost every instantiation the union
+    // of all three projection paths' stack frames). Defaults on =
+    // <Proj=1 blocked, Solver=1 QL>; all three knobs =0 is the historical
+    // dense 12x12 Eigen path.
+    // UIPC_DAHL_REDUCED_SPD=0 restores the 12x12 eigen-solve;
+    // UIPC_DAHL_BLOCKED_PROJ=0 = the dense 12x9 basis products of K7;
+    // UIPC_DAHL_TQL2=0 restores Eigen's SelfAdjointEigenSolver.
+    bool m_reduced_spd  = true;
     bool m_blocked_proj = true;
+    bool m_tql2         = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -265,6 +287,8 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
         m_reduced_spd  = !(e && e[0] == '0');
         const char* b  = std::getenv("UIPC_DAHL_BLOCKED_PROJ");
         m_blocked_proj = !(b && b[0] == '0');
+        const char* t  = std::getenv("UIPC_DAHL_TQL2");
+        m_tql2         = !(t && t[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -487,9 +511,11 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
 
     virtual void do_compute_gradient_hessian(ComputeGradientHessianInfo& info) override
     {
-        auto k = DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel;
         int n = (int)stencils.size();
-        if(n > 0)
+        if(n == 0)
+            return;
+
+        auto launch = [&](auto k)
         {
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 stencils.view(),
@@ -507,9 +533,28 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
                 info.hessians(),
                 info.dt(),
                 info.gradient_only(),
-                m_reduced_spd,
-                m_blocked_proj,
                 n);
+        };
+
+        // s02 (round 7): the plain hinge's dispatch shape -- only the
+        // instantiations the knobs can reach, each launched by name.
+        if(m_tql2)
+        {
+            if(!m_reduced_spd)
+                launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 1>);
+            else if(m_blocked_proj)
+                launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>);
+            else
+                launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<2, 1>);
+        }
+        else
+        {
+            if(!m_reduced_spd)
+                launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 0>);
+            else if(m_blocked_proj)
+                launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0>);
+            else
+                launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<2, 0>);
         }
     }
 };
