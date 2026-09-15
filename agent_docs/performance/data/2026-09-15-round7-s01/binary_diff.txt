@@ -1,0 +1,34 @@
+=== G/H kernel resource usage, main fa99082b vs branch perf/round7-s01-plastic-proj (build-perf .so, cuobjdump -res-usage)
+instantiation                main                                                           branch                                                         identical
+plain-hinge                  REG:255 STACK:11704 SHARED:0 LOCAL:0 CONSTANT[2]:728 CONSTANT[0]:736 REG:255 STACK:11704 SHARED:0 LOCAL:0 CONSTANT[2]:728 CONSTANT[0]:736 True
+plain-hinge <2,0>            REG:255 STACK:6688 SHARED:0 LOCAL:0 CONSTANT[2]:288 CONSTANT[0]:640 REG:255 STACK:6688 SHARED:0 LOCAL:0 CONSTANT[2]:288 CONSTANT[0]:640 True
+plain-hinge <1,0>            REG:255 STACK:3472 SHARED:0 LOCAL:0 CONSTANT[2]:392 CONSTANT[0]:640 REG:255 STACK:3472 SHARED:0 LOCAL:0 CONSTANT[2]:392 CONSTANT[0]:640 True
+plain-hinge <0,0>            REG:255 STACK:6976 SHARED:0 LOCAL:0 CONSTANT[2]:240 CONSTANT[0]:640 REG:255 STACK:6976 SHARED:0 LOCAL:0 CONSTANT[2]:240 CONSTANT[0]:640 True
+plain-hinge <2,1>            REG:255 STACK:3840 SHARED:0 LOCAL:0 CONSTANT[2]:288 CONSTANT[0]:640 REG:255 STACK:3840 SHARED:0 LOCAL:0 CONSTANT[2]:288 CONSTANT[0]:640 True
+plain-hinge <0,1>            REG:255 STACK:3328 SHARED:0 LOCAL:0 CONSTANT[2]:240 CONSTANT[0]:640 REG:255 STACK:3328 SHARED:0 LOCAL:0 CONSTANT[2]:240 CONSTANT[0]:640 True
+plain-hinge <3,1>            REG:208 STACK:1248 SHARED:0 LOCAL:0 CONSTANT[2]:232 CONSTANT[0]:640 REG:208 STACK:1248 SHARED:0 LOCAL:0 CONSTANT[2]:232 CONSTANT[0]:640 True
+plain-hinge <1,1>            REG:255 STACK:3104 SHARED:0 LOCAL:0 CONSTANT[2]:392 CONSTANT[0]:640 REG:255 STACK:3104 SHARED:0 LOCAL:0 CONSTANT[2]:392 CONSTANT[0]:640 True
+
+
+=== new plastic instantiations (branch only)
+strain-plastic <2,0>  REG:255 STACK:6752 SHARED:0 LOCAL:0 CONSTANT[2]:352 CONSTANT[0]:640
+strain-plastic <1,0>  REG:255 STACK:3328 SHARED:0 LOCAL:0 CONSTANT[2]:456 CONSTANT[0]:640
+strain-plastic <0,0>  REG:255 STACK:6912 SHARED:0 LOCAL:0 CONSTANT[2]:304 CONSTANT[0]:640
+strain-plastic <2,1>  REG:255 STACK:4032 SHARED:0 LOCAL:0 CONSTANT[2]:352 CONSTANT[0]:640
+strain-plastic <1,1>  REG:255 STACK:2912 SHARED:0 LOCAL:0 CONSTANT[2]:456 CONSTANT[0]:640
+strain-plastic <0,1>  REG:255 STACK:3408 SHARED:0 LOCAL:0 CONSTANT[2]:304 CONSTANT[0]:640
+stress-plastic <2,0>  REG:255 STACK:6736 SHARED:0 LOCAL:0 CONSTANT[2]:352 CONSTANT[0]:664
+stress-plastic <1,0>  REG:255 STACK:3328 SHARED:0 LOCAL:0 CONSTANT[2]:456 CONSTANT[0]:664
+stress-plastic <0,0>  REG:255 STACK:6944 SHARED:0 LOCAL:0 CONSTANT[2]:304 CONSTANT[0]:664
+stress-plastic <2,1>  REG:255 STACK:5056 SHARED:0 LOCAL:0 CONSTANT[2]:352 CONSTANT[0]:664
+stress-plastic <1,1>  REG:255 STACK:3600 SHARED:0 LOCAL:0 CONSTANT[2]:504 CONSTANT[0]:664
+stress-plastic <0,1>  REG:255 STACK:3344 SHARED:0 LOCAL:0 CONSTANT[2]:304 CONSTANT[0]:664
+
+=== old-arm identity (branch <0,0> vs main's shipped non-template kernel)
+strain-plastic: main  REG:255 STACK:6912 SHARED:0 LOCAL:0 CONSTANT[2]:304 CONSTANT[0]:640
+strain-plastic: branch<0,0> REG:255 STACK:6912 SHARED:0 LOCAL:0 CONSTANT[2]:304 CONSTANT[0]:640  -> IDENTICAL
+stress-plastic: main  REG:255 STACK:6944 SHARED:0 LOCAL:0 CONSTANT[2]:304 CONSTANT[0]:664
+stress-plastic: branch<0,0> REG:255 STACK:6944 SHARED:0 LOCAL:0 CONSTANT[2]:304 CONSTANT[0]:664  -> IDENTICAL
+("plain-hinge" first row above is the DAHL kernel -- the tagger's family fallback;
+all 7 real plain-hinge DiscreteShellBending instantiations are identical, and the
+dahl TU was not recompiled at all: figures and mangled symbols match main exactly.)

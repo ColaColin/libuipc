@@ -11,6 +11,7 @@
 #include <kernel_cout.h>
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 namespace uipc::backend::cuda
 {
@@ -81,6 +82,21 @@ namespace
         energies(I) = E * V_bar * dt * dt;
     }
 
+    // s01 (round 7): Proj = 0 dense 12x12 eigen-solve (the path this kernel
+    // shipped with), 1 = K16 block-assembled translation-free 9x9 projection,
+    // 2 = K7 dense 12x9 basis products. The projection is a template parameter,
+    // not a runtime flag, so each instantiation carries only one code path's
+    // register/stack footprint (the 12x12 eigen-solve alone costs ~7 KB of
+    // stack). The strain-plastic bending energy depends on the vertices only
+    // through the dihedral angle, which is translation invariant, so H t = 0
+    // exactly for every rigid translation t and the translation-free
+    // projection the plain hinge ships (rounds 5/6, s14/s19) applies verbatim.
+    // UIPC_PDSB_REDUCED_SPD=0 restores the 12x12 eigen-solve;
+    // UIPC_PDSB_BLOCKED_PROJ=0 uses the dense 12x9 basis products of K7
+    // instead of the K16 block assembly; UIPC_PDSB_TQL2=0 restores Eigen's
+    // SelfAdjointEigenSolver inside the 9x9 (or 12x12) PSD projection.
+    // All three off is byte-identical to the pre-round-7 kernel.
+    template <int Proj, int Solver>
     __global__ void StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel(
         cuda_tool::BufferView<Vector4i>        stencils,
         cuda_tool::BufferView<Float>           bending_stiffnesses,
@@ -125,7 +141,12 @@ namespace
 
         PDSB::ddEddx(H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa);
         H12x12 *= Vdt2;
-        make_spd(H12x12);
+        if constexpr(Proj == 1)
+            make_spd_translation_free_4x3_blocked<Solver>(H12x12);
+        else if constexpr(Proj == 2)
+            make_spd_translation_free_4x3<Solver>(H12x12);
+        else
+            make_spd<12, Solver>(H12x12);
 
         TripletMatrixAssembler TMA{H3x3s};
         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
@@ -205,7 +226,24 @@ class StrainPlasticDiscreteShellBending final : public FiniteElementExtraConstit
     cuda_tool::DeviceBuffer<Float>    hardening_moduli;
     cuda_tool::DeviceBuffer<Float>    V_bars;
 
-    virtual void do_build(BuildInfo& info) override {}
+    // s01 (round 7): translation-free 9x9 PSD projection of the hinge
+    // Hessian, the same knob set the plain hinge ships (namespaced to this
+    // family; it covers both plastic bending kernels, which are one family).
+    // Defaults on = <Proj=1 blocked, Solver=1 QL>; all three =0 is the
+    // pre-round-7 dense 12x12 Eigen path, byte-identical.
+    bool m_reduced_spd  = true;
+    bool m_blocked_proj = true;
+    bool m_tql2         = true;
+
+    virtual void do_build(BuildInfo& info) override
+    {
+        const char* e  = std::getenv("UIPC_PDSB_REDUCED_SPD");
+        m_reduced_spd  = !(e && e[0] == '0');
+        const char* b  = std::getenv("UIPC_PDSB_BLOCKED_PROJ");
+        m_blocked_proj = !(b && b[0] == '0');
+        const char* t  = std::getenv("UIPC_PDSB_TQL2");
+        m_tql2         = !(t && t[0] == '0');
+    }
 
     virtual void do_init(FilteredInfo& info) override
     {
@@ -382,9 +420,11 @@ class StrainPlasticDiscreteShellBending final : public FiniteElementExtraConstit
 
     virtual void do_compute_gradient_hessian(ComputeGradientHessianInfo& info) override
     {
-        auto k = StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel;
         int n = (int)stencils.size();
-        if(n > 0)
+        if(n == 0)
+            return;
+
+        auto launch = [&](auto k)
         {
             k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
                 stencils.view(),
@@ -399,6 +439,27 @@ class StrainPlasticDiscreteShellBending final : public FiniteElementExtraConstit
                 info.dt(),
                 info.gradient_only(),
                 n);
+        };
+
+        // s01 (round 7): the plain hinge's dispatch shape -- only the
+        // instantiations the knobs can reach, each launched by name.
+        if(m_tql2)
+        {
+            if(!m_reduced_spd)
+                launch(StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 1>);
+            else if(m_blocked_proj)
+                launch(StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>);
+            else
+                launch(StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<2, 1>);
+        }
+        else
+        {
+            if(!m_reduced_spd)
+                launch(StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 0>);
+            else if(m_blocked_proj)
+                launch(StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0>);
+            else
+                launch(StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<2, 0>);
         }
     }
 };
