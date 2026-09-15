@@ -96,26 +96,56 @@ clusters, whose conditioning is not covered by the level-0 surrogate test. The e
 own `UIPC_MAS_APPLY_VERIFY` modes cannot see it: they compare the pipeline against itself
 and never run inside captured graph replays, which is where the PCG iterations execute.
 
-Fix directions, in increasing invasiveness:
+Fix directions were ranked; **the detect-and-re-solve guard shipped the same day**
+(commit `8849bfa6`, see below). Localizing the multi-level stage remains optional
+hardening (retro-capture cluster dump on a fresh event, or offline replication of the
+coarsening).
 
-- **Guard the tolerance**: floor `rz_tol` at an absolute value, or fall back to a
-  residual-norm criterion when `|rz0|` is anomalously small relative to ‖b‖ (the
-  reference `LinearPCG` additionally requires `accuracy_statisfied(r)`, which the fused
-  path dropped). Cheap, turns a 255 k-iteration spin into a bounded solve — but leaves
-  the indefinite apply in place.
-- **Detect and re-solve**: if `rz0 ≤ 0`, re-run the solve with the diagonal fallback
-  preconditioner (plain CG would have needed ~809 iterations; the diagonal path exists —
-  `NO_MAS`). One branch per solve, no cost in the healthy case.
-- **Fix the apply**: pin the multi-level stage that loses PSD (needs the retro-capture
-  cluster dump on a fresh event, or an offline replication of the coarsening).
+## The shipped guard (2026-09-15, commit 8849bfa6)
+
+`LinearFusedPCG::fused_pcg` now checks the solve-start `rz0`: **`rz0 < 0`, or `rz0`
+non-finite with a finite `r`** (the case `check_init_rz_nan_inf` used to abort on — the
+round-6 tumbler "preconditioner NaN" abort flavour) → redo the solve's initialization
+with the preconditioner bypassed (`z = r`, plain CG; `x` is still the all-zero start, so
+only `z`, `p` and the rz scalars are redone), run the plain-launch path (no graph replay,
+the captured graph embeds the preconditioner launches), warn once with frame/newton. A
+non-finite `r` (assembly NaN) still aborts as before. `UIPC_PCG_PSD_FALLBACK=0` is the
+rollback; `UIPC_PCG_PSD_FALLBACK_TEST=k` forces the bypass every k-th solve (test arm);
+the trace probe's S/E lines gained a `bypass=` field. The full-GPU while-loop mode
+(graph_mode 2) has no host read of the initial rz and is not covered.
+
+Validation:
+
+- **Gate identical to `baseline_tests.txt` in all suites** (11/3, 1112/36, 2730/46,
+  100/3, 4/1, 448/23, 14213/95, pytest 48+1).
+- **Forced arm** (`UIPC_PCG_PSD_FALLBACK_TEST=37`, 12-frame case2 run): 2/39 solves
+  bypassed, both converged (90 / 200 iterations against a median 45 for MAS solves),
+  0 unconverged, all frames converged; the one Newton-count shift on a bypassed frame is
+  the same rounding-level trajectory variation the scene shows between any two runs.
+- **A/B, all five benchmark scenes, n=6/arm, ABBA + warm-up** (`off` =
+  `UIPC_PCG_PSD_FALLBACK=0` vs `on` = default; raw runs in
+  `/workspace/output/round6/psdfb/`): every statistic overlapping, no regression beyond
+  any scene's own envelope. `mas-bunny` — the deterministic control — at **Newton 465 /
+  line search 465 in all 12 runs of both arms** (this repo's standard proof that a change
+  computes nothing differently), PCG totals ±0.03 %. ms/PCG (trajectory-insensitive):
+  mb +0.65 %, cwc −0.64 %, case2 −0.63 %, rwb −1.06 % (p=0.10), tumbler −0.54 % — all
+  overlapping. ms/Newton: mb +0.68 % (p=0.53), cwc −0.14 % (p=0.93), case2 +0.16 %
+  (p=0.80), rwb −0.59 % (p=0.33), tumbler −0.64 % (p=0.81). The count guards fired on
+  cwc/rwb/tumbler with movements (+0.5…+2.4 %) inside those scenes' recorded run-to-run
+  count envelopes (round 6: tumbler PCG ±4 %, rwb counts ±1 %+, single-run wall
+  134–169 ms); the healthy path adds no device work and no computed value differs — the
+  drift is the scenes' own non-determinism. No fallback triggered naturally in the 60
+  measured runs (case2 PCG totals all within the normal 63–65 k band).
 
 ## Measurement hazard (why round 6 noticed it)
 
 1 event in ~40–140 runs inflates a pooled mean enough to require exclusion (s14's null arm
 was reported as +0.11 % ms/Newton *excluding* the stall run; including it, the arm's mean
-moves by the event's ~8 s against a ~50 s run). For future sweeps: a per-frame
-`linear_solver_iterations > 2000` check on case2 is one line over the existing JSONs and
-flags an event run immediately.
+moves by the event's ~8 s against a ~50 s run). **With the shipped guard the damage is
+bounded** — a triggered event costs one ~800-iteration plain-CG solve (~+0.8 % of a case2
+run's PCG total) instead of 12 k–256 k iterations. For future sweeps: a per-frame
+`linear_solver_iterations > 2000` check on case2 still flags event runs cheaply, and the
+solver's own warning line (`preconditioner action not SPD/finite`) names them exactly.
 
 ## Relation to s13 (unresolved)
 

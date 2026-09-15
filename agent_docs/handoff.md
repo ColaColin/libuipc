@@ -1,5 +1,18 @@
 # Handoff — Current State of the Repo
 
+> **PCG-stall guard shipped (2026-09-15, `8849bfa6`)**: `LinearFusedPCG` now
+> re-solves with the preconditioner bypassed (plain CG, plain-launch path,
+> graph replay suppressed for that solve) when the solve-start `rz0` is
+> negative or non-finite with a finite `r` — the contract violation behind
+> the diagnosed one-frame stalls and behind the round-6 "preconditioner NaN"
+> abort on tumbler. `UIPC_PCG_PSD_FALLBACK=0` rolls back, `=_TEST=k` forces
+> the path for exercise. Gate identical to baseline in all suites; five-scene
+> A/B (n=6/arm) a null with mas-bunny at Newton 465 / LS 465 in all 12 runs.
+> The multi-level float stage that actually loses PSD remains unlocalized
+> (level-0 float GJ exonerated offline) — open issue in
+> `09-known-issues-and-roadmap.md`, evidence in
+> [performance/2026-09-15-pcg-stall-diagnosis.md](performance/2026-09-15-pcg-stall-diagnosis.md).
+
 > **One-frame PCG stall on `stiff-gipc-case2` diagnosed (2026-09-15,
 > `diag/pcg-stall-trace`)**: the round-6 "1 run in 48" linear-solver stall was
 > reproduced (140-run sweep, 1 event) and classified as a **preconditioner
