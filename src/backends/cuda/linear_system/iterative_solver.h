@@ -47,6 +47,10 @@ class IterativeSolver : public SimSystem
     int spmv_grid_key() const;
     bool accuracy_statisfied(cuda_tool::DenseVectorView<Float> r);
     cuda_tool::LinearSystemContext& ctx() const;
+    // PCG-stall diagnostic (2026-09-15): dump this Newton iteration's A and b
+    // (extras/debug/dump_linear_system's writer, frame+newton-tagged .mtx).
+    // IterativeSolver is the friend; derived solvers are not.
+    void dump_A_b();
 
   private:
     friend class GlobalLinearSystem;

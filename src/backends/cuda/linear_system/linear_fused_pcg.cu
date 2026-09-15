@@ -139,6 +139,19 @@ namespace
         return f;
     }
 
+    // PCG-stall diagnostic, dump half: when a solve exceeds this many
+    // iterations, dump that solve's A and b for offline analysis
+    // (see dump_A_b in iterative_solver.h). Absent/0/negative = off.
+    long long pcg_stall_dump_threshold()
+    {
+        static const long long t = []
+        {
+            const char* s = std::getenv("UIPC_PCG_STALL_DUMP");
+            return s ? std::atoll(s) : 0;
+        }();
+        return t;
+    }
+
     const PcgSmallEnv& pcg_small_env()
     {
         static const PcgSmallEnv env = []
@@ -767,6 +780,21 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
     }
 
     auto iter = fused_pcg(x, b, max_iter_ratio * b.size());
+
+    // PCG-stall diagnostic: bcoo_A and b persist until the next Newton
+    // iteration's assembly, so dumping here still captures exactly the
+    // system that stalled (or any other solve above the threshold).
+    if(long long t = pcg_stall_dump_threshold()) [[unlikely]]
+    {
+        if((long long)iter > t)
+        {
+            logger::warn(
+                "LinearFusedPCG: solve took {} iterations (> {}); dumping A and b",
+                iter,
+                t);
+            dump_A_b();
+        }
+    }
 
     if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify)
         report_ap_zero();
