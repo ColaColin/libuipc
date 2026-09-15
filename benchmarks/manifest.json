@@ -116,6 +116,42 @@
       "unsetEnvironment": ["NO_MAS", "NO_GRAPH", "WB_TIMER"],
       "metadataOutput": "output/benchmark-runs/tumbler-garments.json",
       "comparability": "The geometry is procedural, so the scene parameters are the assets: keep the drum spec (R=0.30 m, depth 0.40 m, 3 lifters, 48 segments), 40 rpm, dt=1/60, the four garments and their placement, the 6.2 mm element size, the shell moduli/thickness, d_hat and the friction table unchanged -- each of them moves the contact count. Compare identical repo, samples, CUDA, GPU, driver, and frame counts."
+    },
+    {
+      "name": "crease-press",
+      "description": "Cyclic press creasing a mixed stack of seven clamped sheets: Dahl internal-friction denim + strain-plastic cardboard + stress-plastic sheet-metal discrete-shell bending, cloth layer-layer and tool contact + friction, NeoHookeanShell2D membrane, one kinematic affine-body press bar, two press cycles at two lateral offsets",
+      "entrypoint": "libuipc-samples/examples/103_crease_press/main.py",
+      "workingDirectory": "libuipc-samples/examples/103_crease_press",
+      "arguments": [
+        "{frames}"
+      ],
+      "defaultFrames": 130,
+      "quickFrames": 3,
+      "requiredPaths": [
+        "libuipc-samples/examples/103_crease_press/main.py",
+        "libuipc-samples/examples/103_crease_press/verify.py",
+        "libuipc-samples/examples/103_crease_press/asset_dir.py",
+        "libuipc-samples/examples/103_crease_press/README.md",
+        "libuipc-samples/examples/benchmark_utils.py",
+        "libuipc-samples/examples/r6_common.py",
+        "libuipc-samples/assets/sim_data/tetmesh/cube.msh"
+      ],
+      "environment": {
+        "WB_LOG": "Warn",
+        "UIPC_BENCHMARK_TIMERS": "0"
+      },
+      "unsetEnvironment": [
+        "NO_MAS",
+        "NO_GRAPH",
+        "WB_TIMER",
+        "CP_DT",
+        "CP_PDEPTH",
+        "CP_DIE",
+        "CP_YSTRAIN",
+        "CP_YSTRESS"
+      ],
+      "metadataOutput": "output/benchmark-runs/crease-press.json",
+      "comparability": "The geometry is procedural, so the scene parameters are the assets: keep the sheet footprints (0.48 x 0.80 m), the 7-sheet stack order and layer gap, the denim element size (10 mm) and carton element size (14.5 mm), the shell moduli/thicknesses/yield thresholds, d_hat and the friction table, the press schedule (depth 0.10 m below the stack's rest top surface, die 75 mm under the rest plane, crease offsets +-80 mm, dt=1/60, tol_rate 1e-4) and the 130-frame default unchanged -- each of them moves the hinge count, the contact count or the solver path. Compare identical repo, samples, CUDA, GPU, driver, and frame counts. The CP_* environment variables are calibration overrides and are unset by the benchmark so a stray export cannot silently change the scene."
     }
   ]
 }
