@@ -152,6 +152,37 @@ namespace
         return t;
     }
 
+    // PCG-stall fix (2026-09-15): when the solve-start rz0 shows the
+    // preconditioner's action is not contract-valid (rz0 < 0, or z
+    // non-finite with a finite r), re-solve that system with the
+    // preconditioner bypassed (z = r, plain CG). See the rz0 check in
+    // fused_pcg and
+    // agent_docs/performance/2026-09-15-pcg-stall-diagnosis.md.
+    // UIPC_PCG_PSD_FALLBACK=0 restores the old behaviour (a non-finite z
+    // then aborts via check_init_rz_nan_inf as before).
+    bool pcg_psd_fallback_enabled()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_PCG_PSD_FALLBACK");
+            return !(e && e[0] == '0');
+        }();
+        return on;
+    }
+
+    // PCG-stall fix test arm: force the bypass on every k-th solve (0/absent
+    // = off) so the fallback path can be exercised deterministically.
+    int pcg_psd_fallback_test()
+    {
+        static const int k = []
+        {
+            const char* e = std::getenv("UIPC_PCG_PSD_FALLBACK_TEST");
+            int         v = e ? std::atoi(e) : 0;
+            return v > 0 ? v : 0;
+        }();
+        return k;
+    }
+
     const PcgSmallEnv& pcg_small_env()
     {
         static const PcgSmallEnv env = []
@@ -1184,12 +1215,16 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                     fold == 1,
                     stream);
 
-    // z = P^{-1} * r
+    // z = P^{-1} * r   (PCG-stall fix: z = r when this solve bypasses the
+    // preconditioner -- see the rz0 check in fused_pcg)
     {
         std::optional<Timer> timer;
         if(timed)
             timer.emplace("Apply Preconditioner");
-        apply_preconditioner(z, r, d_converged.view(), stream);
+        if(m_precond_bypass)
+            cuda_tool::BufferLaunch(stream).copy(z.buffer_view(), r.buffer_view());
+        else
+            apply_preconditioner(z, r, d_converged.view(), stream);
     }
 
     const bool fuse_dot   = (fold == 2);
@@ -1568,6 +1603,58 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
     // rz = r^T * z
     fused_dot(r.cview(), z.cview(), d_rz.view());
     Float rz_host = d_rz;
+
+    // PCG-stall fix (2026-09-15): rz0 < 0 is impossible for an SPD
+    // preconditioner (r^T P^-1 r > 0 for any r != 0), and a non-finite
+    // rz0 with a finite r means the preconditioner's apply blew up -- the
+    // case check_init_rz_nan_inf below aborts on. Both mean THIS Newton
+    // iteration's preconditioner instance is not contract-valid, so redo
+    // the solve's initialization with the preconditioner bypassed
+    // (z = r, plain CG). m_precond_bypass also swaps run_iteration's
+    // preconditioner step for the same copy and suppresses graph replay
+    // for this solve (the captured graph embeds the preconditioner
+    // launches). On the reproduced stiff-gipc-case2 stall the system was
+    // SPD and plain CG solved it in 809 iterations where the broken
+    // preconditioner span to the 255 666 cap; see
+    // agent_docs/performance/2026-09-15-pcg-stall-diagnosis.md.
+    // UIPC_PCG_PSD_FALLBACK=0 restores the old behaviour;
+    // UIPC_PCG_PSD_FALLBACK_TEST=k forces the bypass on every k-th solve.
+    // The full-GPU while-loop mode (graph_mode 2) never reaches this host
+    // code and is not covered -- same limit as the trace probe.
+    m_precond_bypass = false;
+    if(pcg_psd_fallback_enabled()) [[unlikely]]
+    {
+        bool fallback = rz_host < Float{0.0};
+        if(!fallback && !std::isfinite(rz_host))
+        {
+            // finite r + non-finite z: preconditioner failure -> bypass.
+            // A non-finite r (assembly NaN) keeps the abort below.
+            Float norm_r = ctx().norm(r.cview());
+            fallback = std::isfinite(norm_r);
+        }
+        if(!fallback && pcg_psd_fallback_test() > 0)
+        {
+            static SizeT forced_count = 0;
+            fallback   = (forced_count++ % (SizeT)pcg_psd_fallback_test()) == 0;
+        }
+        if(fallback)
+        {
+            logger::warn(
+                "LinearFusedPCG: frame {} newton {}: rz0 = {:.6e} -- preconditioner action "
+                "not SPD/finite; re-solving with the preconditioner bypassed (plain CG)",
+                engine().frame(),
+                engine().newton_iter(),
+                rz_host);
+            m_precond_bypass = true;
+            // x is still the all-zero start state (nothing has updated it),
+            // r = b still holds; only z, p and the rz scalars need redoing.
+            cuda_tool::BufferLaunch(nullptr).copy(z.buffer_view(), r.buffer_view());
+            p = z;
+            fused_dot(r.cview(), z.cview(), d_rz.view());
+            rz_host = d_rz;
+        }
+    }
+
     check_init_rz_nan_inf(rz_host);
     Float abs_rz0 = std::abs(rz_host);
 
@@ -1578,12 +1665,13 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
 
     if(FILE* f = pcg_trace_file()) [[unlikely]]
         std::fprintf(f,
-                     "S frame=%llu newton=%llu n=%llu max_iter=%llu rz0=%.17e\n",
+                     "S frame=%llu newton=%llu n=%llu max_iter=%llu rz0=%.17e bypass=%d\n",
                      (unsigned long long)engine().frame(),
                      (unsigned long long)engine().newton_iter(),
                      (unsigned long long)x.size(),
                      (unsigned long long)max_iter,
-                     rz_host);
+                     rz_host,
+                     m_precond_bypass ? 1 : 0);
     // synchronous upload: an async copy on the default stream would race with
     // the graph launch stream (blocking streams do not wait for
     // legacy-stream work), letting the converged kernel read a stale/uninit
@@ -1614,8 +1702,10 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
     {
         SizeT block = std::min(effective_check_interval, total_iters - iter_done);
 
+        // PCG-stall fix: a bypassed solve must not replay the captured
+        // graph -- it embeds the preconditioner launches. Plain path.
         bool graph_block = m_use_cuda_graph && !m_graph.disabled()
-                           && block == effective_check_interval;
+                           && block == effective_check_interval && !m_precond_bypass;
         if(graph_block)
         {
             if(!graph_key_matches(x, b, effective_check_interval, max_iter))
@@ -1662,11 +1752,12 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
     SizeT reported_iters = converged ? iter_done : max_iter;
     if(FILE* f = pcg_trace_file()) [[unlikely]]
         std::fprintf(f,
-                     "E frame=%llu newton=%llu iters=%llu conv=%d\n",
+                     "E frame=%llu newton=%llu iters=%llu conv=%d bypass=%d\n",
                      (unsigned long long)engine().frame(),
                      (unsigned long long)engine().newton_iter(),
                      (unsigned long long)reported_iters,
-                     converged ? 1 : 0);
+                     converged ? 1 : 0,
+                     m_precond_bypass ? 1 : 0);
     return reported_iters;
 }
 }  // namespace uipc::backend::cuda

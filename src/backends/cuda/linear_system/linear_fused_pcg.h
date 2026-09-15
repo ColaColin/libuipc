@@ -98,6 +98,13 @@ class LinearFusedPCG : public IterativeSolver
     Float reserve_ratio   = 1.5;
     SizeT check_interval  = 5;
 
+    // PCG-stall fix (2026-09-15): set by fused_pcg when this solve's rz0
+    // check found the preconditioner's action not contract-valid (rz0 < 0,
+    // or z non-finite with a finite r); run_iteration then uses z = r and
+    // the solve runs the plain-launch path (no graph replay). Reset at the
+    // top of every solve.
+    bool m_precond_bypass = false;
+
     // --- CUDA graph state ---
     IndexT m_use_cuda_graph = 1;  // config: linear_system/use_cuda_graph
     // 0 = plain loop, 1 = block replay, 2 = full-GPU while-loop graph
