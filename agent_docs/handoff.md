@@ -1671,3 +1671,37 @@ n−1 root visits). Recommendation: build the next wheel from `837ce898`.
   The raw `.log` was written before `output/benchmark-runs/` existed, so the
   first run in a fresh checkout failed; the directory is created first.
   Regression tests in `scripts/tests/test_benchmark_manifest.py`.
+
+## libuipc-samples fork topology resolved (2026-09-15)
+
+The samples line was 9 ahead / 2 behind `spiriMirror/libuipc-samples` main, with
+the two "behind" commits (upstream `90607b9` + `a7ca63f`, the apple-grasp pair)
+content-identical to our `cd8e838` + `ecad2ca` (patch-ids verified), and the
+parent gitlink (`6764ad3`) reachable only on the fork's `perf/round6` branch —
+a fresh clone of the engine fork could not resolve the submodule.
+
+Resolution: our line was rebased onto `origin/main` (the duplicate pair
+auto-dropped; 7 commits replayed), with the rebased tip's tree verified
+**bit-identical** to `6764ad3`'s (`9ffef415…`) — the rebase changed nothing but
+hashes. Pushed to `ColaColin/libuipc-samples` `main` as a pure fast-forward
+(`a7ca63f..a72bf49`, no force), so the gitlink now names a commit on the fork's
+default branch. `.gitmodules` switched to the relative URL `../libuipc-samples.git`:
+a clone of `ColaColin/libuipc` resolves the submodule against the fork, a clone
+of `spiriMirror/libuipc` still gets upstream samples — both sides self-consistent.
+
+Hash mapping (old hashes remain reachable on the fork's `perf/round6` branch
+and in the parent's gitlink history; earlier entries in this file and the
+performance records cite the old hashes and are historical fact, left as written):
+
+| old | new | subject |
+|---|---|---|
+| `8701983` | `b1910b5` | bench: standardize headless performance reporting |
+| `4fb26b7` | `f8b2b70` | docs: align benchmark descriptions with measured scenes |
+| `97f0d8e` | `e639292` | feat(examples): add 95_tumbler_garments |
+| `15ccea2` | `eae90ea` | feat(95_tumbler_garments): perturbation + observables |
+| `d106903` | `51e2fa2` | feat(95_tumbler_garments): --vel-tol |
+| `fa5c3b9` | `9d77b9a` | feat(95_tumbler_garments): area_ratio_max distribution |
+| `6764ad3` | `a72bf49` | feat(93_cube_wall_cloth): UIPC_CWC_TIGHT |
+
+(`cd8e838`/`ecad2ca` were dropped as duplicates of upstream
+`90607b9`/`a7ca63f`.)

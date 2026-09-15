@@ -424,12 +424,16 @@ assertions).
   upstream advisories. This statement covers that advisory only, not all OpenUSD
   vulnerabilities or a blanket security clearance of 25.08.
 
-## Samples submodule state (spiriMirror/libuipc-samples)
+## Samples submodule state (fork: ColaColin/libuipc-samples)
 
 The root repository tracks this repository as the `libuipc-samples/` submodule.
-It currently has 53 example directories; numbering is non-contiguous and two
-directories use the `40_` prefix, so paths/names—not integer IDs—are the stable
-reference.
+The `.gitmodules` URL is **relative** (`../libuipc-samples.git`), so a clone of
+the fork resolves it against `ColaColin/libuipc` and a clone of
+`spiriMirror/libuipc` still gets the upstream samples (set 2026-09-15; see
+`handoff.md` for the rebase that made the gitlink reachable on the fork's
+default branch). It currently has 53 example directories; numbering is
+non-contiguous and two directories use the `40_` prefix, so paths/names—not
+integer IDs—are the stable reference.
 
 - `87_robot_hand` — URDF robot hand (ABD links + soft transform
   constraints) + ABD cube on the ground, manual GUI posing (sliders +
