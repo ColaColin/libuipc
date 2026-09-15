@@ -1,0 +1,227 @@
+### calibration Mon Sep 14 20:47:14 UTC 2026
+20:48:00 rc=0   46s calib__racecheck__95_tumbler_garments_2f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+20:50:21 rc=0  141s calib__racecheck__88_stiff_gipc_benchmark_2f | ========= RACECHECK SUMMARY: 19 hazards displayed (0 errors, 19 warnings)
+20:51:06 rc=0   45s calib__racecheck__89_mas_bunny_2f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+20:51:47 rc=0   41s calib__memcheck__88_stiff_gipc_benchmark_6f | ========= ERROR SUMMARY: 0 errors
+20:51:58 rc=0   11s calib__synccheck__95_tumbler_garments_6f | ========= ERROR SUMMARY: 0 errors
+20:52:25 rc=0   27s calib__initcheck__88_stiff_gipc_benchmark_4f | ========= ERROR SUMMARY: 0 errors
+### A head default (main 67062f5f, build-perf)  2026-09-14 20:53:48
+20:54:08 rc=0   20s head__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+20:54:17 rc=0    9s head__initcheck__6_wrecking_balls_8f | ========= ERROR SUMMARY: 0 errors
+20:54:56 rc=0   39s head__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+20:55:03 rc=0    7s head__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+20:55:29 rc=0   26s head__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+20:55:51 rc=0   22s head__initcheck__93_cube_wall_cloth_8f | ========= ERROR SUMMARY: 8127 errors
+20:56:55 rc=0   64s head__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+20:57:03 rc=0    8s head__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+20:58:12 rc=0   69s head__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+20:58:56 rc=0   44s head__initcheck__88_stiff_gipc_benchmark_8f | ========= ERROR SUMMARY: 0 errors
+21:04:43 rc=0  347s head__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 19 hazards displayed (0 errors, 19 warnings)
+21:04:59 rc=0   16s head__synccheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+21:05:22 rc=0   23s head__memcheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+21:05:37 rc=0   15s head__initcheck__89_mas_bunny_8f | ========= ERROR SUMMARY: 0 errors
+21:07:28 rc=0  111s head__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+21:07:37 rc=0    9s head__synccheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+21:09:04 rc=0   87s head__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+21:09:39 rc=0   35s head__initcheck__95_tumbler_garments_8f | ========= ERROR SUMMARY: 5418 errors
+21:12:50 rc=0  191s head__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+21:13:06 rc=0   16s head__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+### B base default (perf-round6-base 60af65e6, build-base)  2026-09-14 21:13:06
+21:13:24 rc=0   18s base__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+21:13:33 rc=0    9s base__initcheck__6_wrecking_balls_8f | ========= ERROR SUMMARY: 0 errors
+21:14:10 rc=0   37s base__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+21:14:17 rc=0    7s base__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+21:14:44 rc=0   27s base__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+21:15:04 rc=0   20s base__initcheck__93_cube_wall_cloth_8f | ========= ERROR SUMMARY: 8127 errors
+21:16:07 rc=0   63s base__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 256 hazards displayed (0 errors, 256 warnings)
+21:16:15 rc=0    8s base__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+21:17:38 rc=0   83s base__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+21:18:31 rc=0   53s base__initcheck__88_stiff_gipc_benchmark_8f | ========= ERROR SUMMARY: 0 errors
+21:23:57 rc=0  326s base__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 2239 hazards displayed (0 errors, 2239 warnings)
+21:24:14 rc=0   17s base__synccheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+21:24:39 rc=0   25s base__memcheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+21:24:55 rc=0   16s base__initcheck__89_mas_bunny_8f | ========= ERROR SUMMARY: 0 errors
+21:26:43 rc=0  108s base__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 1176 hazards displayed (0 errors, 1176 warnings)
+21:26:51 rc=0    8s base__synccheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+21:28:27 rc=0   96s base__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+21:29:12 rc=0   45s base__initcheck__95_tumbler_garments_8f | ========= ERROR SUMMARY: 5418 errors
+21:33:13 rc=0  241s base__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 792 hazards displayed (0 errors, 792 warnings)
+21:33:28 rc=0   15s base__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+### C head all-switches-rolled-back: UIPC_DSB_GAUSS_NEWTON=0 UIPC_CONTACT_RANK1=0 UIPC_CCD_EARLY_OUT=0 UIPC_CCD_COMPACT=0 UIPC_CONTACT_SPD1_BASIS=0 UIPC_ABD_GH_PREPASS=0 UIPC_SPMV_GRID_FIT=0 UIPC_CONTACT_DEFERRED_JOIN=0 UIPC_MAS_ROWDOT2=0 UIPC_MAS_FUSED_R=0 UIPC_SEG_REDUCE2=0  2026-09-14 21:33:28
+21:33:47 rc=0   20s rb__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+21:33:57 rc=0    9s rb__initcheck__6_wrecking_balls_8f | ========= ERROR SUMMARY: 0 errors
+21:34:35 rc=0   38s rb__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+21:34:43 rc=0    8s rb__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+21:35:10 rc=0   27s rb__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+21:35:32 rc=0   22s rb__initcheck__93_cube_wall_cloth_8f | ========= ERROR SUMMARY: 8127 errors
+21:36:35 rc=0   63s rb__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 256 hazards displayed (0 errors, 256 warnings)
+21:36:44 rc=0    9s rb__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+21:38:08 rc=0   84s rb__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+21:39:01 rc=0   53s rb__initcheck__88_stiff_gipc_benchmark_8f | ========= ERROR SUMMARY: 0 errors
+21:44:28 rc=0  327s rb__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 2239 hazards displayed (0 errors, 2239 warnings)
+21:44:45 rc=0   17s rb__synccheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+21:45:10 rc=0   25s rb__memcheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+21:45:27 rc=0   17s rb__initcheck__89_mas_bunny_8f | ========= ERROR SUMMARY: 0 errors
+21:47:16 rc=0  109s rb__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 1176 hazards displayed (0 errors, 1176 warnings)
+21:47:25 rc=0    9s rb__synccheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+21:48:52 rc=0   87s rb__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+21:49:38 rc=0   46s rb__initcheck__95_tumbler_garments_8f | ========= ERROR SUMMARY: 5418 errors
+21:53:28 rc=0  230s rb__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 621 hazards displayed (0 errors, 621 warnings)
+21:53:44 rc=0   16s rb__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+### E tests: head default  2026-09-14 21:53:44
+21:54:55 rc=0   71s head__memcheck__backend_cuda | ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+21:56:06 rc=0   71s head__initcheck__backend_cuda | ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+21:58:23 rc=0  137s head__racecheck__backend_cuda | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings) | All tests passed (448 assertions in 23 test cases)
+21:58:48 rc=0   25s head__synccheck__backend_cuda | ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+22:26:42 ABORTED head memcheck sim_case (full, 95 cases): 8 of 95 cases in ~27 min (~3.5 min/case under memcheck, vs 0.4 s unsanitized) -- cannot finish inside its 2 h timeout; log kept as aborted__memcheck__sim_case_full.txt; findings in the completed part: 0
+### D concurrency variants on the contact scenes (memcheck 12 f, racecheck 6 f, synccheck 12 f)  2026-09-14 22:26:42
+22:27:02 rc=0   20s pp0__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:27:40 rc=0   38s pp0__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+22:27:47 rc=0    7s pp0__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:28:14 rc=0   27s pp0__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:29:18 rc=0   64s pp0__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+22:29:27 rc=0    9s pp0__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:31:04 rc=0   97s pp0__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+22:33:59 rc=0  175s pp0__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+22:34:13 rc=0   14s pp0__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+22:34:32 rc=0   19s pp1__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:35:11 rc=0   39s pp1__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+22:35:18 rc=0    7s pp1__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:35:45 rc=0   27s pp1__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:36:49 rc=0   64s pp1__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+22:36:58 rc=0    9s pp1__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:38:27 rc=0   89s pp1__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+22:41:23 rc=0  176s pp1__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+22:41:37 rc=0   14s pp1__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+22:41:56 rc=0   19s pp2__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:42:34 rc=0   38s pp2__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+22:42:42 rc=0    8s pp2__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:43:08 rc=0   26s pp2__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:44:13 rc=0   64s pp2__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+22:44:21 rc=0    8s pp2__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:45:50 rc=0   89s pp2__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+22:48:46 rc=0  176s pp2__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+22:49:01 rc=0   15s pp2__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+22:49:21 rc=0   20s pp3__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:49:59 rc=0   38s pp3__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+22:50:06 rc=0    7s pp3__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:50:32 rc=0   26s pp3__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:51:36 rc=0   64s pp3__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+22:51:45 rc=0    9s pp3__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:53:09 rc=0   84s pp3__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+22:56:05 rc=0  176s pp3__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+22:56:19 rc=0   14s pp3__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+22:56:39 rc=0   20s dj0__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:57:17 rc=0   38s dj0__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+22:57:25 rc=0    8s dj0__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+22:57:51 rc=0   26s dj0__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+22:58:55 rc=0   64s dj0__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+22:59:04 rc=0    9s dj0__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+23:00:23 rc=0   79s dj0__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+23:03:28 rc=0  185s dj0__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+23:03:42 rc=0   14s dj0__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+23:04:51 rc=0   69s dj0__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+23:10:38 rc=0  347s dj0__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 19 hazards displayed (0 errors, 19 warnings)
+23:10:55 rc=0   17s dj0__synccheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+23:11:14 rc=0   19s dj2__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+23:11:52 rc=0   38s dj2__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+23:12:00 rc=0    8s dj2__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+23:12:26 rc=0   26s dj2__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+23:13:30 rc=0   64s dj2__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+23:13:39 rc=0    9s dj2__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+23:15:09 rc=0   91s dj2__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+23:18:22 rc=0  192s dj2__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+23:18:36 rc=0   14s dj2__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+23:19:45 rc=0   69s dj2__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+23:25:32 rc=0  347s dj2__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 19 hazards displayed (0 errors, 19 warnings)
+23:25:48 rc=0   16s dj2__synccheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+23:26:08 rc=0   20s sp0__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+23:26:46 rc=0   38s sp0__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+23:26:53 rc=0    7s sp0__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+23:27:19 rc=0   26s sp0__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+23:28:23 rc=0   64s sp0__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+23:28:32 rc=0    9s sp0__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+23:29:52 rc=0   80s sp0__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+23:32:49 rc=0  177s sp0__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+23:33:03 rc=0   14s sp0__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+23:34:08 rc=0   65s sp0__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+23:39:54 rc=0  346s sp0__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 19 hazards displayed (0 errors, 19 warnings)
+23:40:11 rc=0   17s sp0__synccheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+23:40:30 rc=0   19s sp1__memcheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+23:41:08 rc=0   38s sp1__racecheck__6_wrecking_balls_6f | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
+23:41:16 rc=0    8s sp1__synccheck__6_wrecking_balls_12f | ========= ERROR SUMMARY: 0 errors
+23:41:42 rc=0   26s sp1__memcheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+23:42:46 rc=0   64s sp1__racecheck__93_cube_wall_cloth_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+23:42:55 rc=0    9s sp1__synccheck__93_cube_wall_cloth_12f | ========= ERROR SUMMARY: 0 errors
+23:44:35 rc=0  100s sp1__memcheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+23:47:30 rc=0  175s sp1__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+23:47:46 rc=0   16s sp1__synccheck__95_tumbler_garments_12f | ========= ERROR SUMMARY: 0 errors
+23:48:55 rc=0   69s sp1__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+23:54:40 rc=0  345s sp1__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 19 hazards displayed (0 errors, 19 warnings)
+23:54:57 rc=0   17s sp1__synccheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+### D2 MAS / reduce variants on the FEM scenes (racecheck 6 f, memcheck 12 f)  2026-09-14 23:54:57
+23:56:40 rc=0  103s fr0__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 1176 hazards displayed (0 errors, 1176 warnings)
+23:57:04 rc=0   24s fr0__memcheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+00:02:20 rc=0  316s fr0__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 2407 hazards displayed (0 errors, 2407 warnings)
+00:03:41 rc=0   81s fr0__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+00:05:32 rc=0  111s fr1__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+00:05:55 rc=0   23s fr1__memcheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+00:11:43 rc=0  348s fr1__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 19 hazards displayed (0 errors, 19 warnings)
+00:12:48 rc=0   65s fr1__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+00:14:31 rc=0  103s rd0__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 1176 hazards displayed (0 errors, 1176 warnings)
+00:14:56 rc=0   25s rd0__memcheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+00:20:13 rc=0  317s rd0__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 2407 hazards displayed (0 errors, 2407 warnings)
+00:21:40 rc=0   87s rd0__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+00:23:32 rc=0  112s sr0__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+00:23:55 rc=0   23s sr0__memcheck__89_mas_bunny_12f | ========= ERROR SUMMARY: 0 errors
+00:29:41 rc=0  346s sr0__racecheck__88_stiff_gipc_benchmark_6f | ========= RACECHECK SUMMARY: 19 hazards displayed (0 errors, 19 warnings)
+00:30:50 rc=0   69s sr0__memcheck__88_stiff_gipc_benchmark_12f | ========= ERROR SUMMARY: 0 errors
+### F long tumbler windows into the dense-pile regime  2026-09-15 00:30:50
+00:30:55 HANDOFF: matrix2 stopped at the F boundary (its first F run killed, re-run by matrix3); matrix3 starts with the full sim_case memcheck
+### H full sim_case memcheck on head, all 95 cases, timeout 8 h (owner-authorized overnight run)  2026-09-15 00:30:55
+00:30:56 rc=42     1s head__memcheck__sim_case_full | ========= ERROR SUMMARY: 228 errors | test cases:  95 |  95 failed
+### E2 backend_cuda: base x4, rb memcheck+racecheck  2026-09-15 00:30:56
+00:32:57 RESTART: the first matrix3 launch hit cudaErrorDevicesUnavailable (launched 1 s after the kill, before the old context was gone); its H and E2 logs deleted; relaunched on an idle GPU
+### H full sim_case memcheck on head, all 95 cases, timeout 8 h (owner-authorized overnight run)  2026-09-15 00:33:02
+00:33:03 rc=42     1s head__memcheck__sim_case_full | ========= ERROR SUMMARY: 228 errors | test cases:  95 |  95 failed
+### E2 backend_cuda: base x4, rb memcheck+racecheck  2026-09-15 00:33:03
+00:34:15 rc=0   72s base__memcheck__backend_cuda | ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+00:35:25 rc=0   70s base__initcheck__backend_cuda | ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+00:39:03 rc=? (driver killed, child ran to completion) base__initcheck__backend_cuda | ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+00:39:03 RESTART 2: second H attempt also died with cudaErrorDevicesUnavailable at the first kernel launch, ~65 s after a kill -9 of a sanitized process; no sanitized process is killed from here on. matrix4 = H, E2 remainder, G, I, F
+### H full sim_case memcheck on head, all 95 cases, timeout 8 h (owner-authorized overnight run)  2026-09-15 00:39:33
+02:19:45 rc=0  6012s head__memcheck__sim_case_full | ========= ERROR SUMMARY: 0 errors | All tests passed (14213 assertions in 95 test cases)
+### E2 backend_cuda: base x4, rb memcheck+racecheck  2026-09-15 02:19:46
+02:22:03 rc=0  137s base__racecheck__backend_cuda | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings) | All tests passed (448 assertions in 23 test cases)
+02:22:28 rc=0   25s base__synccheck__backend_cuda | ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+02:23:39 rc=0   71s rb__memcheck__backend_cuda | ========= ERROR SUMMARY: 0 errors | All tests passed (448 assertions in 23 test cases)
+02:25:55 rc=0  136s rb__racecheck__backend_cuda | ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings) | All tests passed (448 assertions in 23 test cases)
+### G replicates: tumbler racecheck 6f x (base2, head2, rb2); mas-bunny racecheck 6f x (head2, base2, head3)  2026-09-15 02:25:55
+02:30:09 rc=0  254s base2__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 901 hazards displayed (0 errors, 901 warnings)
+02:33:21 rc=0  192s head2__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+02:36:38 rc=0  197s rb2__racecheck__95_tumbler_garments_6f | ========= RACECHECK SUMMARY: 459 hazards displayed (0 errors, 459 warnings)
+02:38:30 rc=0  112s head2__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+02:40:18 rc=0  108s base2__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 1176 hazards displayed (0 errors, 1176 warnings)
+02:42:10 rc=0  112s head3__racecheck__89_mas_bunny_6f | ========= RACECHECK SUMMARY: 16 hazards displayed (0 errors, 16 warnings)
+### I racecheck over sim_case, head: the MAS / shell-bending / contact cases first (subset A), timeout 5 h; then base on the same subset only if the head reports anything outside the known MAS family  2026-09-15 02:42:10
+03:17:11 rc=0  2101s head__racecheck__sim_case_subsetA | ========= RACECHECK SUMMARY: 24 hazards displayed (0 errors, 24 warnings) | All tests passed (529 assertions in 6 test cases)
+03:52:07 rc=0  2096s base__racecheck__sim_case_subsetA | ========= RACECHECK SUMMARY: 4336 hazards displayed (0 errors, 4336 warnings) | All tests passed (529 assertions in 6 test cases)
+### F long tumbler windows into the dense-pile regime  2026-09-15 03:52:07
+04:19:48 rc=0 1661s head__racecheck__95_tumbler_garments_24f | ========= RACECHECK SUMMARY: 17 hazards displayed (0 errors, 17 warnings)
+04:45:09 rc=0 1521s base__racecheck__95_tumbler_garments_24f | ========= RACECHECK SUMMARY: 3902 hazards displayed (0 errors, 3902 warnings)
+04:49:41 rc=0  272s head__memcheck__95_tumbler_garments_30f | ========= ERROR SUMMARY: 0 errors
+04:51:21 rc=0  100s head__initcheck__95_tumbler_garments_24f | ========= ERROR SUMMARY: 5418 errors
+04:53:18 rc=0  117s base__initcheck__95_tumbler_garments_24f | ========= ERROR SUMMARY: 5418 errors
+### DONE4  2026-09-15 04:53:18
+### J racecheck over the FULL sim_case on head (95 cases), timeout 5 h  2026-09-15 04:53:48
+09:53:48 rc=124 18000s head__racecheck__sim_case_full |  | test cases:   56 |   55 passed | 1 failed
+09:53:48 racecheck: base re-run on the reporting cases: 53_fem_mas_small_cube,54_fem_mas_cube_ground,55_fem_mas_stiff_stack,56_fem_mas_bunny_ground,57_fem_mas_two_bunnies,58_fem_mas_hybrid_mix,59_fem_mas_vs_diag_benchmark
+10:12:27 rc=0  1119s base__racecheck__sim_case_reporting | ========= RACECHECK SUMMARY: 5181 hazards displayed (0 errors, 5181 warnings) | All tests passed (227 assertions in 7 test cases)
+### K synccheck over the full sim_case on head  2026-09-15 10:12:27
+10:17:27 rc=0   300s head__synccheck__sim_case_full | ========= ERROR SUMMARY: 0 errors | All tests passed (14213 assertions in 95 test cases)
+10:17:27 synccheck: head reported nothing on sim_case -- no base run needed
+### L initcheck over the full sim_case on head, timeout 5 h  2026-09-15 10:17:27
+10:28:25 rc=0   658s head__initcheck__sim_case_full | ========= ERROR SUMMARY: 272789 errors | All tests passed (14213 assertions in 95 test cases)
+10:28:28 initcheck: base re-run on the reporting cases: 18_abd_fem_contact
+10:30:58 rc=0   150s base__initcheck__sim_case_reporting | ========= ERROR SUMMARY: 115988 errors | All tests passed (202 assertions in 1 test case)
+### DONE5  2026-09-15 10:30:58
