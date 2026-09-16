@@ -1,0 +1,16 @@
+# tumbler-garments -- UIPC_D2H_PROFILE=2 full default-frame run, per-call-site readback stalls
+# log: /workspace/deps/libuipc-src/output/benchmark-runs/tumbler-garments-20260916T055146Z.log
+[d2h] readbacks=39233 bytes=41047168 drain=17189.935 ms stall=246.460 ms (stall/readback=6.28 us) oversize=0 verify=0 bad=0
+# stall_us n bytes fn(first stack frame after host_read)
+53779 9120 72960 LinearFusedPCG::fused_pcg(uipc::backend::cuda_tool::DenseVectorViewT<fal
+25918 4404 17616 GlobalDyTopoEffectManager::Impl::_distribute(GlobalDyTopoEffectManager::
+17134 2936 23488 GlobalDyTopoEffectManager::Impl::_distribute(GlobalDyTopoEffectManager::
+11019 1675 53600 LineSearcher::compute_energy(bool)
+10541 1675 26800 InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(SimplexTraj
+10065 1454 5816 GlobalDyTopoEffectManager::Impl::_convert_matrix()
+9924 1468 5872 MatrixConverter<double, 3>::convert_sym(uipc::backend::cuda_tool::Device
+9722 1675 6700 EasyVertexHalfPlaneTrajectoryFilter::Impl::filter_active(VertexHalfPlane
+9416 1468 23488 InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(SimplexTraject
+9271 1468 46976 InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(SimplexTrajectoryF
+9254 1468 5872 MatrixConverter<double, 3>::convert_sym(uipc::backend::cuda_tool::Device
+9215 1454 5816 GlobalDyTopoEffectManager::Impl::_convert_matrix()

@@ -1,0 +1,16 @@
+# cube-wall-cloth -- UIPC_D2H_PROFILE=2 full default-frame run, per-call-site readback stalls
+# log: /workspace/deps/libuipc-src/output/benchmark-runs/cube-wall-cloth-20260916T055023Z.log
+[d2h] readbacks=13860 bytes=10510208 drain=4947.746 ms stall=87.375 ms (stall/readback=6.30 us) oversize=0 verify=0 bad=0
+# stall_us n bytes fn(first stack frame after host_read)
+22754 3864 30912 LinearFusedPCG::fused_pcg(uipc::backend::cuda_tool::DenseVectorViewT<fal
+8803 1488 5952 GlobalDyTopoEffectManager::Impl::_distribute(GlobalDyTopoEffectManager::
+5783 992 7936 GlobalDyTopoEffectManager::Impl::_distribute(GlobalDyTopoEffectManager::
+3441 517 16544 LineSearcher::compute_energy(bool)
+3341 496 1984 MatrixConverter<double, 3>::convert_sym(uipc::backend::cuda_tool::Device
+3170 496 7936 InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(SimplexTraject
+3163 517 8272 InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(SimplexTraj
+3160 496 1984 MatrixConverter<double, 3>::convert_sym(uipc::backend::cuda_tool::Device
+3115 496 15872 InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(SimplexTrajectoryF
+3093 496 3968 LinearFusedPCG::fused_pcg(uipc::backend::cuda_tool::DenseVectorViewT<fal
+3049 517 2068 EasyVertexHalfPlaneTrajectoryFilter::Impl::filter_active(VertexHalfPlane
+2854 496 7936 GlobalTrajectoryFilter::Impl::filter_toi(double)

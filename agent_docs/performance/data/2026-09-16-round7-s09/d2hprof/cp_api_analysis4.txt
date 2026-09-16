@@ -1,0 +1,27 @@
+readbacks=11989 span=12.46s
+tag                    n   park_ms  drain_ms  stall_ms med_park_us park%span
+other              10215    7726.0    3211.7    4514.2       611.7     61.99
+matrix_converter     669    3151.3    3145.6       5.7      5303.8     25.28
+_dist_grad           221      46.7      44.9       1.9       188.9      0.37
+_dist_hess           884       5.1       0.4       4.6         4.4      0.04
+
+_dist_hess: n=884 park=5.06ms stall(GPU-idle)=0.00ms stall(GPU-busy-elsewhere)=4.62ms
+   park=     15.1us drain=      3.7us ctx=['ScanTileState<int, ', 'ScanTileState<int, ', 'GlobalDyTopoEffectManager_distribute_k4_kernel', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+   park=     13.6us drain=      3.8us ctx=['ScanTileState<int, ', 'ScanTileState<int, ', 'GlobalDyTopoEffectManager_distribute_k4_kernel', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+   park=     13.3us drain=      3.7us ctx=['ScanTileState<int, ', 'ScanTileState<int, ', 'GlobalDyTopoEffectManager_distribute_k4_kernel', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+   park=     13.2us drain=      1.3us ctx=['ScanTileState<int, ', 'ScanTileState<int, ', 'GlobalDyTopoEffectManager_distribute_k4_kernel', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+   park=     13.2us drain=      3.9us ctx=['ScanTileState<int, ', 'ScanTileState<int, ', 'GlobalDyTopoEffectManager_distribute_k4_kernel', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+
+_dist_grad: n=221 park=46.73ms stall(GPU-idle)=0.00ms stall(GPU-busy-elsewhere)=1.86ms
+   park=    745.4us drain=    733.8us ctx=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<', 'fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+   park=    410.9us drain=    402.3us ctx=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<', 'fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+   park=    403.0us drain=    391.1us ctx=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<', 'fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+   park=    396.2us drain=    388.4us ctx=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<', 'fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+   park=    395.3us drain=    387.2us ctx=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<', 'fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel']
+
+matrix_converter: n=669 park=3151.30ms stall(GPU-idle)=0.00ms stall(GPU-busy-elsewhere)=5.73ms
+   park=  16633.5us drain=  16627.6us ctx=['matrix_converter_radix_sort_indices_and_blocks_k2_kernel', 'matrix_converter_radix_sort_indices_and_blocks_k3_kernel<dou', 'ReduceByKeyScanTileState<int, int, ', 'ReduceByKeyScanTileState<int, int, ']
+   park=  15376.4us drain=  15370.5us ctx=['matrix_converter_radix_sort_indices_and_blocks_k2_kernel', 'matrix_converter_radix_sort_indices_and_blocks_k3_kernel<dou', 'ReduceByKeyScanTileState<int, int, ', 'ReduceByKeyScanTileState<int, int, ']
+   park=  15176.3us drain=  15168.8us ctx=['matrix_converter_radix_sort_indices_and_blocks_k2_kernel', 'matrix_converter_radix_sort_indices_and_blocks_k3_kernel<dou', 'ReduceByKeyScanTileState<int, int, ', 'ReduceByKeyScanTileState<int, int, ']
+   park=  14900.0us drain=  14893.6us ctx=['matrix_converter_radix_sort_indices_and_blocks_k2_kernel', 'matrix_converter_radix_sort_indices_and_blocks_k3_kernel<dou', 'ReduceByKeyScanTileState<int, int, ', 'ReduceByKeyScanTileState<int, int, ']
+   park=  14767.2us drain=  14758.0us ctx=['matrix_converter_radix_sort_indices_and_blocks_k2_kernel', 'matrix_converter_radix_sort_indices_and_blocks_k3_kernel<dou', 'ReduceByKeyScanTileState<int, int, ', 'ReduceByKeyScanTileState<int, int, ']

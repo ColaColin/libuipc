@@ -1,0 +1,30 @@
+api rows=94243 gpu kernels=405132
+readbacks: 11989
+window span 12.46s (from first to last readback)
+tag                   n   park_ms  drain_ms  stall_ms stall/rb_us park%span drain%span
+other              9361    6361.2    1854.3    4506.9      481.46     51.04      14.88
+scan/sort          2186    4519.1    4503.0      16.0        7.33     36.26      36.13
+_distribute         442      48.8      45.3       3.5        7.95      0.39       0.36
+
+_distribute: n=442 park med=14.4us drain med=4.2us stall med=8.6us
+top 10 parks:
+  park=    745.4us drain=    733.8us stall=   11.6us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'ScanTileState<int, ']
+  park=    410.9us drain=    402.3us stall=    8.6us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  park=    403.0us drain=    391.1us stall=   12.0us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  park=    396.2us drain=    388.4us stall=    7.8us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  park=    395.3us drain=    387.2us stall=    8.1us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  park=    395.3us drain=    384.2us stall=   11.0us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  park=    395.2us drain=    383.5us stall=   11.7us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  park=    394.6us drain=    383.7us stall=   11.0us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  park=    392.9us drain=    380.6us stall=   12.3us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  park=    392.8us drain=    383.4us stall=    9.4us ctx=['fast_segmental_reduce_matrix_k2_kernel<', 'GlobalDyTopoEffectManager_distribute_k1_kernel'] elsewhere=['ScanTileState<int, ', 'fast_segmental_reduce_zero_cross_warp_kernel<']
+  stall with GPU idle elsewhere: 0.00ms; stall while other-stream kernels ran: 3.51ms
+
+phase-entry gaps after distribute_k4 bursts: n=535
+  med=1.0us p90=1.2us max=98.2us sum=0.56ms
+         98.2us -> abd_linear_subsystem_dytopo_pair_key_kernel
+          6.0us -> GlobalDyTopoEffectManager_distribute_k3_kernel
+          5.5us -> GlobalDyTopoEffectManager_distribute_k3_kernel
+          3.1us -> GlobalDyTopoEffectManager_distribute_k3_kernel
+          2.6us -> GlobalDyTopoEffectManager_distribute_k3_kernel
+          2.2us -> GlobalDyTopoEffectManager_distribute_k3_kernel
