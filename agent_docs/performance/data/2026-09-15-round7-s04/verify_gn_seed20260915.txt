@@ -1,0 +1,20 @@
+=== STRAIN-plastic GN premise N=200000 used=199070 zeroH=0 guardKilled=930
+classes: R(chained-commit) 89691  B(direct) 70104  Z(fresh) 20091  X(out-of-range) 20114
+|del| regime: <0.05 3089  0.05..1 59360  >1 136621
+[1] ddEddtheta<0 on REACHABLE (R+B+Z): 0   min ddEddtheta 1.396585e-06   min margin ddEdd/(2*k*L0/h) 1.000000e+00
+[1] argmin sample: |del| 1.062  ddEdd 5.309e-05  margin 1.000e+00  theta -0.793
+[1] clamp activations reachable 0   out-of-range 19993 / 20114 (min ddEddtheta -7.802229e+02)
+[2] ||H_full-(ddEdd*g*g'+dEdt*hess)||/||H_full|| max 1.720e-16
+[3] GN fill: max asym 0.000e+00   min eig/||H|| -6.511e-16   max ||Hgn*t||/||Hgn|| 7.826e-16
+[4] ||dEdt*hess||/||H_full||: med 0.9365 p99 1.0395 max 1.1910 | del<0.05 0.0091 mid 0.4160 far 1.0071
+[4] relFro(old shipped projected <1,1>, GN): med 0.8567 p1 0.0396 p99 1.0000 max 1.1008  [THE A/B HESSIAN DELTA]
+=== STRESS-plastic GN premise N=200000 used=172469 zeroH=6581 respGuardKilled=20950
+classes: R(chained-commit) 89544  B(direct) 70301  Z(fresh) 20002  X(out-of-range) 20153
+branch regime: elastic(|del|<=th_y) 33523  near-yield 14056  deep-yield 124890   yielded(ddEdd==0) 145527 / resp-ok 179050
+[1] ddEddtheta<0 on REACHABLE (R+B+Z): 0   min ddEddtheta 0.000000e+00   min margin ddEdd/(2*k*L0/h) 0.000000e+00
+[1] argmin sample: |del|/th_y 12.942  ddEdd 0.000e+00  margin 0.000e+00  theta 2.640
+[1] clamp activations reachable 0   out-of-range 0 / 20153 (min ddEddtheta 1.000000e+300)
+[2] ||H_full-(ddEdd*g*g'+dEdt*hess)||/||H_full|| max 1.691e-16
+[3] GN fill: max asym 0.000e+00   min eig/||H|| -6.653e-16   max ||Hgn*t||/||Hgn|| 6.677e-16
+[4] ||dEdt*hess||/||H_full||: med 1.0000 p99 1.0078 max 1.2311 | elastic 0.6546 near-yield 1.0000 deep-yield 1.0000
+[4] relFro(old shipped projected <1,1>, GN): med 1.0000 p1 0.0480 p99 1.0000 max 1.1374  [THE A/B HESSIAN DELTA]

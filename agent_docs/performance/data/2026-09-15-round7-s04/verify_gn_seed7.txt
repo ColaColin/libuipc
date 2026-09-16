@@ -1,0 +1,27 @@
+/workspace/deps/libuipc-src/src/backends/cuda/cuda_tool/view.h(145): warning #554-D: "uipc::backend::cuda_tool::BufferView<T>::operator uipc::backend::cuda_tool::CBufferView<int>() const [with T=int]" will not be called for implicit or explicit conversions
+      __attribute__((host)) __attribute__((device)) operator CBufferView<T>() const { return *this; }
+                                                    ^
+          detected during instantiation of class "uipc::backend::cuda_tool::BufferView<T> [with T=int]" at line 117 of /workspace/deps/libuipc-src/src/backends/cuda/cuda_tool/linear_system.h
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+=== STRAIN-plastic GN premise N=200000 used=199121 zeroH=0 guardKilled=879
+classes: R(chained-commit) 89923  B(direct) 70245  Z(fresh) 19771  X(out-of-range) 20061
+|del| regime: <0.05 3118  0.05..1 59551  >1 136452
+[1] ddEddtheta<0 on REACHABLE (R+B+Z): 0   min ddEddtheta 1.362570e-06   min margin ddEdd/(2*k*L0/h) 1.000000e+00
+[1] argmin sample: |del| 0.758  ddEdd 6.267e-01  margin 1.000e+00  theta -0.758
+[1] clamp activations reachable 0   out-of-range 19973 / 20061 (min ddEddtheta -8.378230e+02)
+[2] ||H_full-(ddEdd*g*g'+dEdt*hess)||/||H_full|| max 1.666e-16
+[3] GN fill: max asym 0.000e+00   min eig/||H|| -6.093e-16   max ||Hgn*t||/||Hgn|| 8.111e-16
+[4] ||dEdt*hess||/||H_full||: med 0.9366 p99 1.0397 max 1.1774 | del<0.05 0.0238 mid 0.7230 far 0.8096
+[4] relFro(old shipped projected <1,1>, GN): med 0.8566 p1 0.0393 p99 1.0000 max 1.0952  [THE A/B HESSIAN DELTA]
+=== STRESS-plastic GN premise N=200000 used=172479 zeroH=6763 respGuardKilled=20758
+classes: R(chained-commit) 89871  B(direct) 69957  Z(fresh) 20180  X(out-of-range) 19992
+branch regime: elastic(|del|<=th_y) 33473  near-yield 14077  deep-yield 124929   yielded(ddEdd==0) 145769 / resp-ok 179242
+[1] ddEddtheta<0 on REACHABLE (R+B+Z): 0   min ddEddtheta 0.000000e+00   min margin ddEdd/(2*k*L0/h) 0.000000e+00
+[1] argmin sample: |del|/th_y 4.313  ddEdd 0.000e+00  margin 0.000e+00  theta 2.404
+[1] clamp activations reachable 0   out-of-range 0 / 19992 (min ddEddtheta 1.000000e+300)
+[2] ||H_full-(ddEdd*g*g'+dEdt*hess)||/||H_full|| max 1.700e-16
+[3] GN fill: max asym 0.000e+00   min eig/||H|| -6.062e-16   max ||Hgn*t||/||Hgn|| 6.008e-16
+[4] ||dEdt*hess||/||H_full||: med 1.0000 p99 1.0078 max 1.1488 | elastic 0.8369 near-yield 1.0000 deep-yield 1.0000
+[4] relFro(old shipped projected <1,1>, GN): med 1.0000 p1 0.0505 p99 1.0000 max 1.0630  [THE A/B HESSIAN DELTA]
