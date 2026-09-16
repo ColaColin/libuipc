@@ -1,0 +1,19 @@
+UIPC_SEG_PROBE=1 decomposition on crease-press (20-frame capture, in-size matched buckets).
+prod = production k2; P1 = no-tree stub (gather+store floor); P2 = no-gather stub (tree+store).
+
+BUFM33 (dytopo convert, STAGED sequential read at main):
+  in=2.0M: prod 1043.7  P1 440.1  P2 938.9   -> tree 58 %, gather(read) 10 %
+  (P1 = 440 us for 2.0M x 72B + keys + out ~160MB = 364 GB/s = 81 % of the 448 GB/s roof)
+PERM33 (global converter convert_sym, RANDOM gather through the permutation):
+  in=750k: prod 361.0  P1 205.4  P2 318.9   -> tree 43 %, gather 12 %
+  (P1 = 205.4 us for ~71MB = 346 GB/s = 77 % of roof WITH the random gather)
+BUFM31 (gradient doublet vector, staged):
+  in=1.25M: prod 363.3  P1 199.8  P2 362.0  -> tree 45 %, gather ~0 %
+
+Reading: round-6 s17's "gather-bound, 862->500us DRAM floor" premise does NOT hold on this
+workload -- the random gather already runs at 77 % of the DRAM roof (346 GB/s), so the
+locality prize ceiling is P0-P2 = 42 us/launch on the only random-gather kernel
+(= 0.08 % of scene GPU kernel time). Sorted-order staging / RCM reorder: REJECTED.
+The family's binding costs are (a) the FP64 warp tree (43-58 %, s17's early exit already
+shipped; the remainder is executed-level arithmetic) and (b) the staged k3 copy pass
+(1175.7 us/launch on crease-press = 2.21 % of scene GPU), which the fold deletes.

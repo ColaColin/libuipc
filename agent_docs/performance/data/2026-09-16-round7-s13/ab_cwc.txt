@@ -1,0 +1,21 @@
+[    7.4s] warmup       old: 59.906 ms/frame (discarded)
+[   14.2s] warmup       new: 55.654 ms/frame (discarded)
+[   21.2s] rep 1      old: 56.039 ms/frame  Newton 509  PCG 19520
+[   28.1s] rep 1      new: 55.730 ms/frame  Newton 512  PCG 19720
+[   34.8s] rep 2      new: 54.124 ms/frame  Newton 505  PCG 19210
+[   41.7s] rep 2      old: 55.618 ms/frame  Newton 505  PCG 19540
+[   48.7s] rep 3      old: 57.044 ms/frame  Newton 516  PCG 19740
+[   55.4s] rep 3      new: 53.760 ms/frame  Newton 501  PCG 19315
+[   62.1s] rep 4      new: 54.269 ms/frame  Newton 502  PCG 19400
+[   69.0s] rep 4      old: 55.740 ms/frame  Newton 504  PCG 19450
+
+=== s13  cube-wall-cloth  n=4 per arm ===
+       mean_ms: old    56.1102 [55.6180, 57.0442]   new    54.4706 [53.7596, 55.7299]     -2.92%  overlapping  t=+3.03 p=0.0254
+     median_ms: old    50.0273 [48.9665, 50.5809]   new    50.0623 [49.5422, 50.9633]     +0.07%  overlapping
+ ms_per_newton: old    11.0344 [11.0097, 11.0594]   new    10.7858 [10.7177, 10.8847]     -2.25%  DISJOINT  t=+6.06 p=0.00486
+    ms_per_pcg: old     0.2868 [0.2846, 0.2890]   new     0.2806 [0.2783, 0.2826]     -2.17%  DISJOINT  t=+4.72 p=0.00331
+        newton: old   508.5000 [504.0000, 516.0000]   new   505.0000 [501.0000, 512.0000]     -0.69%  overlapping
+           pcg: old 19562.5000 [19450.0000, 19740.0000]   new 19411.2500 [19210.0000, 19720.0000]     -0.77%  overlapping
+   line_search: old   530.2500 [526.0000, 538.0000]   new   527.0000 [523.0000, 535.0000]     -0.61%  overlapping
+
+raw runs + summary: /workspace/output/round6/s13

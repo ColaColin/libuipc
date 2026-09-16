@@ -3,7 +3,9 @@
 #include <cub/warp/warp_reduce.cuh>
 #include <uipc/common/timer.h>
 #include <algorithm/fast_segmental_reduce.h>
+#include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <utility>
 
 namespace uipc::backend::cuda
@@ -50,6 +52,39 @@ namespace
             return !(e && e[0] == '0');
         }();
         return drop;
+    }
+
+    // perf/round7 (s13): the triplet->BCOO convert's segmental reduce reads
+    // its values through a staged copy -- k3 gathers every block into sorted
+    // order and the reduce then streams that copy back. The gather is folded
+    // into the reduce instead (round-4 s10's convert_sym design, applied to
+    // the call sites that never got it): the reduce reads
+    // src[sort_index[j]] directly, the staged pass disappears, and the values
+    // entering the summation tree are the same bytes in the same slots --
+    // bit-identical by construction (UIPC_SEGRED_VERIFY proves it on device).
+    // UIPC_SEGRED_UNSTAGE=0 restores the staged path (k3 + sequential read).
+    inline bool matrix_converter_unstage_enabled()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_SEGRED_UNSTAGE");
+            return !(e && e[0] == '0');
+        }();
+        return on;
+    }
+
+    // UIPC_SEGRED_VERIFY=1: after the folded reduce, run the whole staged
+    // chain (k3 + the staged reduce) into scratch and count mismatching
+    // 64-bit words, split by the >= 3-warp atomic-arrival class. Diagnostic
+    // only; it makes the folded path strictly more expensive.
+    inline bool matrix_converter_segred_verify_enabled()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_SEGRED_VERIFY");
+            return e && e[0] == '1';
+        }();
+        return on;
     }
 
     // fused #1: flag the upper-triangular entries (i <= j)
@@ -130,6 +165,81 @@ namespace
             return src[perm[i]];
         }
     };
+
+    // diagnostic (UIPC_SEGRED_VERIFY): mark the output slots whose segment
+    // spans >= 3 warps -- both the folded and the staged reduce accumulate
+    // >= 3 atomic operands into such a slot in arrival order, so their
+    // results there are the matrix's own non-determinism (s17's class);
+    // every other slot must match bit for bit.
+    template <int WarpSize, typename GetKeyOp>
+    __global__ void matrix_converter_segred_mark_multi_warp_kernel(
+        size_t in_size, GetKeyOp get_key_op, unsigned char* mark, int n_boundary)
+    {
+        int t = blockIdx.x * blockDim.x + threadIdx.x;
+        if(t >= n_boundary)
+            return;
+        size_t g = (size_t)(t + 1) * (size_t)WarpSize;
+        if(g >= in_size)
+            return;
+        int key = get_key_op((int)g);
+        if(get_key_op((int)(g - 1)) != key)
+            return;  // no segment crosses this boundary
+        // crosses this boundary: >= 3 warps iff it also crosses the next one
+        size_t g2 = g + (size_t)WarpSize;
+        if(g2 < in_size && get_key_op((int)(g2 - 1)) == key && get_key_op((int)g2) == key)
+            mark[key] = 1;
+    }
+
+    // diagnostic (UIPC_SEGRED_VERIFY): word-wise comparison of the folded
+    // reduce's output against the staged path's, with the multi-warp split.
+    template <typename T, int N>
+    __global__ void matrix_converter_segred_verify_compare_kernel(
+        cuda_tool::CBufferView<MatrixConverterBlockT<T, N>> a,
+        cuda_tool::CBufferView<MatrixConverterBlockT<T, N>> b,
+        const unsigned char*                                mark,
+        unsigned long long*                                 stats)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= (int)a.size())
+            return;
+        const double* pa;
+        const double* pb;
+        int           words;
+        if constexpr(N == 1)
+        {
+            pa    = &a(i);
+            pb    = &b(i);
+            words = 1;
+        }
+        else
+        {
+            pa    = a(i).data();
+            pb    = b(i).data();
+            words = N * N;
+        }
+        int    c  = 0;
+        double md = 0.0;
+        for(int k = 0; k < words; ++k)
+        {
+            const unsigned long long wa = *(const unsigned long long*)(pa + k);
+            const unsigned long long wb = *(const unsigned long long*)(pb + k);
+            if(wa != wb)
+            {
+                ++c;
+                double d = fabs(pa[k] - pb[k]);
+                double r = d / fmax(fabs(pa[k]), 1e-300);
+                md       = fmax(md, r);
+            }
+        }
+        if(c)
+        {
+            atomicAdd(stats + (mark[i] ? 1 : 0), (unsigned long long)c);
+            atomicAdd(stats + 2, 1ull);
+            atomicMax(stats + 3, (unsigned long long)__double_as_longlong(md));
+        }
+        if(mark[i])
+            atomicAdd(stats + 4, 1ull);
+    }
 
     // MatrixConverter::_radix_sort_indices_and_blocks(from, to) #1: hash ij
     __global__ void matrix_converter_radix_sort_indices_and_blocks_k1_kernel(
@@ -559,7 +669,12 @@ void MatrixConverter<T, N>::_radix_sort_indices_and_blocks(
             ij_hash.view(), ij_pairs.view(), key_cols, n_unpack_ij);
 
     // sort the block values
-
+    //
+    // perf/round7 (s13): skipped at default -- the segmental reduce gathers
+    // through the permutation itself (see _make_unique_block_warp_reduction),
+    // so the staged copy of the sorted blocks is dead work. UIPC_SEGRED_UNSTAGE=0
+    // restores it (the staged path's rollback arm).
+    if(!matrix_converter_unstage_enabled())
     {
         loose_resize(blocks_sorted, from.values().size());
         int n_sort_blocks = (int)src_blocks.size();
@@ -707,11 +822,105 @@ void MatrixConverter<T, N>::_make_unique_block_warp_reduction(
     // `blocks` is the key of at least one element -- SegOutInit::CrossWarpOnly's
     // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
     // size, not capacity), so there is no tail beyond the key space either.
-    FastSegmentalReduce<>().reduce(std::as_const(sorted_partition_output).view(),
-                                   std::as_const(blocks_sorted).view(),
-                                   blocks,
-                                   ::cuda::std::plus<T>{},
-                                   cuda_tool::SegOutInit::CrossWarpOnly);
+    //
+    // perf/round7 (s13): the reduce gathers its values through the sort
+    // permutation (convert_sym's round-4 design) instead of reading the staged
+    // `blocks_sorted` copy -- the staged copy is a full extra pass over the
+    // blocks that the folded gather makes unnecessary. `sort_index[j]` is the
+    // source slot of the j-th sorted entry, exactly what k3 staged into
+    // `blocks_sorted[j]`, so the values entering the summation tree are the
+    // same bytes in the same order: bit-identical by construction.
+    // UIPC_SEGRED_UNSTAGE=0 restores the staged read.
+    const size_t m = sorted_partition_output.size();
+
+    if(matrix_converter_unstage_enabled())
+    {
+        matrix_converter_permuted_value_op<T, N> value_op{from.values().data(),
+                                                          sort_index.data()};
+        FastSegmentalReduce<>().reduce(
+            m,
+            blocks,
+            fast_segmental_reduce_get_offset_key_op{
+                std::as_const(sorted_partition_output).view()},
+            value_op,
+            ::cuda::std::plus<T>{},
+            cuda_tool::SegOutInit::CrossWarpOnly);
+    }
+    else
+    {
+        FastSegmentalReduce<>().reduce(std::as_const(sorted_partition_output).view(),
+                                       std::as_const(blocks_sorted).view(),
+                                       blocks,
+                                       ::cuda::std::plus<T>{},
+                                       cuda_tool::SegOutInit::CrossWarpOnly);
+    }
+
+    if(matrix_converter_segred_verify_enabled() && blocks.size() > 0)
+    {
+        // the staged reference: k3 + the staged reduce, into scratch, then a
+        // word-wise comparison with the multi-warp slot split (s17's instrument)
+        static cuda_tool::DeviceBuffer<MatrixConverterBlockT<T, N>> ref;
+        static cuda_tool::DeviceBuffer<unsigned char>               mark;
+        static cuda_tool::DeviceBuffer<unsigned long long>          vstats;
+        ref.resize_discard(blocks.size());
+        mark.resize_discard(blocks.size());
+        vstats.resize_discard(5);
+        using BlockT = MatrixConverterBlockT<T, N>;
+        if constexpr(N == 1)
+            cuda_tool::BufferLaunch().fill<T>(ref.view(), T{0});
+        else
+            cuda_tool::BufferLaunch().fill<BlockT>(ref.view(), BlockT::Zero().eval());
+        cuda_tool::BufferLaunch().fill<unsigned char>(mark.view(), (unsigned char)0);
+
+        loose_resize(blocks_sorted, m);
+        int n_stage = (int)m;
+        if(n_stage > 0)
+            matrix_converter_radix_sort_indices_and_blocks_k3_kernel<T, N>
+                <<<(n_stage + 256 - 1) / 256, 256, 0, nullptr>>>(
+                    from.values(), sort_index.cview(), blocks_sorted.view(), n_stage);
+
+        FastSegmentalReduce<>().reduce(std::as_const(sorted_partition_output).view(),
+                                       std::as_const(blocks_sorted).view(),
+                                       ref.view(),
+                                       ::cuda::std::plus<T>{},
+                                       cuda_tool::SegOutInit::CrossWarpOnly);
+
+        int n_boundary = (int)((m + 32 - 1) / 32) - 1;
+        if(n_boundary > 0)
+            matrix_converter_segred_mark_multi_warp_kernel<32>
+                <<<(n_boundary + 255) / 256, 256, 0, nullptr>>>(
+                    m,
+                    fast_segmental_reduce_get_offset_key_op{
+                        std::as_const(sorted_partition_output).view()},
+                    mark.data(),
+                    n_boundary);
+
+        unsigned long long zero[5]{};
+        cudaMemcpyAsync(vstats.data(), zero, sizeof(zero), cudaMemcpyHostToDevice, nullptr);
+        int n_cmp = (int)blocks.size();
+        matrix_converter_segred_verify_compare_kernel<T, N>
+            <<<(n_cmp + 255) / 256, 256, 0, nullptr>>>(
+                blocks.cview(), ref.cview(), mark.data(), vstats.data());
+        unsigned long long h[5]{};
+        cudaMemcpyAsync(h, vstats.data(), sizeof(h), cudaMemcpyDeviceToHost, nullptr);
+        cudaStreamSynchronize(nullptr);
+        double maxrel;
+        std::memcpy(&maxrel, &h[3], sizeof(double));
+        std::fprintf(stderr,
+                     "[segred-verify] convert<T,%d> in=%zu out=%d words=%zu mismatch_words=%llu "
+                     "(in_multiwarp_slots=%llu, elsewhere=%llu) slots=%llu multiwarp_slots=%llu "
+                     "maxrel=%.3e\n",
+                     N,
+                     m,
+                     n_cmp,
+                     (size_t)n_cmp * (N == 1 ? 1 : N * N),
+                     h[0] + h[1],
+                     h[1],
+                     h[0],
+                     h[2],
+                     h[4],
+                     maxrel);
+    }
 }
 
 template <typename T, int N>
@@ -1203,11 +1412,11 @@ void MatrixConverter<T, N>::convert_sym(const cuda_tool::DeviceTripletMatrix<T, 
         // gather folded into the reduce: no staged copy of the sorted blocks
         matrix_converter_permuted_value_op<T, N> value_op{src_blocks.data(),
                                                           sort_index.data()};
-    // The keys are the exclusive sum of the segment-end marks over the whole
-    // sorted input, so they run densely over [0, h_count) and every slot of
-    // `blocks` is the key of at least one element -- SegOutInit::CrossWarpOnly's
-    // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
-    // size, not capacity), so there is no tail beyond the key space either.
+        // The keys are the exclusive sum of the segment-end marks over the whole
+        // sorted input, so they run densely over [0, h_count) and every slot of
+        // `blocks` is the key of at least one element -- SegOutInit::CrossWarpOnly's
+        // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
+        // size, not capacity), so there is no tail beyond the key space either.
         FastSegmentalReduce<>().reduce(
             (size_t)m,
             blocks,
@@ -1224,11 +1433,11 @@ void MatrixConverter<T, N>::convert_sym(const cuda_tool::DeviceTripletMatrix<T, 
             <<<(m + 256 - 1) / 256, 256, 0, nullptr>>>(
                 src_blocks, sort_index.cview(), blocks_sorted.view(), m);
 
-    // The keys are the exclusive sum of the segment-end marks over the whole
-    // sorted input, so they run densely over [0, h_count) and every slot of
-    // `blocks` is the key of at least one element -- SegOutInit::CrossWarpOnly's
-    // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
-    // size, not capacity), so there is no tail beyond the key space either.
+        // The keys are the exclusive sum of the segment-end marks over the whole
+        // sorted input, so they run densely over [0, h_count) and every slot of
+        // `blocks` is the key of at least one element -- SegOutInit::CrossWarpOnly's
+        // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
+        // size, not capacity), so there is no tail beyond the key space either.
         FastSegmentalReduce<>().reduce(std::as_const(sorted_partition_output).view(),
                                        std::as_const(blocks_sorted).view(),
                                        blocks,

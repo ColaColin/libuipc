@@ -1,0 +1,3 @@
+Generating SQLite file /workspace/output/round7/s13/nsys/probe20.sqlite from /workspace/output/round7/s13/nsys/probe20.nsys-rep
+Processing [/workspace/output/round7/s13/nsys/probe20.sqlite] with [/workspace/deps/nsight/nsight-systems/2024.6.2/host-linux-x64/reports/cuda_gpu_kern_sum.py] to [/workspace/output/round7/s13/nsys/probe20_cuda_gpu_kern_sum.csv]... PROCESSED
+
