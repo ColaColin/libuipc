@@ -1,0 +1,28 @@
+/workspace/deps/libuipc-src/src/backends/cuda/cuda_tool/view.h(145): warning #554-D: "uipc::backend::cuda_tool::BufferView<T>::operator uipc::backend::cuda_tool::CBufferView<int>() const [with T=int]" will not be called for implicit or explicit conversions
+      __attribute__((host)) __attribute__((device)) operator CBufferView<T>() const { return *this; }
+                                                    ^
+          detected during instantiation of class "uipc::backend::cuda_tool::BufferView<T> [with T=int]" at line 117 of /workspace/deps/libuipc-src/src/backends/cuda/cuda_tool/linear_system.h
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+batch done 16384/200000
+batch done 32768/200000
+batch done 49152/200000
+batch done 65536/200000
+batch done 81920/200000
+batch done 98304/200000
+batch done 114688/200000
+batch done 131072/200000
+batch done 147456/200000
+batch done 163840/200000
+batch done 180224/200000
+batch done 196608/200000
+batch done 200000/200000
+
+== NeoHookeanShell2D projection verifier: 200000 used, 0 zero-H, 193237 raw-indefinite (96.6%)
+premise  raw ||H t||/||H||F  max = 1.035e-08   (old 1.896e-08, new11 2.658e-16)
+min-eig/||H||F   raw=-7.061e-01 old00=-4.604e-16 new11=-5.421e-16 new21=-4.648e-16 new10=-4.656e-16
+relFro(old00,new11) med=2.506e-15 p999=1.990e-10 max=1.569e-08
+relFro(old00,new21) med=2.578e-15 p999=2.150e-10 max=1.888e-08
+relFro(old00,new10) med=2.690e-15 p999=1.990e-10 max=1.569e-08
+relFro(old00,old01) med=2.008e-15 p999=5.578e-11 max=1.234e-08   (old's own solver sensitivity)

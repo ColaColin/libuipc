@@ -1,0 +1,18 @@
+NHS2D G/H <0,0> (old)      old=Y new=- (only present in its own arm, as designed)
+NHS2D G/H <1,1> (new)      old=- new=Y (only present in its own arm, as designed)
+
+in-run controls (untouched kernels, same-capture pair):
+  NHS2D energy (ctl)          346.6 ->    348.9 µs   +0.65%  (launches 784/727)
+  SLBW G/H (ctl)              332.2 ->    333.1 µs   +0.26%  (launches 578/559)
+  strain G/H (ctl)           1217.2 ->   1217.5 µs   +0.03%  (launches 578/559)
+  stress G/H (ctl)           1359.0 ->   1368.8 µs   +0.72%  (launches 578/559)
+  dahl G/H (ctl)              460.5 ->    464.4 µs   +0.85%  (launches 578/559)
+
+total GPU kernel time: old=32.72s new=30.31s
+NHS2D G/H scene-GPU share: old 4.20% -> new 2.46%
+
+== the A/B contrast (each arm launches exactly its own instantiation) ==
+old <0,0>: 2376.1 µs/launch × 578  = 184.3 ns/tri
+new <1,1>: 1334.1 µs/launch × 559  = 103.5 ns/tri
+delta: -43.85%
+mean in-run control drift: +0.46%  -> control-normalised delta: -44.32%
