@@ -87,6 +87,44 @@ namespace
         return on;
     }
 
+    // perf/round7 (s14): the doublet -> BCOO vector convert's CUB sort moves
+    // the whole segment (a 24 B 3x1 block for the gradient doublets) as the
+    // sort payload -- two onesweep passes of (24 B read + 24 B write) per
+    // element, ~0.6 % of crease-press scene GPU time on its own. Sorting
+    // (key, source index) pairs instead and gathering the segments through
+    // the permutation inside the segmental reduce (exactly the s13 fold,
+    // applied to the one chain that still staged inside CUB) moves 4 B/pair
+    // through the sort; the reduce's sequential read of the staged copy
+    // becomes a random gather of the original segments. The permutation the
+    // wide-payload sort applied implicitly and the payload of the
+    // (key, iota) sort are the same sigma, so the values entering the
+    // summation tree are the same bytes in the same slots -- bit-identical
+    // by construction (UIPC_DOUBLET_VERIFY proves it on device).
+    // UIPC_DOUBLET_UNSTAGE=0 restores the wide-payload sort + staged read.
+    inline bool matrix_converter_doublet_unstage_enabled()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_DOUBLET_UNSTAGE");
+            return !(e && e[0] == '0');
+        }();
+        return on;
+    }
+
+    // UIPC_DOUBLET_VERIFY=1: after the folded reduce, re-run the whole staged
+    // chain (wide-payload sort + staged reduce) into scratch and count
+    // mismatching 64-bit words, split by the >= 3-warp atomic-arrival class
+    // (the s13 instrument). Diagnostic only.
+    inline bool matrix_converter_doublet_verify_enabled()
+    {
+        static const bool on = []
+        {
+            const char* e = std::getenv("UIPC_DOUBLET_VERIFY");
+            return e && e[0] == '1';
+        }();
+        return on;
+    }
+
     // fused #1: flag the upper-triangular entries (i <= j)
     __global__ void matrix_converter_fused_flag_upper_k1_kernel(
         cuda_tool::CBufferView<int> row_indices,
@@ -165,6 +203,83 @@ namespace
             return src[perm[i]];
         }
     };
+
+    // value functor for the fused doublet segmental reduce: the segment
+    // vector type is Eigen::Vector<T, N> (a scalar T when N == 1), not the
+    // triplet's NxN block, so it needs its own gather op
+    template <typename T, int N>
+    struct matrix_converter_permuted_segment_value_op
+    {
+        using SegmentT = typename cuda_tool::DeviceDoubletVector<T, N>::ValueT;
+        const SegmentT*     src;
+        const int*          perm;
+        __device__ SegmentT operator()(int i) const { return src[perm[i]]; }
+    };
+
+    // MatrixConverter::_radix_sort_indices_and_segments (folded arm) #1: the
+    // identity payload for the (key, source index) sort -- the wide-payload
+    // arm has no k1 at all, the sort reads the doublet indices directly
+    __global__ void matrix_converter_radix_sort_segments_k1_kernel(cuda_tool::BufferView<int> sort_index,
+                                                                   int n)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= n)
+            return;
+        sort_index(i) = i;
+    }
+
+    // diagnostic (UIPC_DOUBLET_VERIFY): word-wise comparison of the folded
+    // doublet reduce's output against the staged path's, with the multi-warp
+    // split. A doublet segment is N words (3x1), not N*N like a block.
+    template <typename T, int N>
+    __global__ void matrix_converter_doublet_verify_compare_kernel(
+        cuda_tool::CBufferView<typename cuda_tool::DeviceDoubletVector<T, N>::ValueT> a,
+        cuda_tool::CBufferView<typename cuda_tool::DeviceDoubletVector<T, N>::ValueT> b,
+        const unsigned char* mark,
+        unsigned long long*  stats)
+    {
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i >= (int)a.size())
+            return;
+        using SegmentT = typename cuda_tool::DeviceDoubletVector<T, N>::ValueT;
+        const double* pa;
+        const double* pb;
+        int           words;
+        if constexpr(sizeof(SegmentT) == sizeof(double))
+        {
+            pa    = reinterpret_cast<const double*>(&a(i));
+            pb    = reinterpret_cast<const double*>(&b(i));
+            words = 1;
+        }
+        else
+        {
+            pa    = a(i).data();
+            pb    = b(i).data();
+            words = N;
+        }
+        int    c  = 0;
+        double md = 0.0;
+        for(int k = 0; k < words; ++k)
+        {
+            const unsigned long long wa = *(const unsigned long long*)(pa + k);
+            const unsigned long long wb = *(const unsigned long long*)(pb + k);
+            if(wa != wb)
+            {
+                ++c;
+                double d = fabs(pa[k] - pb[k]);
+                double r = d / fmax(fabs(pa[k]), 1e-300);
+                md       = fmax(md, r);
+            }
+        }
+        if(c)
+        {
+            atomicAdd(stats + (mark[i] ? 1 : 0), (unsigned long long)c);
+            atomicAdd(stats + 2, 1ull);
+            atomicMax(stats + 3, (unsigned long long)__double_as_longlong(md));
+        }
+        if(mark[i])
+            atomicAdd(stats + 4, 1ull);
+    }
 
     // diagnostic (UIPC_SEGRED_VERIFY): mark the output slots whose segment
     // spans >= 3 warps -- both the folded and the staged reduce accumulate
@@ -1010,14 +1125,45 @@ void MatrixConverter<T, N>::_radix_sort_indices_and_segments(
     loose_resize(indices_sorted, src_indices.size());
     loose_resize(segments_sorted, src_segments.size());
 
-    DeviceRadixSort().SortPairs(src_indices.data(),
-                                indices_sorted.data(),
-                                src_segments.data(),
-                                segments_sorted.data(),
-                                src_indices.size(),
-                                0,
-                                matrix_converter_key_bits(static_cast<uint64_t>(
-                                    from.count() > 0 ? from.count() - 1 : 0)));
+    // perf/round7 (s14): at default the sort carries only (key, source
+    // index) pairs -- 4 B of payload per element instead of the whole
+    // segment (24 B for the 3x1 gradient doublets) -- and the segmental
+    // reduce gathers the segments through the permutation (see
+    // _make_unique_segment_warp_reduction). Both arms run the same stable
+    // CUB sort over the same keys, so the payload of the index sort at
+    // sorted position j is exactly the source the wide-payload sort would
+    // have staged there: same values in the same slots.
+    // UIPC_DOUBLET_UNSTAGE=0 restores the wide-payload sort + staged read.
+    if(matrix_converter_doublet_unstage_enabled())
+    {
+        // the identity payload: sort_index_input[i] = i
+        loose_resize(sort_index_input, src_indices.size());
+        loose_resize(sort_index, src_indices.size());
+        int n_iota = (int)src_indices.size();
+        if(n_iota > 0)
+            matrix_converter_radix_sort_segments_k1_kernel<<<(n_iota + 255) / 256, 256, 0, nullptr>>>(
+                sort_index_input.view(), n_iota);
+
+        DeviceRadixSort().SortPairs(src_indices.data(),
+                                    indices_sorted.data(),
+                                    sort_index_input.data(),
+                                    sort_index.data(),
+                                    n_iota,
+                                    0,
+                                    matrix_converter_key_bits(static_cast<uint64_t>(
+                                        from.count() > 0 ? from.count() - 1 : 0)));
+    }
+    else
+    {
+        DeviceRadixSort().SortPairs(src_indices.data(),
+                                    indices_sorted.data(),
+                                    src_segments.data(),
+                                    segments_sorted.data(),
+                                    src_indices.size(),
+                                    0,
+                                    matrix_converter_key_bits(static_cast<uint64_t>(
+                                        from.count() > 0 ? from.count() - 1 : 0)));
+    }
 }
 
 template <typename T, int N>
@@ -1086,11 +1232,117 @@ void MatrixConverter<T, N>::_make_unique_segment_warp_reduction(
     // `segments` is the key of at least one element -- SegOutInit::CrossWarpOnly's
     // precondition. `to.values()` is sized to h_count (DeviceVector::view() is
     // size, not capacity), so there is no tail beyond the key space either.
-    FastSegmentalReduce<64, 32>().reduce(std::as_const(sorted_partition_output).view(),
-                                         std::as_const(segments_sorted).view(),
-                                         segments,
-                                         ::cuda::std::plus<T>{},
-                                         cuda_tool::SegOutInit::CrossWarpOnly);
+    //
+    // perf/round7 (s14): the reduce gathers its segments through the sort
+    // permutation (the s13 fold) instead of reading the `segments_sorted`
+    // copy the wide-payload CUB sort staged -- the staged copy is a full
+    // extra pass over the segments that the folded gather makes unnecessary.
+    // `sort_index[j]` is the source slot of the j-th sorted entry, exactly
+    // what the wide-payload sort wrote into `segments_sorted[j]`, so the
+    // values entering the summation tree are the same bytes in the same
+    // order: bit-identical by construction. UIPC_DOUBLET_UNSTAGE=0 restores
+    // the staged read. `from.values()` and `to.values()` are the distinct
+    // collected_* / sorted_* buffers at the call site (no aliasing).
+    const size_t m = sorted_partition_output.size();
+
+    if(matrix_converter_doublet_unstage_enabled())
+    {
+        matrix_converter_permuted_segment_value_op<T, N> value_op{from.values().data(),
+                                                                  sort_index.data()};
+        FastSegmentalReduce<64, 32>().reduce(
+            m,
+            segments,
+            fast_segmental_reduce_get_offset_key_op{
+                std::as_const(sorted_partition_output).view()},
+            value_op,
+            ::cuda::std::plus<T>{},
+            cuda_tool::SegOutInit::CrossWarpOnly);
+    }
+    else
+    {
+        FastSegmentalReduce<64, 32>().reduce(
+            std::as_const(sorted_partition_output).view(),
+            std::as_const(segments_sorted).view(),
+            segments,
+            ::cuda::std::plus<T>{},
+            cuda_tool::SegOutInit::CrossWarpOnly);
+    }
+
+    if(matrix_converter_doublet_verify_enabled() && segments.size() > 0)
+    {
+        // the staged reference: the wide-payload sort + the staged reduce,
+        // into scratch, then a word-wise comparison with the multi-warp slot
+        // split (the s13 instrument). Re-running the sort rewrites
+        // `indices_sorted` with the same stable result and is enqueued after
+        // every production consumer of it.
+        using SegmentT = typename cuda_tool::DeviceDoubletVector<T, N>::ValueT;
+        static cuda_tool::DeviceBuffer<SegmentT>           ref;
+        static cuda_tool::DeviceBuffer<unsigned char>      mark;
+        static cuda_tool::DeviceBuffer<unsigned long long> vstats;
+        ref.resize_discard(segments.size());
+        mark.resize_discard(segments.size());
+        vstats.resize_discard(5);
+        if constexpr(sizeof(SegmentT) == sizeof(T))
+            cuda_tool::BufferLaunch().fill<T>(ref.view(), T{0});
+        else
+            cuda_tool::BufferLaunch().fill<SegmentT>(ref.view(),
+                                                     SegmentT::Zero().eval());
+        cuda_tool::BufferLaunch().fill<unsigned char>(mark.view(), (unsigned char)0);
+
+        int n_stage = (int)from.values().size();
+        if(n_stage > 0)
+            DeviceRadixSort().SortPairs(from.indices().data(),
+                                        indices_sorted.data(),
+                                        from.values().data(),
+                                        segments_sorted.data(),
+                                        n_stage,
+                                        0,
+                                        matrix_converter_key_bits(static_cast<uint64_t>(
+                                            from.count() > 0 ? from.count() - 1 : 0)));
+
+        FastSegmentalReduce<64, 32>().reduce(
+            std::as_const(sorted_partition_output).view(),
+            std::as_const(segments_sorted).view(),
+            ref.view(),
+            ::cuda::std::plus<T>{},
+            cuda_tool::SegOutInit::CrossWarpOnly);
+
+        int n_boundary = (int)((m + 32 - 1) / 32) - 1;
+        if(n_boundary > 0)
+            matrix_converter_segred_mark_multi_warp_kernel<32>
+                <<<(n_boundary + 255) / 256, 256, 0, nullptr>>>(
+                    m,
+                    fast_segmental_reduce_get_offset_key_op{
+                        std::as_const(sorted_partition_output).view()},
+                    mark.data(),
+                    n_boundary);
+
+        unsigned long long zero[5]{};
+        cudaMemcpyAsync(vstats.data(), zero, sizeof(zero), cudaMemcpyHostToDevice, nullptr);
+        int n_cmp = (int)segments.size();
+        matrix_converter_doublet_verify_compare_kernel<T, N>
+            <<<(n_cmp + 255) / 256, 256, 0, nullptr>>>(
+                segments.cview(), ref.cview(), mark.data(), vstats.data());
+        unsigned long long h[5]{};
+        cudaMemcpyAsync(h, vstats.data(), sizeof(h), cudaMemcpyDeviceToHost, nullptr);
+        cudaStreamSynchronize(nullptr);
+        double maxrel;
+        std::memcpy(&maxrel, &h[3], sizeof(double));
+        std::fprintf(stderr,
+                     "[doublet-verify] convert<T,%d> in=%zu out=%d words=%zu mismatch_words=%llu "
+                     "(in_multiwarp_slots=%llu, elsewhere=%llu) slots=%llu multiwarp_slots=%llu "
+                     "maxrel=%.3e\n",
+                     N,
+                     m,
+                     n_cmp,
+                     (size_t)n_cmp * (N == 1 ? 1 : N),
+                     h[0] + h[1],
+                     h[1],
+                     h[0],
+                     h[2],
+                     h[4],
+                     maxrel);
+    }
 }
 
 template <typename T, int N>
