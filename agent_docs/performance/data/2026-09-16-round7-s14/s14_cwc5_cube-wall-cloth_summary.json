@@ -1,0 +1,302 @@
+{
+ "scene": "cube-wall-cloth",
+ "label": "s14_cwc5",
+ "n": 5,
+ "frames": 100,
+ "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+ "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+ "arms": {
+  "old": [
+   {
+    "mean_ms": 55.375798356253654,
+    "median_ms": 49.355756025761366,
+    "p95_ms": 136.4546885713935,
+    "frames": 100,
+    "newton": 509,
+    "pcg": 19605,
+    "line_search": 530,
+    "ms_per_newton": 10.879331700639225,
+    "ms_per_pcg": 0.2824575279584476,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1078,
+    "rep": 1,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=0"
+    ]
+   },
+   {
+    "mean_ms": 56.07360643101856,
+    "median_ms": 48.84458042215556,
+    "p95_ms": 136.4307518932037,
+    "frames": 100,
+    "newton": 512,
+    "pcg": 19870,
+    "line_search": 532,
+    "ms_per_newton": 10.951876256058313,
+    "ms_per_pcg": 0.2822023474132791,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1120,
+    "rep": 2,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=0"
+    ]
+   },
+   {
+    "mean_ms": 55.06650127703324,
+    "median_ms": 49.33038249146193,
+    "p95_ms": 139.53004539944232,
+    "frames": 100,
+    "newton": 508,
+    "pcg": 19490,
+    "line_search": 531,
+    "ms_per_newton": 10.839862456108905,
+    "ms_per_pcg": 0.28253720511561436,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1114,
+    "rep": 3,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=0"
+    ]
+   },
+   {
+    "mean_ms": 52.28650787379593,
+    "median_ms": 50.8108374197036,
+    "p95_ms": 138.6677265749313,
+    "frames": 100,
+    "newton": 493,
+    "pcg": 18705,
+    "line_search": 515,
+    "ms_per_newton": 10.60578253018173,
+    "ms_per_pcg": 0.27953225273347193,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1046,
+    "rep": 4,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=0"
+    ]
+   },
+   {
+    "mean_ms": 54.68587156152353,
+    "median_ms": 49.8353565344587,
+    "p95_ms": 134.6961331437342,
+    "frames": 100,
+    "newton": 505,
+    "pcg": 19520,
+    "line_search": 530,
+    "ms_per_newton": 10.82888545772743,
+    "ms_per_pcg": 0.2801530305405918,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1086,
+    "rep": 5,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=0"
+    ]
+   }
+  ],
+  "new": [
+   {
+    "mean_ms": 54.178847467992455,
+    "median_ms": 50.67689798306674,
+    "p95_ms": 141.47632198873907,
+    "frames": 100,
+    "newton": 505,
+    "pcg": 19325,
+    "line_search": 525,
+    "ms_per_newton": 10.72848464712722,
+    "ms_per_pcg": 0.2803562611539066,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1076,
+    "rep": 1,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=1"
+    ]
+   },
+   {
+    "mean_ms": 54.68502977164462,
+    "median_ms": 49.049143912270665,
+    "p95_ms": 134.49081018334255,
+    "frames": 100,
+    "newton": 506,
+    "pcg": 19475,
+    "line_search": 526,
+    "ms_per_newton": 10.80731813668866,
+    "ms_per_pcg": 0.28079604504053723,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1078,
+    "rep": 2,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=1"
+    ]
+   },
+   {
+    "mean_ms": 53.97668626625091,
+    "median_ms": 49.68115396331996,
+    "p95_ms": 142.11241487646473,
+    "frames": 100,
+    "newton": 502,
+    "pcg": 19245,
+    "line_search": 525,
+    "ms_per_newton": 10.752327941484245,
+    "ms_per_pcg": 0.2804712198817922,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1082,
+    "rep": 3,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=1"
+    ]
+   },
+   {
+    "mean_ms": 55.662029285449535,
+    "median_ms": 49.3549550883472,
+    "p95_ms": 139.38898096093908,
+    "frames": 100,
+    "newton": 511,
+    "pcg": 19835,
+    "line_search": 532,
+    "ms_per_newton": 10.892765026506758,
+    "ms_per_pcg": 0.2806253051951073,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1098,
+    "rep": 4,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=1"
+    ]
+   },
+   {
+    "mean_ms": 53.96256295731291,
+    "median_ms": 48.75159892253578,
+    "p95_ms": 136.87237165868282,
+    "frames": 100,
+    "newton": 499,
+    "pcg": 19385,
+    "line_search": 521,
+    "ms_per_newton": 10.814140873209,
+    "ms_per_pcg": 0.2783727777008662,
+    "converged": true,
+    "hit_newton_limit": false,
+    "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+    "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+    "dirty": true,
+    "peak_mib": 1090,
+    "rep": 5,
+    "env": [
+     "UIPC_DOUBLET_UNSTAGE=1"
+    ]
+   }
+  ]
+ },
+ "verdict": {
+  "mean_ms": {
+   "delta_pct": -0.37410368385810794,
+   "disjoint": false,
+   "t": 0.2844074514032644,
+   "p": 0.7858771581419639
+  },
+  "median_ms": {
+   "delta_pct": -0.2672138259231616,
+   "disjoint": false
+  },
+  "ms_per_newton": {
+   "delta_pct": -0.20460265208811532,
+   "disjoint": false,
+   "t": 0.342636742302255,
+   "p": 0.7438961001659006
+  },
+  "ms_per_pcg": {
+   "delta_pct": -0.4450091173548153,
+   "disjoint": false,
+   "t": 1.613816059405372,
+   "p": 0.14970446308206886
+  },
+  "newton": {
+   "delta_pct": -0.1582904629995953,
+   "disjoint": false
+  },
+  "pcg": {
+   "delta_pct": 0.07716843296635456,
+   "disjoint": false
+  },
+  "line_search": {
+   "delta_pct": -0.3411675511751456,
+   "disjoint": false
+  }
+ },
+ "warmup_discarded": [
+  {
+   "mean_ms": 55.011797298211604,
+   "median_ms": 50.760732498019934,
+   "p95_ms": 135.5210651876405,
+   "frames": 100,
+   "newton": 508,
+   "pcg": 19360,
+   "line_search": 530,
+   "ms_per_newton": 10.829093956340866,
+   "ms_per_pcg": 0.28415184554861367,
+   "converged": true,
+   "hit_newton_limit": false,
+   "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+   "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+   "dirty": true,
+   "peak_mib": 1102,
+   "rep": -1,
+   "arm": "old",
+   "warmup": true
+  },
+  {
+   "mean_ms": 55.63414741307497,
+   "median_ms": 48.838834976777434,
+   "p95_ms": 133.06241285754368,
+   "frames": 100,
+   "newton": 511,
+   "pcg": 19935,
+   "line_search": 534,
+   "ms_per_newton": 10.887308691404105,
+   "ms_per_pcg": 0.2790777397194631,
+   "converged": true,
+   "hit_newton_limit": false,
+   "commit": "59174d753cea5ab80019f899c98caa3510aaabd0",
+   "samples_commit": "a47ba7d26544efd5bd993171ecf909790e18fefd",
+   "dirty": true,
+   "peak_mib": 1096,
+   "rep": -1,
+   "arm": "new",
+   "warmup": true
+  }
+ ]
+}
