@@ -1,0 +1,4 @@
+[2026-09-16 09:10:42.364] [warning] Line Search Exits with Max Iteration: 12 (Frame=1, Newton=16, alpha_last=3.3805073382976665e-09, E0=1.722383e+02, E_last=1.722383e+02, rel_E_increase=5.069e-09, ccd_alpha=1, cfl_alpha=1)
+[2026-09-16 09:10:50.078] [warning] Line Search Exits with Max Iteration: 12 (Frame=1, Newton=17, alpha_last=2.933444153518798e-09, E0=1.722383e+02, E_last=1.722383e+02, rel_E_increase=4.374e-09, ccd_alpha=1, cfl_alpha=1)
+[2026-09-16 09:10:57.618] [warning] Line Search Exits with Max Iteration: 12 (Frame=1, Newton=18, alpha_last=2.581276502285567e-09, E0=1.722383e+02, E_last=1.722383e+02, rel_E_increase=3.873e-09, ccd_alpha=1, cfl_alpha=1)
+rc=139 (SIGSEGV at teardown after the frame-1 Newton cap; profile data complete) -- timing-only arm, results invalid by design

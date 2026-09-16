@@ -1,0 +1,8 @@
+== crease-press default ==
+  fused_R<bool)0,int)0>  grid=   42 block=96  ->   1344 nodes  x 34851 launches
+  fused_R<bool)1,int)1>  grid=  561 block=96  ->  17952 nodes  x 34851 launches
+  total cluster nodes = 19296  -> 1206 cluster blocks x 4896 B = 5904576 B = 5.63 MiB (141% of the 4 MiB L2)
+== mas-bunny default ==
+  fused_R<bool)0,int)0>  grid=   46 block=96  ->   1472 nodes  x 35685 launches
+  fused_R<bool)1,int)1>  grid=  640 block=96  ->  20480 nodes  x 35685 launches
+  total cluster nodes = 21952  -> 1372 cluster blocks x 4896 B = 6717312 B = 6.41 MiB (160% of the 4 MiB L2)
