@@ -178,21 +178,7 @@ namespace
             // ddEddtheta * grad(theta) grad(theta)^T with Vdt2 folded into
             // the coefficient. No projection, no hess(theta).
             DFDSB::dEdx_ddEddx_gauss_newton(
-                G12,
-                H12x12,
-                x0,
-                x1,
-                x2,
-                x3,
-                L0,
-                h_bar,
-                theta_bar,
-                kappa,
-                M_e,
-                ell_e,
-                theta_commit,
-                F_commit,
-                Vdt2);
+                G12, H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, M_e, ell_e, theta_commit, F_commit, Vdt2);
         }
         else
         {

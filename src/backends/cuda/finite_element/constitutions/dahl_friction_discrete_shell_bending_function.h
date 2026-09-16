@@ -465,9 +465,9 @@ namespace sym::dahl_friction_discrete_shell_bending
                                                       Float          kappa,
                                                       Float          M_e,
                                                       Float          ell_e,
-                                                      Float          theta_commit,
-                                                      Float          F_commit,
-                                                      Float          scale)
+                                                      Float theta_commit,
+                                                      Float F_commit,
+                                                      Float scale)
     {
         namespace DFDSB = sym::dahl_friction_discrete_shell_bending;
         Float theta     = 0.0;
