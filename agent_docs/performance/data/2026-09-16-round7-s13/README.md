@@ -146,3 +146,13 @@ measure `P0 - P2` first, as this step did.
 3. **mas-bunny's wall does not track its GPU kernel time** (fold removes ~130 ms
    of GPU work there yet the wall moves -0.23 %): the scene is host-latency-bound
    at the margin — relevant to whoever next prices GPU-side wins on it.
+
+## Post-format validation (the committed tree)
+
+clang-format touched the changed file after the measurement build; the
+rebuild's SASS diff against the pre-format build shows the same 7-function
+±8-instruction TU-ripple class and 0 added/removed functions. Re-validated on
+the exact committed build: `gate_default_postfmt.txt` identical to
+`baseline_tests.txt` (duration string only), and `nsys/final_check_*` (full
+130-frame run) confirms k3 = 0 launches, the PERM k2 row in-family
+(1 197 × 669.5 µs merged both-3x3 average), SpMV control 66.4 µs.
