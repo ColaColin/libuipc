@@ -1,0 +1,36 @@
+=== model strain-plastic ===
+bit-diff vs shipped: T 4718766 / 5373952 words (eigenvalue slots: 2960), B 4819834 (ev: 504918), TB 5282451 (ev: 504900)
+relFro(V): B med 2.49e-03 max 1.89e+00 | TB med 1.43e+00 max 2.24e+02
+copy <0,0> baseline     : 12395.60 us =  189.14 ns/mat
+orig (shipped)          : 12384.17 us =  188.97 ns/mat
+T transposed V          : 12252.72 us =  186.96 ns/mat
+B div-reduced           : 13350.64 us =  203.71 ns/mat
+TB both                 : 13409.55 us =  204.61 ns/mat
+copy <0,0> baseline     : 12376.49 us =  188.85 ns/mat
+orig (shipped)          : 12377.95 us =  188.87 ns/mat
+T transposed V          : 12262.37 us =  187.11 ns/mat
+B div-reduced           : 13377.17 us =  204.12 ns/mat
+TB both                 : 13431.31 us =  204.95 ns/mat
+copy <0,0> baseline     : 12380.89 us =  188.92 ns/mat
+orig (shipped)          : 12396.32 us =  189.15 ns/mat
+T transposed V          : 12239.21 us =  186.76 ns/mat
+B div-reduced           : 13361.34 us =  203.88 ns/mat
+TB both                 : 13421.62 us =  204.80 ns/mat
+=== model stress-plastic ===
+bit-diff vs shipped: T 4718969 / 5373952 words (eigenvalue slots: 3204), B 4853658 (ev: 514148), TB 5291586 (ev: 514136)
+relFro(V): B med 1.53e-03 max 1.89e+00 | TB med 1.42e+00 max 1.85e+00
+copy <0,0> baseline     : 12733.59 us =  194.30 ns/mat
+orig (shipped)          : 12747.10 us =  194.51 ns/mat
+T transposed V          : 12605.64 us =  192.35 ns/mat
+B div-reduced           : 13818.25 us =  210.85 ns/mat
+TB both                 : 13933.86 us =  212.61 ns/mat
+copy <0,0> baseline     : 12753.67 us =  194.61 ns/mat
+orig (shipped)          : 12731.67 us =  194.27 ns/mat
+T transposed V          : 12590.76 us =  192.12 ns/mat
+B div-reduced           : 13823.69 us =  210.93 ns/mat
+TB both                 : 13907.60 us =  212.21 ns/mat
+copy <0,0> baseline     : 12748.84 us =  194.53 ns/mat
+orig (shipped)          : 12754.33 us =  194.62 ns/mat
+T transposed V          : 12588.77 us =  192.09 ns/mat
+B div-reduced           : 13827.26 us =  210.99 ns/mat
+TB both                 : 13936.04 us =  212.65 ns/mat
