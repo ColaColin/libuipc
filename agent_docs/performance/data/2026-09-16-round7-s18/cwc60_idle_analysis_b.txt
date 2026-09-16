@@ -1,0 +1,38 @@
+steady window: span=2.26s idle=258.6ms (11.43%)  gaps>=3us: 193.8ms
+gap_us                 n  total_ms
+0-       5        131445      86.3
+5-      10          7292      53.6
+10-      20         2195      27.6
+20-      50          149       4.3
+50-     100           94       6.7
+100-     500         155      35.5
+500-    2000          33      27.2
+2000-    10ms          6      17.3
+10000-1152921504606847ms         0       0.0
+
+top gaps (steady):
+  t=  3.134s gap=   3677.0us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex2,Mallocx2,StreamSynchronizex1 api=194us
+  t=  3.007s gap=   3426.1us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | StreamSynchronizex1,EventRecordx1,StreamWaitEventx1 api=192us
+  t=  2.901s gap=   3071.9us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | StreamSynchronizex1,EventRecordx1,StreamWaitEventx1 api=194us
+  t=  2.793s gap=   2972.3us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex2,StreamSynchronizex1,EventRecordx1 api=194us
+  t=  2.606s gap=   2094.8us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex3,Mallocx2,StreamSynchronizex1 api=194us
+  t=  2.699s gap=   2070.4us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex2,StreamSynchronizex1,EventRecordx1 api=194us
+  t=  1.373s gap=   1979.8us | ee_mollifier_partition_kernel      -> do_assemble_kernel                 |  api=0us
+  t=  2.518s gap=   1539.4us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex2,Mallocx2,StreamSynchronizex1 api=194us
+  t=  2.580s gap=   1451.4us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex2,Mallocx2,StreamSynchronizex1 api=195us
+  t=  2.461s gap=   1404.5us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex2,StreamSynchronizex1,EventRecordx1 api=195us
+  t=  1.291s gap=   1270.1us | MASPreconditionerEngine_schwarz_lo -> MASPreconditionerEngine_collect_fi | GraphLaunch_v10000x1 api=200us
+  t=  1.955s gap=   1096.7us | MASPreconditionerEngine_schwarz_lo -> MASPreconditionerEngine_collect_fi | GraphLaunch_v10000x1 api=200us
+  t=  2.417s gap=   1049.2us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex4,Mallocx3,StreamSynchronizex1 api=195us
+  t=  2.676s gap=    946.9us | abd_linear_subsystem_dytopo_pair_s -> buffer_view_fill_kernel            | Freex3,Mallocx3 api=199us
+  t=  2.728s gap=    899.0us | ortho_potential_compute_gradient_h -> matrix_converter_radix_sort_indice | Freex1 api=200us
+  t=  2.366s gap=    883.9us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex3,Mallocx2,StreamSynchronizex1 api=193us
+  t=  3.087s gap=    806.2us | ortho_potential_compute_gradient_h -> matrix_converter_radix_sort_indice | Freex2,Mallocx1 api=199us
+  t=  2.790s gap=    796.6us | [CUDA memcpy Device-to-Host]       -> [CUDA memcpy Device-to-Host]       | MemcpyAsyncx1,DeviceSynchronizex1 api=16us
+  t=  1.735s gap=    795.3us | [CUDA memcpy Device-to-Host]       -> [CUDA memcpy Device-to-Host]       | MemcpyAsyncx1,DeviceSynchronizex1 api=16us
+  t=  1.420s gap=    791.1us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex5,Mallocx4,StreamSynchronizex1 api=193us
+  t=  1.960s gap=    775.2us | [CUDA memcpy Device-to-Host]       -> [CUDA memcpy Device-to-Host]       | MemcpyAsyncx1,DeviceSynchronizex1 api=18us
+  t=  3.003s gap=    771.9us | [CUDA memcpy Device-to-Host]       -> [CUDA memcpy Device-to-Host]       | MemcpyAsyncx1,DeviceSynchronizex1 api=17us
+  t=  1.963s gap=    695.1us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex3,Mallocx3,StreamSynchronizex1 api=193us
+  t=  1.334s gap=    686.1us | [CUDA memcpy Device-to-Host]       -> [CUDA memcpy Device-to-Host]       | MemcpyAsyncx1,DeviceSynchronizex1 api=18us
+  t=  2.093s gap=    680.8us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | Freex3,Mallocx3,StreamSynchronizex1 api=194us

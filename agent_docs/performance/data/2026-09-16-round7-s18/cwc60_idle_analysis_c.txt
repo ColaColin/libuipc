@@ -1,0 +1,29 @@
+realloc-idle gaps (steady, >=3us): n=32 total_idle=10.0ms (Free/Malloc api calls inside: 146)
+  t=  3.13s idle=  3677.0us | [CUDA memcpy Device-to-Host]  ->do_assemble_kernel             | StreamSynchronize,EventRecord,StreamWaitEvent,Free,Malloc,Free
+  t=  3.01s idle=  3426.1us | [CUDA memcpy Device-to-Host]  ->do_assemble_kernel             | StreamSynchronize,EventRecord,StreamWaitEvent,Free,Malloc,Free
+  t=  3.09s idle=   806.2us | ortho_potential_compute_gradie->matrix_converter_radix_sort_in | Free,Malloc,Free,Malloc,Free,Malloc
+  t=  3.09s idle=   343.2us | matrix_converter_radix_sort_in->ReduceByKeyScanTileState       | Free,Malloc,Free,Malloc,LaunchKernel
+  t=  3.09s idle=   262.4us | matrix_converter_make_unique_i->buffer_fill_kernel             | Free,Malloc,Free,Malloc,LaunchKernel,LaunchKernel
+  t=  3.03s idle=   195.1us | [CUDA memcpy Device-to-Host]  ->GlobalDyTopoEffectManager_dist | StreamSynchronize,Free,Malloc,Free,Malloc,Free
+  t=  3.16s idle=   177.0us | [CUDA memcpy Device-to-Host]  ->GlobalDyTopoEffectManager_dist | StreamSynchronize,Free,Malloc,Free,Malloc,Free
+  t=  3.01s idle=   163.2us | ortho_potential_compute_gradie->[CUDA memset]                  | Free,Malloc,MemsetAsync,MemsetAsync
+  t=  3.04s idle=   154.6us | abd_linear_subsystem_assemble_->Matrix                         | Free,Malloc,LaunchKernel
+  t=  3.06s idle=   136.8us | GlobalDyTopoEffectManager_dist->abd_linear_subsystem_dytopo_pa | Free,Malloc,Free,Malloc,Free,Malloc
+  t=  3.23s idle=   105.3us | abd_line_search_reporter_combi->do_compute_energy_k1_kernel    | Free,Malloc,LaunchKernel
+  t=  3.13s idle=    95.0us | [CUDA memcpy Device-to-Device]->[CUDA memcpy Device-to-Device] | Free,Malloc,MemcpyAsync,Free
+  t=  3.13s idle=    77.0us | [CUDA memcpy Device-to-Device]->[CUDA memcpy Device-to-Device] | Free,Malloc,MemcpyAsync,Free
+  t=  3.17s idle=    42.0us | [CUDA memcpy Device-to-Host]  ->InfoStacklessBVHSimplexTraject | StreamSynchronize,Free,Malloc,Free,Malloc,Free
+  t=  3.17s idle=    33.9us | InfoStacklessBVHSimplexTraject->ScanTileState                  | Free,Malloc,Free,Malloc,Free,Malloc
+
+api totals (whole capture): cudaFree n=1380 sum=4217650.9ms; cudaMalloc n=1380 sum=3190245.4ms; mallocAsync n=0
+
+target-region idle (gaps whose NEXT kernel is classify/assembly):
+  [CUDA memcpy Device-to-Host]->do_assemble_kernel             n=  16 total=   7.35ms
+  [CUDA memcpy Device-to-Host]->GlobalDyTopoEffectManager_di   n=  80 total=   0.95ms
+  matrix_converter_make_unique->buffer_fill_kernel             n=   5 total=   0.28ms
+  [CUDA memcpy Device-to-Host]->abd_linear_subsystem_dytopo_   n=  16 total=   0.14ms
+  GlobalDyTopoEffectManager_di->abd_linear_subsystem_dytopo_   n=   1 total=   0.14ms
+  buffer_view_fill_kernel->abd_linear_subsystem_assembl        n=  16 total=   0.07ms
+  GlobalDyTopoEffectManager_di->GlobalDyTopoEffectManager_di   n=   2 total=   0.06ms
+  abd_linear_subsystem_dytopo_->buffer_view_fill_kernel        n=   6 total=   0.02ms
+  TOTAL 9.0ms over steady span = 0.000% of wall

@@ -1,0 +1,38 @@
+steady window: span=9.22s idle=259.1ms (2.81%)  gaps>=3us: 141.5ms
+gap_us                 n  total_ms
+0-       5        338479     131.8
+5-      10         10149      73.9
+10-      20         1787      22.8
+20-      50          114       2.9
+50-     100           23       1.8
+100-     500          52      11.1
+500-    2000           7       7.3
+2000-    10ms          2       7.4
+10000-1152921504606847ms         0       0.0
+
+top gaps (steady):
+  t= 12.204s gap=   4454.4us | [CUDA memcpy Device-to-Host]       -> Matrix                             | StreamSynchronizex1 api=3us
+  t=  7.247s gap=   2986.5us | abd_linear_subsystem_dytopo_pair_s -> buffer_view_fill_kernel            | Freex1,Mallocx1 api=199us
+  t= 11.799s gap=   1786.6us | [CUDA memcpy Device-to-Host]       -> do_assemble_kernel                 | StreamSynchronizex1,EventRecordx1 api=198us
+  t= 12.217s gap=   1454.6us | [CUDA memcpy Device-to-Host]       -> Matrix                             | Freex5,StreamSynchronizex1,Mallocx1 api=198us
+  t=  9.703s gap=   1318.1us | fused_dot_kernel                   -> fused_pcg_scalar_kernel            | GraphLaunch_v10000x1 api=200us
+  t=  3.199s gap=    713.0us | __identity>                        -> InfoStacklessBVHSimplexTrajectoryF | Freex2,Mallocx1 api=199us
+  t=  3.233s gap=    692.7us | [CUDA memcpy Device-to-Host]       -> InfoStacklessBVHSimplexTrajectoryF | Freex2,StreamSynchronizex1,Mallocx1 api=198us
+  t=  3.236s gap=    680.5us | InfoStacklessBVHSimplexTrajectoryF -> ScanTileState                      | Freex2,Mallocx1 api=199us
+  t=  3.186s gap=    651.8us | [CUDA memcpy Device-to-Host]       -> [CUDA memcpy Host-to-Device]       | StreamSynchronizex1,Freex1,Mallocx1 api=199us
+  t= 12.213s gap=    453.7us | [CUDA memcpy Device-to-Host]       -> [CUDA memset]                      | Freex3,StreamSynchronizex1,Mallocx1 api=198us
+  t=  4.135s gap=    428.4us | MASPreconditionerEngine_schwarz_lo -> MASPreconditionerEngine_collect_fi | GraphLaunch_v10000x1 api=200us
+  t=  3.193s gap=    357.4us | InfoStacklessBVH_pairFilter_kernel -> [CUDA memcpy Host-to-Device]       | Freex2,Mallocx1 api=199us
+  t=  7.257s gap=    340.1us | [CUDA memset]                      -> Spmv_rbk_sym_spmv_dot_chunked_kern | LaunchKernelx45,GraphExecDestroy_v10000x1,GraphDestroy_v10000x1 api=179us
+  t=  9.370s gap=    329.3us | fused_update_p_beta_kernel         -> Spmv_rbk_sym_spmv_dot_chunked_kern | GraphLaunch_v10000x1 api=74us
+  t=  6.367s gap=    321.4us | fused_update_p_beta_kernel         -> Spmv_rbk_sym_spmv_dot_chunked_kern | GraphLaunch_v10000x1 api=47us
+  t= 10.371s gap=    319.3us | fused_update_p_beta_kernel         -> Spmv_rbk_sym_spmv_dot_chunked_kern | GraphLaunch_v10000x1 api=74us
+  t= 10.400s gap=    318.2us | fused_update_p_beta_kernel         -> Spmv_rbk_sym_spmv_dot_chunked_kern | GraphLaunch_v10000x1 api=71us
+  t=  7.368s gap=    315.6us | fused_update_p_beta_kernel         -> Spmv_rbk_sym_spmv_dot_chunked_kern | GraphLaunch_v10000x1 api=49us
+  t=  3.364s gap=    315.4us | fused_update_p_beta_kernel         -> Spmv_rbk_sym_spmv_dot_chunked_kern | GraphLaunch_v10000x1 api=45us
+  t=  4.367s gap=    312.7us | fused_update_p_beta_kernel         -> Spmv_rbk_sym_spmv_dot_chunked_kern | GraphLaunch_v10000x1 api=45us
+  t=  6.388s gap=    312.1us | fused_update_p_beta_kernel         -> abd_linear_subsystem_retrieve_solu | LaunchKernelx12,MemcpyAsyncx3,StreamSynchronizex1 api=183us
+  t=  8.369s gap=    311.0us | [CUDA memcpy Device-to-Host]       -> InfoStacklessBVHSimplexTrajectoryF | LaunchKernelx14,MemcpyAsyncx7,StreamSynchronizex2 api=185us
+  t=  6.023s gap=    253.8us | [CUDA memcpy Device-to-Host]       -> GlobalDyTopoEffectManager_distribu | Freex2,StreamSynchronizex1,Mallocx1 api=199us
+  t=  9.608s gap=    246.0us | InfoStacklessBVH_reorderNode_kerne -> [CUDA memset]                      | MemsetAsyncx1 api=200us
+  t= 10.400s gap=    242.2us | fused_update_p_beta_kernel         -> Spmv_rbk_sym_spmv_dot_chunked_kern | GraphLaunch_v10000x1 api=57us
