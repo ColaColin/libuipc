@@ -117,7 +117,11 @@ namespace
     // instead of the K16 block assembly; UIPC_DAHL_TQL2=0 restores Eigen's
     // SelfAdjointEigenSolver inside the 9x9 (or 12x12) PSD projection.
     // All three off is the pre-round-7 dense 12x12 Eigen path.
-    template <int Proj, int Solver>
+    // s08 (round 7): SymAsm selects the K16 assembly variant inside
+    // Proj == 1 (see make_spd.h): 2 = dead-triangle cut + mirrored
+    // back-assembly (default), 0 = the pre-s08 full-triangle assembly;
+    // UIPC_MAKE_SPD_BLOCKED_HALF=0 is the rollback.
+    template <int Proj, int Solver, int SymAsm = 2>
     __global__ void DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel(
         cuda_tool::BufferView<Vector4i>        stencils,
         cuda_tool::BufferView<Float>           bending_stiffnesses,
@@ -198,7 +202,7 @@ namespace
         {
             H12x12 *= Vdt2;
             if constexpr(Proj == 1)
-                make_spd_translation_free_4x3_blocked<Solver>(H12x12);  // K16: block-assembled K7 projection
+                make_spd_translation_free_4x3_blocked<Solver, SymAsm>(H12x12);  // K16: block-assembled K7 projection
             else if constexpr(Proj == 2)
                 make_spd_translation_free_4x3<Solver>(H12x12);  // K7: 9x9 eigen-solve
             else
@@ -315,6 +319,7 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
     bool m_blocked_proj = true;
     bool m_tql2         = true;
     bool m_gauss_newton = true;
+    bool m_half_asm     = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -326,6 +331,8 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
         m_tql2         = !(t && t[0] == '0');
         const char* gn = std::getenv("UIPC_DAHL_GAUSS_NEWTON");
         m_gauss_newton = !(gn && gn[0] == '0');
+        const char* sa = std::getenv("UIPC_MAKE_SPD_BLOCKED_HALF");
+        m_half_asm     = !(sa && sa[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -617,12 +624,18 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
         {
             launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>);
         }
+        // s08: the blocked arm splits on the assembly variant (SymAsm).
         else if(m_tql2)
         {
             if(!m_reduced_spd)
                 launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 1>);
             else if(m_blocked_proj)
-                launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>);
+            {
+                if(m_half_asm)
+                    launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1, 2>);
+                else
+                    launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1, 0>);
+            }
             else
                 launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<2, 1>);
         }
@@ -631,7 +644,12 @@ class DahlFrictionDiscreteShellBending final : public FiniteElementExtraConstitu
             if(!m_reduced_spd)
                 launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 0>);
             else if(m_blocked_proj)
-                launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0>);
+            {
+                if(m_half_asm)
+                    launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0, 2>);
+                else
+                    launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0, 0>);
+            }
             else
                 launch(DahlFrictionDiscreteShellBending_do_compute_gradient_hessian_kernel<2, 0>);
         }
