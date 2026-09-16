@@ -1,0 +1,37 @@
+== block-dim sweep, full 130-frame runs, per-launch figures (avg us / med us / instances)
+arm                                     xr                p_beta              dot(ctl)           scalar(ctl)             spmv(ctl)
+bd64                    8.14/8.19  /101305     3.78/3.81  /101305     7.15/7.10  /101873     1.97/1.95  /101305    67.17/67.04 /101305 
+bd128 (spread pick)     8.10/8.16  /112640     3.60/3.62  /112640     7.06/7.01  /113198     1.95/1.95  /112640    67.16/67.97 /112640 
+def=256                 8.33/8.35  /141810     3.68/3.68  /141810     7.03/7.01  /142358     1.95/1.95  /141810    65.27/63.33 /141810 
+bd512                   8.34/8.42  /95360      3.78/3.81  /95360      7.03/7.01  /96004      1.95/1.95  /95360     66.94/66.40 /95360  
+bd1024 (pre-R4s11)     10.34/10.40 /122010     4.14/4.16  /122010     7.06/7.01  /122574     1.95/1.95  /122010    66.28/66.53 /122010 
+
+== repeats, def vs bd128, n=4 full runs per arm (sweep arm + 3 reps), MEDIANS
+kernel                     def(256)            bd128(spread)     delta  ctl-norm
+xr            8.40 [8.35,8.48]    8.14 [8.13,8.16]    -3.05%    -2.38%
+p_beta        3.70 [3.68,3.74]    3.60 [3.58,3.62]    -2.60%    -1.93%
+dot           7.04 [7.01,7.10]    6.99 [6.98,7.01]    -0.68%    +0.00%
+scalar        1.95 [1.95,1.95]    1.95 [1.95,1.95]    +0.00%    +0.68%
+spmv         65.61 [63.33,66.69]   66.38 [64.80,67.97]    +1.17%    +1.87%
+collectZ      4.92 [4.90,4.96]    4.90 [4.90,4.90]    -0.49%    +0.20%
+
+PCG instances/run: def [141810, 106275, 116500, 119410]  bd128 [112640, 102610, 119940, 113545]
+prize: xr 2.90% + p_beta 1.30% of scene GPU kernel time (s05 ranking) x per-launch delta
+
+== trace geom_def (3 frames)
+  fused_update_xr_kernel                 n=12850 med=8.22us p10=8.03 p90=8.45 <4us:1.43%
+  fused_update_p_beta_kernel             n=12850 med=3.68us p10=3.55 p90=3.81 <4us:94.87%
+  fused_dot_kernel                       n=12934 med=6.94us p10=6.82 p90=7.33 <4us:0.00%
+  fused_pcg_scalar_kernel                n=12850 med=1.92us p10=1.89 p90=1.98 <4us:100.00%
+  Spmv_rbk_sym_spmv_dot_chunked          n=12850 med=73.54us p10=67.20 p90=75.81 <4us:0.00%
+  xr stream ids: ['18']
+  PCG-family node-to-node gaps: med=384ns p90=2464ns
+
+== trace geom_bd128 (3 frames)
+  fused_update_xr_kernel                 n=14270 med=8.00us p10=7.75 p90=8.26 <4us:1.15%
+  fused_update_p_beta_kernel             n=14270 med=3.58us p10=3.49 p90=3.71 <4us:97.33%
+  fused_dot_kernel                       n=14346 med=6.95us p10=6.85 p90=7.23 <4us:0.00%
+  fused_pcg_scalar_kernel                n=14270 med=1.95us p10=1.89 p90=1.98 <4us:99.99%
+  Spmv_rbk_sym_spmv_dot_chunked          n=14270 med=73.44us p10=67.94 p90=76.03 <4us:0.00%
+  xr stream ids: ['18']
+  PCG-family node-to-node gaps: med=384ns p90=2464ns
