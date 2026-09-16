@@ -1,0 +1,64 @@
+s15 SASS diagnosis: is the k2 FP64 warp tree latency- or throughput-bound?
+
+Binary: main head a30f86f5 (3x3 k2 SASS identical through s13/s14 — s14 touched only
+the 3x1 call site's value op). Production instantiation examined:
+  fast_segmental_reduce_matrix_k2_kernel<128,32,double,3,3,Flags,offset_key_op,
+                                         permuted_value_op<double,3>,plus<double>,Probe=0>
+  REG:48 STACK:0 (res_usage_head.txt; 3x1 staged k2 = 24, 3x1 probe variants 24-32)
+
+Per tree level per warp, from the SASS (sass_head_full.txt, block extraction in
+sass_diagnosis.py):
+
+  18 x SHFL.DOWN   (9 matrix entries x 2 for the 64-bit halves)
+   9 x DADD        -- UNPREDICATED: `if(active) v = op(other,v)' compiles to a bare
+                     `DADD Rd, Ra, Rb' followed by `FSEL Rd, Rsum, Rd, !P' -- the add
+                     executes for all 32 lanes at every executed level, active or not
+  18 x FSEL        (the per-lane guard, 2 per 64-bit entry, FP32 pipe)
+   1 x VOTE.ANY + ISETP + P2R + BRA  (the s17 early exit)
+
+Bonus finding: the FLAGS int reduce (WarpReduceInt::HeadSegmentedReduce on flags.flags)
+is instantiated through the kernel's plus<double> -- 5 levels of I2F.F64 + DADD +
+F2I.F64.TRUNC per warp: the flags word is converted to double, added on the FP64 pipe,
+and truncated back. 5 extra DADD issues + 20 conversion ops per warp.
+
+FP64-issue-floor arithmetic (2070S: 2 FP64 lanes/SM x 40 SM, warp-wide DADD = 16
+pipe-cycles; clocks 1.605/1.755 GHz), against s13's measured probe decomposition:
+
+  class             in      levels(avg)  FP64 floor us   measured tree us  ratio
+  3x3 dytopo        2.0M    4.2          588.8 / 538.5   603.6            1.03 / 1.12
+  3x1 doublet       1.25M   4.98         145.4 / 133.0   163.5            1.12 / 1.23
+  3x3 GLS PERM      750k    4.2          220.8 / 201.9   155.6 (*)        0.71 / 0.77
+
+(*) the GLS stub difference (prod - no-tree) underestimates: its no-tree floor is itself
+    12 % gather at 346 GB/s and the two stubs overlap differently; the 3x3 dytopo row
+    (the largest, cleanest class) is the decisive one.
+
+VERDICT: THROUGHPUT-BOUND on the FP64 pipe, at ~90-105 % of its own instruction count's
+floor (dytopo 3x3). The SHFL/FSEL/VOTE overhead is an order of magnitude below the DADD
+pipe cost (18 SHFL ~= 18-72 issue cycles vs 9 DADD x 16 = 144 pipe-cycles per level).
+Unrolling/ILP cannot help: the pipe is the wall, not the dependency chain.
+
+The lever is the ISSUE COUNT itself. A down-shuffle tree over 32 one-element lanes issues
+MN DADDs per level warp-wide, no matter how many lanes' results any consumer ever reads:
+for a 32-long segment the tree issues 45 warp-DADDs (3x3) where the information-theoretic
+minimum (31 lane-adds, 32 lanes per instruction) is 9. The re-summation that closes the
+gap: K elements per thread, in-thread serial adds first (all 32 lanes usefully active),
+then the shuffle tree over the 32 per-window partials:
+
+  issues per 32K elements = MN*(K-1) + MN*levels(partials)   vs   K * MN * 4.2
+
+  K=4: 3x3 44 % / 3x1 40 % of the current issue count  (tree 604 -> ~266 us at in=2.0M)
+  K=8: 3x3 34 % / 3x1 30 %                              (tree 604 -> ~205 us)
+
+Mechism selected: (b)+(a) of the brief's candidate list -- K-per-thread serial-first
+re-summation (K template constant), pairwise down-tree over partials with the same s17
+early exit. This is a rounding-level change (blocked serial-within-window association
+replaces pure balanced-pairwise), full verifier burden per the brief.
+
+Rejected alternatives, by the same arithmetic:
+  (c) two/four-wide ILP unrolling: the tree is not latency-bound (90-105 % of the pipe
+      floor) -- ILP buys nothing.
+  (d) skip the cross-warp phase for warp-local segments: already the shipped design
+      (direct store vs atomic); nothing to win.
+  plain register-local pairing (a): is K=2 (59-64 % of issues) -- strictly dominated by
+      K=4/K=8 at the same code complexity.
