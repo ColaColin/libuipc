@@ -95,7 +95,11 @@ namespace
     // instead of the K16 block assembly; UIPC_PDSB_TQL2=0 restores Eigen's
     // SelfAdjointEigenSolver inside the 9x9 (or 12x12) PSD projection.
     // All three off is byte-identical to the pre-round-7 kernel.
-    template <int Proj, int Solver>
+    // s08 (round 7): SymAsm selects the K16 assembly variant inside
+    // Proj == 1 (see make_spd.h): 2 = dead-triangle cut + mirrored
+    // back-assembly (default), 0 = the pre-s08 full-triangle assembly;
+    // UIPC_MAKE_SPD_BLOCKED_HALF=0 is the rollback.
+    template <int Proj, int Solver, int SymAsm = 2>
     __global__ void StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel(
         cuda_tool::BufferView<Vector4i>        stencils,
         cuda_tool::BufferView<Float>           bending_stiffnesses,
@@ -143,7 +147,7 @@ namespace
         SPDSB::ddEddx(H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, yield_stress);
         H12x12 *= Vdt2;
         if constexpr(Proj == 1)
-            make_spd_translation_free_4x3_blocked<Solver>(H12x12);
+            make_spd_translation_free_4x3_blocked<Solver, SymAsm>(H12x12);
         else if constexpr(Proj == 2)
             make_spd_translation_free_4x3<Solver>(H12x12);
         else
@@ -242,6 +246,7 @@ class StressPlasticDiscreteShellBending final : public FiniteElementExtraConstit
     bool m_reduced_spd  = true;
     bool m_blocked_proj = true;
     bool m_tql2         = true;
+    bool m_half_asm     = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -251,6 +256,8 @@ class StressPlasticDiscreteShellBending final : public FiniteElementExtraConstit
         m_blocked_proj = !(b && b[0] == '0');
         const char* t  = std::getenv("UIPC_PDSB_TQL2");
         m_tql2         = !(t && t[0] == '0');
+        const char* s  = std::getenv("UIPC_MAKE_SPD_BLOCKED_HALF");
+        m_half_asm     = !(s && s[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -453,12 +460,18 @@ class StressPlasticDiscreteShellBending final : public FiniteElementExtraConstit
 
         // s01 (round 7): the plain hinge's dispatch shape -- only the
         // instantiations the knobs can reach, each launched by name.
+        // s08: the blocked arm splits on the assembly variant (SymAsm).
         if(m_tql2)
         {
             if(!m_reduced_spd)
                 launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 1>);
             else if(m_blocked_proj)
-                launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>);
+            {
+                if(m_half_asm)
+                    launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1, 2>);
+                else
+                    launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1, 0>);
+            }
             else
                 launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<2, 1>);
         }
@@ -467,7 +480,12 @@ class StressPlasticDiscreteShellBending final : public FiniteElementExtraConstit
             if(!m_reduced_spd)
                 launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<0, 0>);
             else if(m_blocked_proj)
-                launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0>);
+            {
+                if(m_half_asm)
+                    launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0, 2>);
+                else
+                    launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0, 0>);
+            }
             else
                 launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<2, 0>);
         }

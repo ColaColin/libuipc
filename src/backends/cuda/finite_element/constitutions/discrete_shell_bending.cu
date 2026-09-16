@@ -75,7 +75,11 @@ namespace
     // algorithmic approximation, not a re-arrangement: same energy, same
     // gradient, different search direction. UIPC_DSB_GAUSS_NEWTON=0 restores
     // the exact-Hessian-plus-projection path.
-    template <int Proj, int Solver>
+    // s08 (round 7): SymAsm selects the K16 assembly variant inside
+    // Proj == 1 (see make_spd.h): 2 = dead-triangle cut + mirrored
+    // back-assembly (default), 0 = the pre-s08 full-triangle assembly;
+    // UIPC_MAKE_SPD_BLOCKED_HALF=0 is the rollback.
+    template <int Proj, int Solver, int SymAsm = 2>
     __global__ void DiscreteShellBending_do_compute_gradient_hessian_kernel(
         cuda_tool::BufferView<Vector4i>        stencils,
         cuda_tool::BufferView<Float>           bending_stiffnesses,
@@ -123,8 +127,7 @@ namespace
             // s02: Gauss-Newton. PSD by construction, no projection at all.
             // Vdt2 goes in as the rank-1 scale, so there is no separate
             // 144-multiply pass over the assembled matrix.
-            DSB::ddEddx_gauss_newton(
-                H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, Vdt2);
+            DSB::ddEddx_gauss_newton(H12x12, x0, x1, x2, x3, L0, h_bar, theta_bar, kappa, Vdt2);
         }
         else
         {
@@ -141,7 +144,7 @@ namespace
             // the 9x9 (or 12x12) PSD projection, 1 = the fixed-size
             // tridiagonal QL.
             if constexpr(Proj == 1)
-                make_spd_translation_free_4x3_blocked<Solver>(H12x12);
+                make_spd_translation_free_4x3_blocked<Solver, SymAsm>(H12x12);
             else if constexpr(Proj == 2)
                 make_spd_translation_free_4x3<Solver>(H12x12);
             else
@@ -202,6 +205,8 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
     // the exact Hessian followed by the s14/s19 PSD projection, and then the
     // three switches above select which projection.
     bool m_gauss_newton = true;
+    // s08 (round 7): the K16 assembly variant (helper-level shared switch).
+    bool m_half_asm = true;
 
     virtual void do_build(BuildInfo& info) override
     {
@@ -214,6 +219,8 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
         m_tql2         = !(t && t[0] == '0');
         const char* gn = std::getenv("UIPC_DSB_GAUSS_NEWTON");
         m_gauss_newton = !(gn && gn[0] == '0');
+        const char* sa = std::getenv("UIPC_MAKE_SPD_BLOCKED_HALF");
+        m_half_asm     = !(sa && sa[0] == '0');
     }
 
     virtual void do_init(FilteredInfo& info) override
@@ -377,23 +384,19 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
                 k,
                 [&](int grid, int block)
                 {
-                    k<<<grid, block, 0, nullptr>>>(
-                    stencils.view(),
-                    bending_stiffnesses.view(),
-                    theta_bars.view(),
-                    h_bars.view(),
-                    V_bars.view(),
-                    rest_lengths.view(),
-                    info.xs(),
-                    info.energies(),
-                    info.dt(),
-                    n);
+                    k<<<grid, block, 0, nullptr>>>(stencils.view(),
+                                                   bending_stiffnesses.view(),
+                                                   theta_bars.view(),
+                                                   h_bars.view(),
+                                                   V_bars.view(),
+                                                   rest_lengths.view(),
+                                                   info.xs(),
+                                                   info.energies(),
+                                                   info.dt(),
+                                                   n);
                 },
                 [&](cuda_tool::SpreadVerifier& v)
-                {
-                    v.add_buffer(info.energies());
-                });
-
+                { v.add_buffer(info.energies()); });
         }
     }
 
@@ -468,12 +471,18 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
             // s02: Solver is irrelevant here -- Proj = 3 runs no eigen-solve.
             launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<3, 1>);
         }
+        // s08: the blocked arm splits on the assembly variant (SymAsm).
         else if(m_tql2)
         {
             if(!m_reduced_spd)
                 launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<0, 1>);
             else if(m_blocked_proj)
-                launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1>);
+            {
+                if(m_half_asm)
+                    launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1, 2>);
+                else
+                    launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1, 0>);
+            }
             else
                 launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<2, 1>);
         }
@@ -482,7 +491,12 @@ class DiscreteShellBending final : public FiniteElementExtraConstitution
             if(!m_reduced_spd)
                 launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<0, 0>);
             else if(m_blocked_proj)
-                launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0>);
+            {
+                if(m_half_asm)
+                    launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0, 2>);
+                else
+                    launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<1, 0, 0>);
+            }
             else
                 launch(DiscreteShellBending_do_compute_gradient_hessian_kernel<2, 0>);
         }

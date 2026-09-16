@@ -1,0 +1,31 @@
+[   33.2s] warmup       old: 245.421 ms/frame (discarded)
+[   69.1s] warmup       new: 265.481 ms/frame (discarded)
+[  102.6s] rep 1      old: 246.800 ms/frame  Newton 570  PCG 119085
+[  133.7s] rep 1      new: 229.263 ms/frame  Newton 557  PCG 103305
+[  165.1s] rep 2      new: 231.315 ms/frame  Newton 576  PCG 102600
+[  200.3s] rep 2      old: 260.551 ms/frame  Newton 542  PCG 140330
+[  236.5s] rep 3      old: 268.071 ms/frame  Newton 583  PCG 139840
+[  271.1s] rep 3      new: 256.464 ms/frame  Newton 569  PCG 128560
+[  306.0s] rep 4      new: 258.317 ms/frame  Newton 548  PCG 138875
+[  340.8s] rep 4      old: 257.608 ms/frame  Newton 585  PCG 126865
+[  371.4s] rep 5      old: 224.672 ms/frame  Newton 552  PCG 99610
+[  403.9s] rep 5      new: 240.229 ms/frame  Newton 555  PCG 116830
+[  434.8s] rep 6      new: 227.095 ms/frame  Newton 540  PCG 105675
+[  466.9s] rep 6      old: 236.451 ms/frame  Newton 538  PCG 116025
+[  500.0s] rep 7      old: 245.366 ms/frame  Newton 569  PCG 116850
+[  531.3s] rep 7      new: 229.954 ms/frame  Newton 563  PCG 102495
+[  566.4s] rep 8      new: 260.210 ms/frame  Newton 600  PCG 128255
+[  598.6s] rep 8      old: 237.457 ms/frame  Newton 559  PCG 110355
+
+=== s08n8  crease-press  n=8 per arm ===
+       mean_ms: old   247.1220 [224.6721, 268.0705]   new   241.6056 [227.0945, 260.2096]     -2.23%  overlapping  t=+0.77 p=0.456
+     median_ms: old    83.6808 [69.3900, 119.4600]   new    81.7422 [74.1888, 91.5506]     -2.32%  overlapping
+ ms_per_newton: old    57.1415 [52.9119, 62.4938]   new    55.7508 [52.2064, 61.2796]     -2.43%  overlapping  t=+0.93 p=0.366
+    ms_per_pcg: old     0.2669 [0.2414, 0.2932]   new     0.2731 [0.2418, 0.2931]     +2.34%  overlapping  t=-0.72 p=0.482
+        newton: old   562.2500 [538.0000, 585.0000]   new   563.5000 [540.0000, 600.0000]     +0.22%  overlapping
+           pcg: old 121120.0000 [99610.0000, 140330.0000]   new 115824.3750 [102495.0000, 138875.0000]     -4.37%  overlapping
+   line_search: old   624.2500 [577.0000, 656.0000]   new   631.1250 [597.0000, 669.0000]     +1.10%  overlapping
+
+!! pcg moved 4.37% against a 2.23% wall change -- this is a trajectory shift, not throughput. The wall number is unreadable; report it as such.
+
+raw runs + summary: /workspace/output/round7/s08

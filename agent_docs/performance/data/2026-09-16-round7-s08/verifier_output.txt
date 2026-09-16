@@ -1,0 +1,14 @@
+== strain-plastic: 200000 hinges used ==
+  [bit-identity] cut-only vs old: 0 / 28800000 words differ (expect 0)
+  [bit-identity] new upper-triangle vs old: 0 / 18000000 words differ (expect 0)
+  [rounding] mirrored lower blocks relFro(new,old): med 4.171e-17 p999 1.298e-16 max 1.984e-16
+  [bound] old path own solver-swap relFro(QL,Eigen): med 9.877e-16 p999 4.591e-15 max 6.678e-15
+  [rounding] under Eigen solver relFro(newE,oldE): med 7.238e-17 p999 1.785e-16 max 2.813e-16
+  [projection] min eig(new) -3.116e-12 (rel -5.960e-16); null space max 4.516e-16
+== stress-plastic: 200000 hinges used ==
+  [bit-identity] cut-only vs old: 0 / 28800000 words differ (expect 0)
+  [bit-identity] new upper-triangle vs old: 0 / 18000000 words differ (expect 0)
+  [rounding] mirrored lower blocks relFro(new,old): med 4.024e-17 p999 1.236e-16 max 2.132e-16
+  [bound] old path own solver-swap relFro(QL,Eigen): med 1.109e-15 p999 4.822e-15 max 7.522e-15
+  [rounding] under Eigen solver relFro(newE,oldE): med 6.972e-17 p999 1.736e-16 max 2.376e-16
+  [projection] min eig(new) -1.113e-12 (rel -6.413e-16); null space max 4.373e-16
