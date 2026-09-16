@@ -6,6 +6,17 @@
 
 namespace uipc::backend::cuda
 {
+// R7 s17: the convergence doorbell the GPU writes into pinned host memory so
+// the block-replay loop can poll instead of doing a blocking D2H after every
+// graph replay. Both fields share one cacheline; `seq` is stored strictly
+// after `rz` (single-thread program order + PCIe posted-write order), so a
+// host that observes seq >= expected reads the matching rz.
+struct PcgPollWord
+{
+    Float              rz;   // the value fused_pcg_scalar read as rz_new
+    unsigned long long seq;  // doorbell: #publishes so far
+};
+
 // Fused PCG: keeps dot-product scalars (rz, pAp, rz_new) on device
 // to eliminate per-iteration host synchronizations.  The update kernels read
 // alpha = rz/pAp and beta = rz_new/rz directly from device memory.
@@ -67,9 +78,9 @@ class LinearFusedPCG : public IterativeSolver
     DeviceDenseVector p;
     DeviceDenseVector Ap;
 
-    cuda_tool::DeviceVar<Float>  d_rz;
-    cuda_tool::DeviceVar<Float>  d_pAp;
-    cuda_tool::DeviceVar<Float>  d_rz_new;
+    cuda_tool::DeviceVar<Float> d_rz;
+    cuda_tool::DeviceVar<Float> d_pAp;
+    cuda_tool::DeviceVar<Float> d_rz_new;
     // s11: beta = rz_new / rz, precomputed by the fused scalar kernel
     cuda_tool::DeviceVar<Float>  d_beta;
     cuda_tool::DeviceVar<IndexT> d_converged;
@@ -78,6 +89,26 @@ class LinearFusedPCG : public IterativeSolver
 
     // s13 probe accumulator: [0] = non-zero count, [1] = max |Ap| bit pattern
     cuda_tool::DeviceVector<unsigned long long> m_ap_zero_acc;
+
+    // R7 s17 (UIPC_PCG_POLL, default on): pinned zero-copy doorbell written by
+    // the graph's fused_pcg_scalar node; the host spins on `seq` instead of a
+    // blocking cudaMemcpy D2H after every block replay. m_poll_expected counts
+    // the iterations this instance has launched (device counter m_poll_seq
+    // counts the publishes executed); both are monotonic for the instance's
+    // lifetime, so no reset is needed between solves. Null when the poll is
+    // off or the allocation failed -- kernels then skip the publish.
+    void*                                    m_poll_host = nullptr;
+    void*                                    m_poll_dev  = nullptr;
+    cuda_tool::DeviceVar<unsigned long long> m_poll_seq{0ull};
+    unsigned long long                       m_poll_expected        = 0;
+    bool                                     m_poll_fallback_warned = false;
+    bool                                     m_poll_init_done       = false;
+
+    void init_poll();
+    // spin until the GPU publishes the launched iterations; returns rz_new.
+    // Falls back to the old blocking read (and warns once) if the doorbell
+    // shows no progress for 100 ms -- correctness never depends on the poll.
+    Float poll_rz_new();
 
     // R7: last-block ticket for the fused dot + scalar kernel; always 0
     // between launches (the last block resets it).
@@ -117,7 +148,7 @@ class LinearFusedPCG : public IterativeSolver
     SizeT                       m_graph_max_iter = 0;
     // round6 (s13): the SpMV+dot grid baked into the capture (blocks; 0 = the
     // capacity grid). Part of the key, so a matrix that outgrows it re-captures.
-    int                         m_graph_spmv_grid = -1;
+    int m_graph_spmv_grid = -1;
 
     // --- full-GPU while-loop graph (CUDA >= 12.4) ---
     cuda_tool::GraphWhile        m_while;
