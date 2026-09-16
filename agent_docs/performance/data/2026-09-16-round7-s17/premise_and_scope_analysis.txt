@@ -1,0 +1,13 @@
+== analyze_pcggap2 (readback count + recoverable bubble) ==
+window=13.88s busy=12.71s idle=1.17s pcg_readbacks=7336
+recoverable bubble (gap ends at next PCG kernel): n=7105 exits=231 total=111.2 ms med=14.69 us p90=15.39 us
+  split at sync-return: sync-return latency med=2.33 us (total 16.9 ms); post-resume host work med=12.34 us (total 94.3 ms)
+
+== scope old (UIPC_PCG_POLL=0) ==
+window=12.74s busy=11.64s idle=1.10s pcg_readbacks=7645
+recoverable bubble (gap ends at next PCG kernel): n=7397 exits=248 total=114.8 ms med=14.75 us p90=15.74 us
+  split at sync-return: sync-return latency med=2.33 us (total 17.6 ms); post-resume host work med=12.41 us (total 97.2 ms)
+
+== scope new (default) ==
+window=12.72s busy=11.75s idle=0.97s pcg_readbacks=0
+no recoverable bubbles; exits=0

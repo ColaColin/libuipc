@@ -12,6 +12,8 @@
 // never checked for spreading)
 #include <cuda_tool/spread_launch.h>
 #include <algorithm>
+#include <chrono>
+#include <cstring>
 #include <optional>
 namespace uipc::backend::cuda
 {
@@ -112,6 +114,15 @@ namespace
         // correct), 0 = **no fence at all** -- incorrect by the CUDA memory
         // model, and present only to price the fence. Never ship 0.
         int dot_fence = 1;
+        // R7 s17: the convergence check polls a pinned zero-copy doorbell
+        // (PcgPollWord) that the graph's scalar node writes, instead of a
+        // blocking cudaMemcpy D2H after every block replay. `poll=0` keeps
+        // the old blocking read of d_rz_new (behaviourally identical: the
+        // kernels then skip the publish entirely).
+        bool poll        = true;   // UIPC_PCG_POLL=0 -> blocking D2H read
+        bool poll_verify = false;  // UIPC_PCG_POLL_VERIFY=1 -> poll + read
+                                   // d_rz_new through the funnel and compare
+                                   // bits; probe only (pays both costs)
     };
     // PCG-stall diagnostic (2026-09-15): round 6 recorded a one-frame ~100x
     // PCG-iteration spike on stiff-gipc-case2 (~1 run in 48; frame solved to
@@ -192,7 +203,7 @@ namespace
                 e.fuse = !(s[0] == '0');
             if(const char* s = std::getenv("UIPC_PCG_BLOCK_DIM"))
             {
-                int b = std::atoi(s);
+                int b   = std::atoi(s);
                 e.block = (b >= 0 && b <= 1024 && (b % 32) == 0) ? b : 256;
             }
             if(const char* s = std::getenv("UIPC_PCG_FUSE_AP_ZERO"))
@@ -222,6 +233,10 @@ namespace
                 int v       = std::atoi(s);
                 e.dot_fence = (v >= 0 && v <= 2) ? v : 1;
             }
+            if(const char* s = std::getenv("UIPC_PCG_POLL"))
+                e.poll = !(s[0] == '0');
+            if(const char* s = std::getenv("UIPC_PCG_POLL_VERIFY"))
+                e.poll_verify = !(s[0] == '0');
             return e;
         }();
         return env;
@@ -263,25 +278,52 @@ namespace
         }
     }
 
+    // R7 s17: publish rz_new + the doorbell into the pinned host word. Called
+    // from the single thread of the <<<1,1>>> scalar node (or thread 0 of
+    // block 0 for the fold-1 publisher), exactly once per live iteration.
+    // Ordering argument for the missing fence: both fields sit in one
+    // cacheline and `seq` is stored strictly after `rz`; the two volatile
+    // stores keep program order at PTX level, PCIe posted writes from one
+    // requester complete in order, and x86 DMA writes are coherent -- so a
+    // host load that observes `seq` returns the `rz` stored before it.
+    // (Empirically guarded by UIPC_PCG_POLL_VERIFY, which bit-compares every
+    // polled value against a blocking read over a full run.)
+    __device__ __forceinline__ void pcg_poll_publish(PcgPollWord*        poll,
+                                                     unsigned long long* d_seq,
+                                                     Float               rz_new)
+    {
+        auto* w              = reinterpret_cast<volatile PcgPollWord*>(poll);
+        w->rz                = rz_new;
+        unsigned long long s = *d_seq + 1;
+        *d_seq               = s;
+        w->seq               = s;
+    }
+
     // R7: the scalar update that used to be a <<<1, 1>>> kernel of its own,
     // as a device function so that both paths compile from ONE source
     // expression: converged = |rz_new| <= rz_tol, beta = rz_new / rz
     // (pre-swap), the guarded rz <- rz_new, then the reset of the p^T A p
-    // accumulator for the next iteration's SpMV.
+    // accumulator for the next iteration's SpMV. `poll != nullptr` also
+    // publishes the doorbell (the fold-2 tail passes nullptr for its
+    // verify-shadow call so the shadow run does not double-publish).
     __device__ __forceinline__ void pcg_scalar_body(Float        rz_new,
                                                     Float*       d_rz,
                                                     Float*       d_beta,
                                                     IndexT*      d_converged,
                                                     const Float* d_rz_tol,
-                                                    Float*       d_pAp)
+                                                    Float*       d_pAp,
+                                                    PcgPollWord* poll = nullptr,
+                                                    unsigned long long* d_seq = nullptr)
     {
-        Float  rz   = *d_rz;
-        IndexT conv = abs(rz_new) <= *d_rz_tol ? 1 : 0;
+        Float  rz    = *d_rz;
+        IndexT conv  = abs(rz_new) <= *d_rz_tol ? 1 : 0;
         *d_converged = conv;
         *d_beta      = rz_new / rz;
         if(conv == 0)
             *d_rz = rz_new;
         *d_pAp = Float(0);
+        if(poll)
+            pcg_poll_publish(poll, d_seq, rz_new);
     }
 
     // R7: fused_dot_kernel with the scalar update appended to the LAST block
@@ -309,16 +351,18 @@ namespace
                                             cuda_tool::Dense<Float> d_result,
                                             int                     n,
                                             unsigned int*           d_ticket,
-                                            cuda_tool::Dense<Float>  d_rz,
-                                            cuda_tool::Dense<Float>  d_beta,
+                                            cuda_tool::Dense<Float> d_rz,
+                                            cuda_tool::Dense<Float> d_beta,
                                             cuda_tool::Dense<IndexT> d_converged,
                                             cuda_tool::CDense<Float> d_rz_tol,
                                             cuda_tool::Dense<Float>  d_pAp,
                                             bool                     verify,
                                             Float*                   v_rz,
                                             Float*                   v_beta,
-                                            IndexT*                  v_converged,
-                                            Float*                   v_pAp)
+                                            IndexT*             v_converged,
+                                            Float*              v_pAp,
+                                            PcgPollWord*        poll  = nullptr,
+                                            unsigned long long* d_seq = nullptr)
     {
         constexpr int block_dim = 256;
         constexpr int warp_size = 32;
@@ -373,7 +417,9 @@ namespace
                                     d_beta.data(),
                                     d_converged.data(),
                                     d_rz_tol.data(),
-                                    d_pAp.data());
+                                    d_pAp.data(),
+                                    poll,
+                                    d_seq);
                 }
             }
         }
@@ -428,19 +474,46 @@ namespace
     };
     PcgScalarVerifyReport g_pcg_scalar_report;
 
+    // R7 s17 probe: UIPC_PCG_POLL_VERIFY=1 bit-compares every polled rz_new
+    // against a blocking funnel read of d_rz_new taken right after the poll
+    // (the block has then fully executed; nothing writes d_rz_new between the
+    // scalar node and the block end). Probe only -- it pays both costs.
+    struct PcgPollVerifyReport
+    {
+        unsigned long long polls = 0, mismatch = 0, fallbacks = 0;
+        ~PcgPollVerifyReport()
+        {
+            if(polls)
+                std::fprintf(stderr,
+                             "[PcgPollVerify] %llu polled values compared, %llu mismatching, %llu poll fallbacks\n",
+                             polls,
+                             mismatch,
+                             fallbacks);
+        }
+    };
+    PcgPollVerifyReport g_pcg_poll_report;
+
+    // spin-wait politeness: keep the SMT sibling fed while doorbell-polling
+    inline void cpu_relax()
+    {
+#if defined(__x86_64__) || defined(__i386__)
+        __builtin_ia32_pause();
+#endif
+    }
+
     __global__ void fused_update_xr_kernel(cuda_tool::CDense<Float> d_rz,
                                            cuda_tool::CDense<Float> d_pAp,
                                            cuda_tool::CDense<IndexT> d_converged,
                                            cuda_tool::DenseVectorView<Float>  x,
                                            cuda_tool::CDenseVectorView<Float> p,
                                            cuda_tool::DenseVectorView<Float>  r,
-                                           cuda_tool::DenseVectorView<Float>  Ap,
+                                           cuda_tool::DenseVectorView<Float> Ap,
                                            cuda_tool::Dense<Float> d_rz_new_reset,
-                                           bool                    reset_rz_new,
-                                           bool                    zero_Ap,
+                                           bool reset_rz_new,
+                                           bool zero_Ap,
                                            cuda_tool::Dense<Float> d_rz_prev_out,
-                                           bool                    save_rz_prev,
-                                           int                     n)
+                                           bool save_rz_prev,
+                                           int  n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         // s11: zero the r^T z accumulator for this iteration's fused_dot here
@@ -498,8 +571,8 @@ namespace
                                           cuda_tool::DenseVectorView<Float>  p,
                                           cuda_tool::CDenseVectorView<Float> z,
                                           cuda_tool::DenseVectorView<Float>  Ap,
-                                          bool                               zero_Ap,
-                                          int                                n)
+                                          bool zero_Ap,
+                                          int  n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -517,13 +590,13 @@ namespace
 
     // s11: p = z + beta * p with beta precomputed by fused_pcg_scalar_kernel.
     // Same value, same expression order as the kernel above.
-    __global__ void fused_update_p_beta_kernel(cuda_tool::CDense<Float>  d_beta,
+    __global__ void fused_update_p_beta_kernel(cuda_tool::CDense<Float> d_beta,
                                                cuda_tool::CDense<IndexT> d_converged,
-                                               cuda_tool::DenseVectorView<Float>  p,
+                                               cuda_tool::DenseVectorView<Float> p,
                                                cuda_tool::CDenseVectorView<Float> z,
-                                               cuda_tool::DenseVectorView<Float>  Ap,
-                                               bool                               zero_Ap,
-                                               int                                n)
+                                               cuda_tool::DenseVectorView<Float> Ap,
+                                               bool zero_Ap,
+                                               int  n)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i >= n)
@@ -553,14 +626,16 @@ namespace
     __global__ void fused_update_p_scalar_kernel(cuda_tool::CDense<Float> d_rz_new,
                                                  cuda_tool::CDense<Float> d_rz_prev,
                                                  cuda_tool::CDense<Float> d_rz_tol,
-                                                 cuda_tool::Dense<Float>  d_rz,
+                                                 cuda_tool::Dense<Float> d_rz,
                                                  cuda_tool::Dense<IndexT> d_converged,
-                                                 cuda_tool::Dense<Float>  d_pAp,
-                                                 cuda_tool::DenseVectorView<Float>  p,
+                                                 cuda_tool::Dense<Float> d_pAp,
+                                                 cuda_tool::DenseVectorView<Float> p,
                                                  cuda_tool::CDenseVectorView<Float> z,
-                                                 cuda_tool::DenseVectorView<Float>  Ap,
-                                                 bool                               zero_Ap,
-                                                 int                                n)
+                                                 cuda_tool::DenseVectorView<Float> Ap,
+                                                 bool         zero_Ap,
+                                                 int          n,
+                                                 PcgPollWord* poll = nullptr,
+                                                 unsigned long long* d_seq = nullptr)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         // All three scalars are loaded unconditionally and up front: they are
@@ -579,6 +654,8 @@ namespace
             if(conv == 0)
                 *d_rz = rz_new;
             *d_pAp = Float(0);
+            if(poll)
+                pcg_poll_publish(poll, d_seq, rz_new);
         }
         if(i >= n)
             return;
@@ -601,7 +678,9 @@ namespace
                                             cuda_tool::Dense<Float>  d_beta,
                                             cuda_tool::Dense<IndexT> d_converged,
                                             cuda_tool::CDense<Float> d_rz_tol,
-                                            cuda_tool::Dense<Float>  d_pAp)
+                                            cuda_tool::Dense<Float>  d_pAp,
+                                            PcgPollWord*        poll  = nullptr,
+                                            unsigned long long* d_seq = nullptr)
     {
         // R7: the body now lives in pcg_scalar_body so that this node and the
         // fused dot tail compile from one source expression.
@@ -610,7 +689,9 @@ namespace
                         d_beta.data(),
                         d_converged.data(),
                         d_rz_tol.data(),
-                        d_pAp.data());
+                        d_pAp.data(),
+                        poll,
+                        d_seq);
     }
 
     __global__ void fused_swap_rz_kernel(cuda_tool::CDense<Float>  d_rz_new,
@@ -790,7 +871,8 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
     Ap.resize(N);
 
     // s13 probe scratch (allocated outside any graph capture)
-    if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify && m_ap_zero_acc.size() < 2)
+    if(pcg_small_env().ap_zero && pcg_small_env().ap_zero_verify
+       && m_ap_zero_acc.size() < 2)
     {
         m_ap_zero_acc.resize(2);
         CUDA_TOOL_CHECK(cudaMemset(m_ap_zero_acc.data(), 0, 2 * sizeof(unsigned long long)));
@@ -806,8 +888,19 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
         if(pcg_small_env().fuse_dot_verify && m_scalar_cmp_acc.size() < 2)
         {
             m_scalar_cmp_acc.resize(2);
-            CUDA_TOOL_CHECK(cudaMemset(m_scalar_cmp_acc.data(), 0, 2 * sizeof(unsigned long long)));
+            CUDA_TOOL_CHECK(
+                cudaMemset(m_scalar_cmp_acc.data(), 0, 2 * sizeof(unsigned long long)));
         }
+    }
+
+    // R7 s17: the pinned doorbell must exist before any graph capture (its
+    // device pointer is baked into the captured kernels). Lazy, attempted
+    // once per instance; a failure just keeps the blocking read.
+    if(pcg_small_env().poll && pcg_small_env().fuse
+       && !pcg_small_env().fold_verify && !m_poll_init_done)
+    {
+        m_poll_init_done = true;
+        init_poll();
     }
 
     auto iter = fused_pcg(x, b, max_iter_ratio * b.size());
@@ -819,10 +912,9 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
     {
         if((long long)iter > t)
         {
-            logger::warn(
-                "LinearFusedPCG: solve took {} iterations (> {}); dumping A and b",
-                iter,
-                t);
+            logger::warn("LinearFusedPCG: solve took {} iterations (> {}); dumping A and b",
+                         iter,
+                         t);
             dump_A_b();
         }
     }
@@ -842,6 +934,80 @@ void LinearFusedPCG::do_solve(GlobalLinearSystem::SolvingInfo& info)
     }
 
     info.iter_count(iter);
+}
+
+// R7 s17: allocate the pinned zero-copy doorbell (once per instance; the
+// device pointer is baked into the captured graph, so it must never move).
+// On failure the solver keeps the old blocking convergence read. The 64
+// bytes are intentionally never freed: instances die at world teardown,
+// where cudaFreeHost can race CUDA-context destruction (the same reasoning
+// as host_sync.h's staging buffer).
+void LinearFusedPCG::init_poll()
+{
+    void* host = nullptr;
+    if(cudaHostAlloc(&host, 64, cudaHostAllocMapped) != cudaSuccess)
+    {
+        cudaGetLastError();
+        logger::warn("LinearFusedPCG: pinned poll word allocation failed; keeping the blocking convergence read");
+        return;
+    }
+    std::memset(host, 0, 64);
+    void* dev = host;  // UVA: same pointer on the device
+    if(cudaHostGetDevicePointer(&dev, host, 0) != cudaSuccess)
+    {
+        cudaGetLastError();
+        cudaFreeHost(host);
+        logger::warn("LinearFusedPCG: cudaHostGetDevicePointer failed; keeping the blocking convergence read");
+        return;
+    }
+    m_poll_host = host;
+    m_poll_dev  = dev;
+}
+
+// R7 s17: spin until the GPU has published every launched iteration, then
+// read the residual from the doorbell. Replaces cudaMemcpyAsync +
+// cudaStreamSynchronize (~6 us of host round trip after the GPU already
+// finished, plus the sync-return latency) with a cacheline poll that also
+// returns ~one kernel EARLY: the doorbell is written by the scalar node,
+// one node before the block's last kernel, so the predicate and the next
+// graph launch overlap the block's tail on the GPU.
+// Safety: if the doorbell shows no progress for 100 ms (publish failed, GPU
+// faulted, or a platform visibility quirk), fall back to the blocking read
+// and warn once -- correctness never depends on the poll.
+Float LinearFusedPCG::poll_rz_new()
+{
+    auto* w = reinterpret_cast<volatile const PcgPollWord*>(m_poll_host);
+    auto  last_progress      = std::chrono::steady_clock::now();
+    unsigned long long last  = w->seq;
+    unsigned long long spins = 0;
+    while(w->seq < m_poll_expected)
+    {
+        cpu_relax();
+        if((++spins & 0xFFFFull) == 0)
+        {
+            auto now = std::chrono::steady_clock::now();
+            if(w->seq != last)
+            {
+                last          = w->seq;
+                last_progress = now;
+            }
+            else if(now - last_progress > std::chrono::milliseconds(100))
+            {
+                if(!m_poll_fallback_warned)
+                {
+                    m_poll_fallback_warned = true;
+                    logger::warn(
+                        "LinearFusedPCG: poll doorbell frozen (seq {} < {}); "
+                        "falling back to the blocking convergence read for the rest of this run",
+                        last,
+                        m_poll_expected);
+                }
+                ++g_pcg_poll_report.fallbacks;
+                return d_rz_new;
+            }
+        }
+    }
+    return w->rz;
 }
 
 void LinearFusedPCG::check_init_rz_nan_inf(Float rz)
@@ -893,7 +1059,7 @@ void LinearFusedPCG::check_iter_rz_nan_inf(Float rz, SizeT k)
 void fused_dot(cuda_tool::CDenseVectorView<Float> x,
                cuda_tool::CDenseVectorView<Float> y,
                cuda_tool::VarView<Float>          d_result,
-               cudaStream_t                       stream = nullptr,
+               cudaStream_t                       stream      = nullptr,
                bool                               zero_result = true)
 {
     // s11: with the scalar fusion on, the accumulator is already zeroed by the
@@ -929,6 +1095,8 @@ void fused_dot_scalar(cuda_tool::CDenseVectorView<Float> x,
                       Float*                             v_beta,
                       IndexT*                            v_converged,
                       Float*                             v_pAp,
+                      PcgPollWord*                       poll   = nullptr,
+                      unsigned long long*                d_seq  = nullptr,
                       cudaStream_t                       stream = nullptr)
 {
     constexpr int block_dim   = 256;
@@ -940,25 +1108,64 @@ void fused_dot_scalar(cuda_tool::CDenseVectorView<Float> x,
         switch(pcg_small_env().dot_fence)
         {
             case 0:
-                fused_dot_scalar_kernel<0><<<block_count, block_dim, 0, stream>>>(
-                    x.cviewer(), y.cviewer(), d_result.viewer(), n, d_ticket,
-                    d_rz.viewer(), d_beta.viewer(), d_converged.viewer(),
-                    d_rz_tol.cviewer(), d_pAp.viewer(),
-                    verify, v_rz, v_beta, v_converged, v_pAp);
+                fused_dot_scalar_kernel<0>
+                    <<<block_count, block_dim, 0, stream>>>(x.cviewer(),
+                                                            y.cviewer(),
+                                                            d_result.viewer(),
+                                                            n,
+                                                            d_ticket,
+                                                            d_rz.viewer(),
+                                                            d_beta.viewer(),
+                                                            d_converged.viewer(),
+                                                            d_rz_tol.cviewer(),
+                                                            d_pAp.viewer(),
+                                                            verify,
+                                                            v_rz,
+                                                            v_beta,
+                                                            v_converged,
+                                                            v_pAp,
+                                                            poll,
+                                                            d_seq);
                 break;
             case 2:
-                fused_dot_scalar_kernel<2><<<block_count, block_dim, 0, stream>>>(
-                    x.cviewer(), y.cviewer(), d_result.viewer(), n, d_ticket,
-                    d_rz.viewer(), d_beta.viewer(), d_converged.viewer(),
-                    d_rz_tol.cviewer(), d_pAp.viewer(),
-                    verify, v_rz, v_beta, v_converged, v_pAp);
+                fused_dot_scalar_kernel<2>
+                    <<<block_count, block_dim, 0, stream>>>(x.cviewer(),
+                                                            y.cviewer(),
+                                                            d_result.viewer(),
+                                                            n,
+                                                            d_ticket,
+                                                            d_rz.viewer(),
+                                                            d_beta.viewer(),
+                                                            d_converged.viewer(),
+                                                            d_rz_tol.cviewer(),
+                                                            d_pAp.viewer(),
+                                                            verify,
+                                                            v_rz,
+                                                            v_beta,
+                                                            v_converged,
+                                                            v_pAp,
+                                                            poll,
+                                                            d_seq);
                 break;
             default:
-                fused_dot_scalar_kernel<1><<<block_count, block_dim, 0, stream>>>(
-                    x.cviewer(), y.cviewer(), d_result.viewer(), n, d_ticket,
-                    d_rz.viewer(), d_beta.viewer(), d_converged.viewer(),
-                    d_rz_tol.cviewer(), d_pAp.viewer(),
-                    verify, v_rz, v_beta, v_converged, v_pAp);
+                fused_dot_scalar_kernel<1>
+                    <<<block_count, block_dim, 0, stream>>>(x.cviewer(),
+                                                            y.cviewer(),
+                                                            d_result.viewer(),
+                                                            n,
+                                                            d_ticket,
+                                                            d_rz.viewer(),
+                                                            d_beta.viewer(),
+                                                            d_converged.viewer(),
+                                                            d_rz_tol.cviewer(),
+                                                            d_pAp.viewer(),
+                                                            verify,
+                                                            v_rz,
+                                                            v_beta,
+                                                            v_converged,
+                                                            v_pAp,
+                                                            poll,
+                                                            d_seq);
                 break;
         }
     }
@@ -1047,13 +1254,8 @@ void fused_update_p_beta(cuda_tool::CVarView<Float>         d_beta,
         if(bd <= 0)
             bd = cuda_tool::best_block_dim(fused_update_p_beta_kernel);
         int gd = (n + bd - 1) / bd;
-        fused_update_p_beta_kernel<<<gd, bd, 0, stream>>>(d_beta.cviewer(),
-                                                          d_converged.cviewer(),
-                                                          p.viewer(),
-                                                          z.cviewer(),
-                                                          Ap.viewer(),
-                                                          zero_Ap,
-                                                          n);
+        fused_update_p_beta_kernel<<<gd, bd, 0, stream>>>(
+            d_beta.cviewer(), d_converged.cviewer(), p.viewer(), z.cviewer(), Ap.viewer(), zero_Ap, n);
     }
 }
 
@@ -1068,6 +1270,8 @@ void fused_update_p_scalar(cuda_tool::CVarView<Float>         d_rz_new,
                            cuda_tool::CDenseVectorView<Float> z,
                            cuda_tool::DenseVectorView<Float>  Ap,
                            bool                               zero_Ap,
+                           PcgPollWord*                       poll   = nullptr,
+                           unsigned long long*                d_seq  = nullptr,
                            cudaStream_t                       stream = nullptr)
 {
     int n = p.size();
@@ -1087,25 +1291,31 @@ void fused_update_p_scalar(cuda_tool::CVarView<Float>         d_rz_new,
                                                             z.cviewer(),
                                                             Ap.viewer(),
                                                             zero_Ap,
-                                                            n);
+                                                            n,
+                                                            poll,
+                                                            d_seq);
     }
 }
 
 // s11: converged + beta + rz swap + d_pAp reset in one single-thread node.
 void fused_pcg_scalar(cuda_tool::CVarView<Float> d_rz_new,
-                      cuda_tool::VarView<Float>   d_rz,
-                      cuda_tool::VarView<Float>   d_beta,
-                      cuda_tool::VarView<IndexT>  d_converged,
-                      cuda_tool::CVarView<Float>  d_rz_tol,
-                      cuda_tool::VarView<Float>   d_pAp,
-                      cudaStream_t                stream = nullptr)
+                      cuda_tool::VarView<Float>  d_rz,
+                      cuda_tool::VarView<Float>  d_beta,
+                      cuda_tool::VarView<IndexT> d_converged,
+                      cuda_tool::CVarView<Float> d_rz_tol,
+                      cuda_tool::VarView<Float>  d_pAp,
+                      PcgPollWord*               poll   = nullptr,
+                      unsigned long long*        d_seq  = nullptr,
+                      cudaStream_t               stream = nullptr)
 {
     fused_pcg_scalar_kernel<<<1, 1, 0, stream>>>(d_rz_new.cviewer(),
                                                  d_rz.viewer(),
                                                  d_beta.viewer(),
                                                  d_converged.viewer(),
                                                  d_rz_tol.cviewer(),
-                                                 d_pAp.viewer());
+                                                 d_pAp.viewer(),
+                                                 poll,
+                                                 d_seq);
 }
 
 // d_rz = d_rz_new when not converged (single-thread write).
@@ -1164,6 +1374,11 @@ void LinearFusedPCG::report_ap_zero()
 void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStream_t stream, bool timed)
 {
     const bool fuse = pcg_small_env().fuse;
+    // R7 s17: the doorbell pointers, baked into the captured kernels exactly
+    // like every other kernel argument (they never move after init_poll).
+    // Null when the poll is off -- the kernels then skip the publish.
+    PcgPollWord*        poll     = static_cast<PcgPollWord*>(m_poll_dev);
+    unsigned long long* poll_seq = m_poll_seq.data();
     // R7 (round 5): 0 = the pre-R7 chain and THE SHIPPED DEFAULT; 1 = folded into
     // update_p; 2 = folded into the dot tail. The fold was REJECTED -- 3 runs read
     // -1.41 % disjoint, 5 runs read -0.83 % overlapping (t = 1.39), the scope gate put
@@ -1249,6 +1464,8 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                          m_v_beta.data(),
                          m_v_converged.data(),
                          m_v_pAp.data(),
+                         poll,
+                         poll_seq,
                          stream);
     }
     else
@@ -1266,6 +1483,8 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                              d_converged.view(),
                              d_rz_tol.view(),
                              d_pAp.view(),
+                             poll,
+                             poll_seq,
                              stream);
         if(dot_verify)
             pcg_scalar_cmp_kernel<<<1, 1, 0, stream>>>(d_rz.data(),
@@ -1292,6 +1511,8 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                                       z.cview(),
                                       Ap.view(),
                                       zero_Ap,
+                                      poll,
+                                      poll_seq,
                                       stream);
             }
             else
@@ -1313,14 +1534,11 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                                  d_converged.view(),
                                  d_rz_tol.view(),
                                  d_pAp.view(),
+                                 nullptr,  // reference run: no doorbell publish
+                                 nullptr,
                                  stream);
-                fused_update_p_beta(d_beta.view(),
-                                    d_converged.view(),
-                                    p.view(),
-                                    z.cview(),
-                                    Ap.view(),
-                                    zero_Ap,
-                                    stream);
+                fused_update_p_beta(
+                    d_beta.view(), d_converged.view(), p.view(), z.cview(), Ap.view(), zero_Ap, stream);
 
                 sv.begin();
                 sv.add_buffer(p.buffer_view());
@@ -1341,6 +1559,8 @@ void LinearFusedPCG::run_iteration(cuda_tool::DenseVectorView<Float> x, cudaStre
                                       z.cview(),
                                       Ap.view(),
                                       zero_Ap,
+                                      poll,  // null: fold_verify disables the poll
+                                      poll_seq,
                                       stream);
                 sv.compare();
             }
@@ -1426,9 +1646,8 @@ void LinearFusedPCG::rebuild_while(cuda_tool::DenseVectorView<Float>  x,
         // setup chain: reset -> r=b -> precond -> p=z -> rz = r^T z -> rz_tol
         [&](cudaStream_t stream, cudaGraphConditionalHandle handle)
         {
-            pcg_while_reset_kernel<<<1, 1, 0, stream>>>(d_converged.viewer(),
-                                                        d_iter.viewer(),
-                                                        d_pAp.viewer());
+            pcg_while_reset_kernel<<<1, 1, 0, stream>>>(
+                d_converged.viewer(), d_iter.viewer(), d_pAp.viewer());
             cuda_tool::BufferLaunch(stream).copy(r.buffer_view(), b.buffer_view());
             if(pcg_small_env().ap_zero)
             {
@@ -1464,19 +1683,19 @@ void LinearFusedPCG::rebuild_while(cuda_tool::DenseVectorView<Float>  x,
         return;
     }
 
-    auto A           = matrix_data_ptrs();
-    m_while_ptrs     = {x.data(),
-                        b.data(),
-                        r.buffer_view().data(),
-                        z.buffer_view().data(),
-                        p.buffer_view().data(),
-                        Ap.buffer_view().data(),
-                        A[0],
-                        A[1],
-                        A[2],
-                        d_rz.data(),
-                        d_rz_new.data(),
-                        d_pAp.data()};
+    auto A            = matrix_data_ptrs();
+    m_while_ptrs      = {x.data(),
+                         b.data(),
+                         r.buffer_view().data(),
+                         z.buffer_view().data(),
+                         p.buffer_view().data(),
+                         Ap.buffer_view().data(),
+                         A[0],
+                         A[1],
+                         A[2],
+                         d_rz.data(),
+                         d_rz_new.data(),
+                         d_pAp.data()};
     m_while_n         = x.size();
     m_while_max_iter  = max_iter;
     m_while_spmv_grid = spmv_grid_key();
@@ -1541,19 +1760,19 @@ void LinearFusedPCG::rebuild_graph(cuda_tool::DenseVectorView<Float>  x,
                  interval,
                  x.size());
 
-    auto A           = matrix_data_ptrs();
-    m_graph_ptrs     = {x.data(),
-                        b.data(),
-                        r.buffer_view().data(),
-                        z.buffer_view().data(),
-                        p.buffer_view().data(),
-                        Ap.buffer_view().data(),
-                        A[0],
-                        A[1],
-                        A[2],
-                        d_rz.data(),
-                        d_rz_new.data(),
-                        d_pAp.data()};
+    auto A            = matrix_data_ptrs();
+    m_graph_ptrs      = {x.data(),
+                         b.data(),
+                         r.buffer_view().data(),
+                         z.buffer_view().data(),
+                         p.buffer_view().data(),
+                         Ap.buffer_view().data(),
+                         A[0],
+                         A[1],
+                         A[2],
+                         d_rz.data(),
+                         d_rz_new.data(),
+                         d_pAp.data()};
     m_graph_n         = x.size();
     m_graph_interval  = interval;
     m_graph_max_iter  = max_iter;
@@ -1630,12 +1849,12 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
             // finite r + non-finite z: preconditioner failure -> bypass.
             // A non-finite r (assembly NaN) keeps the abort below.
             Float norm_r = ctx().norm(r.cview());
-            fallback = std::isfinite(norm_r);
+            fallback     = std::isfinite(norm_r);
         }
         if(!fallback && pcg_psd_fallback_test() > 0)
         {
             static SizeT forced_count = 0;
-            fallback   = (forced_count++ % (SizeT)pcg_psd_fallback_test()) == 0;
+            fallback = (forced_count++ % (SizeT)pcg_psd_fallback_test()) == 0;
         }
         if(fallback)
         {
@@ -1730,8 +1949,31 @@ SizeT LinearFusedPCG::fused_pcg(cuda_tool::DenseVectorView<Float>  x,
         }
         iter_done += block;
 
-        // host convergence check, same cadence as the plain loop
-        Float rz_new_host = d_rz_new;
+        // host convergence check, same cadence as the plain loop.
+        // R7 s17: poll the pinned doorbell instead of a blocking D2H when the
+        // publish is wired in (every iteration of this loop, graph or plain,
+        // ran exactly one live scalar node). The polled bits are the same the
+        // blocking read would return -- the doorbell copy is written by the
+        // same thread from the same register -- so the exit iteration cannot
+        // move. `poll_verify` re-reads d_rz_new through the funnel and
+        // bit-compares (probe only).
+        Float rz_new_host;
+        if(m_poll_dev)
+        {
+            m_poll_expected += block;
+            rz_new_host = poll_rz_new();
+            if(pcg_small_env().poll_verify) [[unlikely]]
+            {
+                Float via_d2h = d_rz_new;
+                ++g_pcg_poll_report.polls;
+                if(std::memcmp(&via_d2h, &rz_new_host, sizeof(Float)) != 0)
+                    ++g_pcg_poll_report.mismatch;
+            }
+        }
+        else
+        {
+            rz_new_host = d_rz_new;
+        }
         if(FILE* f = pcg_trace_file()) [[unlikely]]
             std::fprintf(f,
                          "C frame=%llu newton=%llu iter=%llu rz=%.17e\n",
