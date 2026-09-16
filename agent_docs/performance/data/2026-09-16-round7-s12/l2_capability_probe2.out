@@ -1,0 +1,10 @@
+cc=7.5 l2=4194304 maxPersisting=0 maxWindow=0
+
+stream window (persisting, 1MB, real ptr)               -> invalid argument
+stream window (normal, 1MB, real ptr)                   -> invalid argument
+stream window (persisting, 4KB, real ptr)               -> invalid argument
+
+captured 0 node(s)
+graphKernelNodeSetAttribute(window)                     -> invalid argument
+graphKernelNodeGetAttribute(window)                     -> invalid argument (base=(nil) bytes=0)
+deviceSetLimit(persisting 1MB)                          -> limit is not supported on this architecture

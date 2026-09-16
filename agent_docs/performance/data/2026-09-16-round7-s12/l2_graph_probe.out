@@ -1,0 +1,10 @@
+warmup launch                                              -> no error
+warmup sync                                                -> no error
+begin capture                                              -> no error
+launch inside capture                                      -> no error
+end capture                                                -> no error
+graphGetNodes                                              -> no error
+captured 1 node(s)
+graphKernelNodeSetAttribute(window, 1MB)                   -> invalid argument
+graphKernelNodeSetAttribute(window, 4KB)                   -> invalid argument
+graphKernelNodeGetAttribute(window)                        -> no error
