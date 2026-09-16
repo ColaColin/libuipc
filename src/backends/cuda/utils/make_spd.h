@@ -116,6 +116,52 @@ inline UIPC_GENERIC void make_spd_translation_free_4x3_blocked(Matrix12x12& H)
         }
 }
 
+// perf/round7 (s07): the same projection for a THREE-vertex element Hessian
+// (9x9) that annihilates rigid translations, e.g. a triangle membrane
+// (NeoHookeanShell2D) whose energy depends on the vertices only through edge
+// differences. The non-trivial part of H lives in the 6-dim orthogonal
+// complement of the translations (Helmert basis of R^3 (x) I_3), so the
+// eigenproblem shrinks 9x9 -> 6x6 and the eigenvalues of the restriction are
+// exactly the non-zero eigenvalues of H. Same math up to rounding as
+// make_spd<9>, assembled from 3x3 blocks with the constant Helmert weights
+// (the K16 construction, one vertex fewer).
+template <int Solver = 0>
+inline UIPC_GENERIC void make_spd_translation_free_3x3_blocked(Matrix9x9& H)
+{
+    constexpr Float r2      = 0.70710678118654752440;
+    constexpr Float r6      = 0.40824829046386301637;
+    constexpr Float h[2][3] = {{r2, -r2, 0.0}, {r6, r6, -2.0 * r6}};
+    constexpr int   nz[2]   = {2, 3};  // non-zero weights of row j: a < nz[j]
+    Eigen::Matrix<Float, 6, 6> Hr;
+    for(int j = 0; j < 2; ++j)
+        for(int k = 0; k < 2; ++k)
+        {
+            Matrix3x3 B = Matrix3x3::Zero();
+            for(int a = 0; a < nz[j]; ++a)
+                for(int b = 0; b < nz[k]; ++b)
+                    B += (h[j][a] * h[k][b]) * H.template block<3, 3>(3 * a, 3 * b);
+            Hr.template block<3, 3>(3 * j, 3 * k) = B;
+        }
+    make_spd<6, Solver>(Hr);
+    for(int a = 0; a < 3; ++a)
+        for(int b = 0; b < 3; ++b)
+        {
+            Matrix3x3 B = Matrix3x3::Zero();
+            for(int j = 0; j < 2; ++j)
+            {
+                if(a >= nz[j])
+                    continue;
+                for(int k = 0; k < 2; ++k)
+                {
+                    if(b >= nz[k])
+                        continue;
+                    B += (h[j][a] * h[k][b]) * Hr.template block<3, 3>(3 * j, 3 * k);
+                }
+            }
+            H.template block<3, 3>(3 * a, 3 * b) = B;
+        }
+}
+
 template <int Solver = 0>
 inline UIPC_GENERIC void make_spd_translation_free_4x3(Matrix12x12& H)
 {
@@ -133,6 +179,25 @@ inline UIPC_GENERIC void make_spd_translation_free_4x3(Matrix12x12& H)
                 Q(3 * a + k, 3 * j + k) = h[j][a];
     Eigen::Matrix<Float, 9, 9> Hr = Q.transpose() * H * Q;
     make_spd<9, Solver>(Hr);
+    H = Q * Hr * Q.transpose();
+}
+
+// perf/round7 (s07): the dense-basis (K7-style) counterpart of the blocked
+// 3-vertex projection above, for A/B of the block assembly.
+template <int Solver = 0>
+inline UIPC_GENERIC void make_spd_translation_free_3x3(Matrix9x9& H)
+{
+    // Helmert rows: orthonormal, each orthogonal to (1,1,1)
+    constexpr Float            r2      = 0.70710678118654752440;  // 1/sqrt(2)
+    constexpr Float            r6      = 0.40824829046386301637;  // 1/sqrt(6)
+    constexpr Float            h[2][3] = {{r2, -r2, 0.0}, {r6, r6, -2.0 * r6}};
+    Eigen::Matrix<Float, 9, 6> Q       = Eigen::Matrix<Float, 9, 6>::Zero();
+    for(int j = 0; j < 2; ++j)
+        for(int a = 0; a < 3; ++a)
+            for(int k = 0; k < 3; ++k)
+                Q(3 * a + k, 3 * j + k) = h[j][a];
+    Eigen::Matrix<Float, 6, 6> Hr = Q.transpose() * H * Q;
+    make_spd<6, Solver>(Hr);
     H = Q * Hr * Q.transpose();
 }
 }  // namespace uipc::backend::cuda

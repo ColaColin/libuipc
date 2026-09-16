@@ -1,0 +1,52 @@
+== arm old ==
+  verify_all_finite: True
+  verify_abs_x_max: 0.3468
+  verify_x_limit: 0.38
+  verify_abs_z_max: 0.4015
+  verify_z_limit: 0.41
+  verify_area_ratio_min: 0.217
+  verify_area_ratio_max: 16.97
+  verify_tri_height_below_relaxed_sheet_frames: 0
+  verify_max_speed: 7.302
+  verify_dahl_active_frac_after_press1: 0.9999
+  verify_dahl_active_frac_final: 0.9998
+  verify_dahl_mean_absF_over_M_final: 0.07047
+  verify_dahl_crease_absF_over_M_final: 0.06169
+  verify_strain_yield_frac_final: 0.001262
+  verify_stress_yield_frac_final: 0.03345
+  verify_plastic_mean_abs_theta_bar_final: 0.0001522
+  verify_sheet_crease_defl_final_mm: [38.627,40.592,41.238,45.497,45.370,48.535,36.040]
+  verify_newton_total: 564
+  verify_pcg_total: 105485
+  verify_not_converged_frames: 0
+  verify_hit_newton_limit_frames: 0
+  verify_hit_ls_limit_frames: 0
+  checks: {'finite': True, 'no_inversion_or_collapse': True, 'tri_height_no_sustained_collapse': True, 'bounded_speed': True, 'contained_x': True, 'contained_z': True, 'above_ground': True, 'no_newton_limit': True, 'no_newton_divergence': True, 'all_converged': True, 'dahl_state_evolved': True, 'plastic_yielded': True, 'residual_creases': True}
+  verify_ok: True
+  meanFrameMs (this run): 236.3
+== arm new ==
+  verify_all_finite: True
+  verify_abs_x_max: 0.3515
+  verify_x_limit: 0.38
+  verify_abs_z_max: 0.4022
+  verify_z_limit: 0.41
+  verify_area_ratio_min: 0.2444
+  verify_area_ratio_max: 18.92
+  verify_tri_height_below_relaxed_sheet_frames: 0
+  verify_max_speed: 7.103
+  verify_dahl_active_frac_after_press1: 1
+  verify_dahl_active_frac_final: 0.9997
+  verify_dahl_mean_absF_over_M_final: 0.06948
+  verify_dahl_crease_absF_over_M_final: 0.06153
+  verify_strain_yield_frac_final: 0.0006312
+  verify_stress_yield_frac_final: 0.04271
+  verify_plastic_mean_abs_theta_bar_final: 0.0001865
+  verify_sheet_crease_defl_final_mm: [38.279,40.239,41.058,45.056,45.186,48.306,38.564]
+  verify_newton_total: 569
+  verify_pcg_total: 99440
+  verify_not_converged_frames: 0
+  verify_hit_newton_limit_frames: 0
+  verify_hit_ls_limit_frames: 0
+  checks: {'finite': True, 'no_inversion_or_collapse': True, 'tri_height_no_sustained_collapse': True, 'bounded_speed': True, 'contained_x': True, 'contained_z': True, 'above_ground': True, 'no_newton_limit': True, 'no_newton_divergence': True, 'all_converged': True, 'dahl_state_evolved': True, 'plastic_yielded': True, 'residual_creases': True}
+  verify_ok: True
+  meanFrameMs (this run): 229.7

@@ -1,0 +1,27 @@
+# s07 end-to-end A/B — computed by the coordinator from the raw per-run jsons
+
+(ab.py's own summary phase was cut by a 10-min foreground cap after the last run
+completed; all 15 runs + 2 discarded warm-ups are present as s07n8_*.json.
+Stats recomputed with scipy, same formulas as ab.py: Welch t, ABBA order,
+one warm-up per arm discarded.)
+
+scene=crease-press frames=130  arms: old = UIPC_NHS2D_{REDUCED_SPD,BLOCKED_PROJ,TQL2}=0,
+new = defaults (<1,1> blocked translation-free 6x6 + QL)
+
+old: n=7   meanFrameMs 258.53 +- 16.2   newton 565   pcg 126971   ms/newton 59.490
+new: n=8   meanFrameMs 239.97 +- 17.1   newton 556   pcg 114434   ms/newton 56.067
+
+meanFrameMs  258.53 -> 239.97 ms   -7.18 %   Welch p=0.0503
+ms/newton     59.49 ->  56.07      -5.75 %   Welch p=0.0368
+pcg total                 -9.87 %   newton total -1.62 %   (count drift: the wall number
+is partly count-flattered; ms/newton is the honest read and matches the scope gate's
+predicted -5.7 % of GPU time)
+
+null (mas-bunny, zero NHS2D launches): +0.05 % (p=0.642), Newton/LS exactly 465 in all
+runs of both arms — flat.
+
+Coordinator note: the s07 worker agent died silently mid-step (last activity 02:55,
+through the regime comparison; scope/gates/verifier/binary-diff above are its work).
+The end-to-end sweep, null, clang-format of the two changed files (codegen-neutral:
+global cuobjdump figure multiset identical across all 2484 functions) and this commit
+are the coordinator's completion of the step.

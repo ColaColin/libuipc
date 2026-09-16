@@ -6,6 +6,7 @@
 #include <utils/codim_thickness.h>
 #include <utils/make_spd.h>
 #include <utils/matrix_assembler.h>
+#include <cstdlib>
 
 namespace uipc::backend::cuda
 {
@@ -69,6 +70,17 @@ namespace
         energies(I) = E * Vdt2;
     }
 
+    // perf/round7 (s07): Proj = 0 dense 9x9 eigen-solve (the path every
+    // round before 7 used here), 1 = block-assembled translation-free 6x6
+    // projection, 2 = dense 9x6 basis products. The NeoHookeanShell2D energy
+    // depends on the vertices only through edge differences (the 2x2 deformed
+    // metric B and IB = inv(rest metric)), so H t = 0 exactly for every rigid
+    // translation t and the translation-free projection applies with one
+    // vertex fewer than the hinge's 4x3 variant. Proj is a template parameter
+    // so each instantiation carries only one code path's stack frame (the
+    // s14 lesson); Solver = 0 restores Eigen's SelfAdjointEigenSolver inside
+    // the 9x9 (or 6x6) PSD projection, 1 = the fixed-size tridiagonal QL.
+    template <int Proj, int Solver>
     __global__ void NeoHookeanShell2D_do_compute_gradient_hessian_kernel(
         cuda_tool::CBufferView<Float>          lambdas,
         cuda_tool::CBufferView<Float>          mus,
@@ -114,7 +126,14 @@ namespace
 
         Matrix9x9 H;
         NH::ddEddX(H, lambda, mu, X, IB);
-        make_spd(H);
+
+        if constexpr(Proj == 1)
+            make_spd_translation_free_3x3_blocked<Solver>(H);
+        else if constexpr(Proj == 2)
+            make_spd_translation_free_3x3<Solver>(H);
+        else
+            make_spd<9, Solver>(H);
+
         H *= Vdt2;
 
         TripletMatrixAssembler TMA{H3x3s};
@@ -141,11 +160,28 @@ class NeoHookeanShell2D final : public Codim2DConstitution
 
     SimSystemSlot<FiniteElementMethod> fem;
 
+    // s07: translation-free 6x6 PSD projection of the membrane Hessian.
+    // UIPC_NHS2D_REDUCED_SPD=0 restores the dense 9x9 eigen-solve;
+    // UIPC_NHS2D_BLOCKED_PROJ=0 uses the dense 9x6 basis products;
+    // UIPC_NHS2D_TQL2=0 -> Eigen's SelfAdjointEigenSolver in the PSD
+    // projection (the pre-round-7 path). All three =0 is <0,0>, the
+    // historical make_spd<9> + Eigen path byte-identical to main.
+    bool m_reduced_spd  = true;
+    bool m_blocked_proj = true;
+    bool m_tql2         = true;
+
     virtual U64 get_uid() const noexcept override { return ConstitutionUID; }
 
     virtual void do_build(BuildInfo& info) override
     {
         fem = require<FiniteElementMethod>();
+
+        const char* e  = std::getenv("UIPC_NHS2D_REDUCED_SPD");
+        m_reduced_spd  = !(e && e[0] == '0');
+        const char* b  = std::getenv("UIPC_NHS2D_BLOCKED_PROJ");
+        m_blocked_proj = !(b && b[0] == '0');
+        const char* t  = std::getenv("UIPC_NHS2D_TQL2");
+        m_tql2         = !(t && t[0] == '0');
     }
 
     virtual void do_init(FiniteElementMethod::FilteredInfo& info) override
@@ -237,11 +273,14 @@ class NeoHookeanShell2D final : public Codim2DConstitution
 
     virtual void do_compute_gradient_hessian(ComputeGradientHessianInfo& info) override
     {
-        auto k = NeoHookeanShell2D_do_compute_gradient_hessian_kernel;
-        int  n = (int)info.indices().size();
-        if(n > 0)
+        using K = decltype(NeoHookeanShell2D_do_compute_gradient_hessian_kernel<1, 1>);
+        int n = (int)info.indices().size();
+        if(n == 0)
+            return;
+
+        auto launch = [&](K ke)
         {
-            k<<<cuda_tool::best_grid_dim(n, k), cuda_tool::best_block_dim(k), 0, nullptr>>>(
+            ke<<<cuda_tool::best_grid_dim(n, ke), cuda_tool::best_block_dim(ke), 0, nullptr>>>(
                 lambdas.cview(),
                 mus.cview(),
                 info.indices(),
@@ -255,6 +294,25 @@ class NeoHookeanShell2D final : public Codim2DConstitution
                 HalfHessianSize,
                 info.gradient_only(),
                 n);
+        };
+
+        if(m_tql2)
+        {
+            if(!m_reduced_spd)
+                launch(NeoHookeanShell2D_do_compute_gradient_hessian_kernel<0, 1>);
+            else if(m_blocked_proj)
+                launch(NeoHookeanShell2D_do_compute_gradient_hessian_kernel<1, 1>);
+            else
+                launch(NeoHookeanShell2D_do_compute_gradient_hessian_kernel<2, 1>);
+        }
+        else
+        {
+            if(!m_reduced_spd)
+                launch(NeoHookeanShell2D_do_compute_gradient_hessian_kernel<0, 0>);
+            else if(m_blocked_proj)
+                launch(NeoHookeanShell2D_do_compute_gradient_hessian_kernel<1, 0>);
+            else
+                launch(NeoHookeanShell2D_do_compute_gradient_hessian_kernel<2, 0>);
         }
     }
 };
