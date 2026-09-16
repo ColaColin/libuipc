@@ -1,0 +1,11 @@
+cuobjdump -sass of libuipc_backend_cuda.so (main c2a104b6), sm_75
+fused_pcg_scalar_kernel: SASS_instr=40 FP64={'DADD': 0, 'DMUL': 1, 'DFMA': 7, 'DSETP': 1, 'DMNMX': 0} {'MUFU': 1, 'LDG': 3, 'STG': 4, 'SHFL': 0, 'LDS': 0, 'STS': 0, 'ATOM': 0, 'BRA': 2}
+   div-rcp: /*0090*/                   MUFU.RCP64H R5, R7 ;                                               /* 0x0
+fused_update_p_scalar_kernel: SASS_instr=256 FP64={'DADD': 0, 'DMUL': 1, 'DFMA': 8, 'DSETP': 2, 'DMNMX': 0} {'MUFU': 1, 'LDG': 5, 'STG': 5, 'SHFL': 0, 'LDS': 0, 'STS': 0, 'ATOM': 0, 'BRA': 10}
+   div-rcp: /*0600*/                   MUFU.RCP64H R5, R29 ;                                              /* 0x0
+fused_update_p_beta_kernel: SASS_instr=216 FP64={'DADD': 0, 'DMUL': 0, 'DFMA': 1, 'DSETP': 0, 'DMNMX': 0} {'MUFU': 0, 'LDG': 4, 'STG': 2, 'SHFL': 0, 'LDS': 0, 'STS': 0, 'ATOM': 0, 'BRA': 8}
+fused_update_p_kernel: SASS_instr=240 FP64={'DADD': 0, 'DMUL': 1, 'DFMA': 8, 'DSETP': 0, 'DMNMX': 0} {'MUFU': 1, 'LDG': 5, 'STG': 2, 'SHFL': 0, 'LDS': 0, 'STS': 0, 'ATOM': 0, 'BRA': 9}
+   div-rcp: /*06e0*/                   MUFU.RCP64H R5, R25 ;                                              /* 0x0
+fused_update_xr_kernel: SASS_instr=384 FP64={'DADD': 1, 'DMUL': 2, 'DFMA': 8, 'DSETP': 0, 'DMNMX': 0} {'MUFU': 1, 'LDG': 8, 'STG': 6, 'SHFL': 0, 'LDS': 0, 'STS': 0, 'ATOM': 0, 'BRA': 14}
+   div-rcp: /*0630*/                   MUFU.RCP64H R9, R7 ;                                               /* 0x0
+fused_dot_kernel: SASS_instr=312 FP64={'DADD': 14, 'DMUL': 1, 'DFMA': 0, 'DSETP': 0, 'DMNMX': 0} {'MUFU': 0, 'LDG': 2, 'STG': 0, 'SHFL': 20, 'LDS': 1, 'STS': 1, 'ATOM': 1, 'BRA': 8}

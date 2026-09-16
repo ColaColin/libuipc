@@ -1,0 +1,141 @@
+s06 — mechanism diagnosis: why the fused PCG vector kernels sit where they sit
+==============================================================================
+All figures: crease-press, n = 50,334 DOF (log line "captured CUDA graph
+(interval = 5, n = 50334)"), RTX 2070 SUPER (TU104, 40 SMs, 1024 threads/SM,
+2 FP64 lanes/SM, 448 GB/s DRAM = 7001 MHz x 256-bit, max SM clock 2115 MHz),
+main binary c2a104b6 (never rebuilt this step).
+
+The four kernels, ranked (s05 full-run kern_sum + this step's repeats)
+---------------------------------------------------------------------
+| kernel                  | launches/run | per-launch   | scene GPU share |
+|-------------------------|--------------|--------------|-----------------|
+| fused_update_xr         | 111,630      | 8.33-8.40 us | 2.90 %          |
+| fused_update_p_beta     | 111,630      | 3.68-3.70 us | 1.30 %          |
+| fused_update_p          | 0            | -            | not launched at default (UIPC_PCG_FUSE_SCALAR=0 arm only) |
+| fused_update_p_scalar   | 0            | -            | not launched at default (UIPC_PCG_FOLD=1 arm only)       |
+| (fused_dot, same family)| 112,172      | 6.94-7.04 us | 2.50 %          |
+| (fused_pcg_scalar <<<1,1>>> | 111,630  | 1.92-1.95 us | 0.70 %          |
+
+The pick-list premise correction #1: at default settings only TWO of the four
+vector kernels launch. The "5.4 % combined" of the s05 pick list is really
+xr 2.90 + p_beta 1.30 + dot 2.50 (the dot is a reduction, not a vector kernel);
+the two unlaunched arms have the same <<<ceil(n/bd), bd>>> shape and the same
+per-element body class, so the geometry conclusions transfer to them.
+
+Occupancy and wave geometry (any block size)
+--------------------------------------------
+Registers (cuobjdump -res-usage): xr 42, p_beta 32, p 39, p_scalar 39,
+dot 30, scalar-node 32. All far below any register granule: occupancy is
+THREAD-limited at 1024 threads/SM = 32 warps/SM whatever the block size
+(whole-warp blocks, multiples of 32).
+
+  block=256 (default): grid = ceil(50334/256) = 197 blocks = 1576 warps
+                        resident 4 blocks/SM = 160 blocks; tail 37; 1.23 waves
+  block=128 (spread):  grid = 394 blocks = the SAME 1576 warps
+                        resident 8 blocks/SM = 320 blocks; tail 74; 1.23 waves
+  block=1024 (best_block_dim / UIPC_PCG_BLOCK_DIM=0): grid 50, 1.23 waves
+
+The spread ramp (spread_block_dim_from, bpsm=8 -> want 320 blocks) halves 256
+to 128 and changes NOTHING else: same warp count, same warp composition (whole
+warps => lane = i%32, warp = i/32 unchanged), same per-element instruction
+stream, same 1.23-wave quantisation. This is round-6 s15's parallelism-limited
+precedent verbatim: "halving the block size leaves the same warp count".
+
+Roofline decomposition (the brief's "find out WHY" item)
+--------------------------------------------------------
+s05's "25-54 % of peak bandwidth" undercounted the traffic: it assumed
+1.2-2 MB for update_xr (4x8B/elem); x and r are READ-MODIFY-WRITE and Ap is
+read then overwritten, so the real traffic is 6x8B/elem.
+
+fused_update_xr  (reads d_rz,d_pAp,d_converged broadcast + p,x,r,Ap;
+                   writes x,r,Ap):
+  traffic = 6 x 8B x 50,334 = 2.82 MB
+  measured 8.2-8.4 us -> 337-345 GB/s = 75-77 % of the 448 GB/s DRAM roof
+  SASS (384 instructions/thread) carries a FULL FP64 DIVISION per thread
+  (alpha = *d_rz / *d_pAp): MUFU.RCP64H + 8 DFMA + 2 DMUL + 1 DADD + DSETP
+  ~ 12 FP64-class instructions/thread x 50,334 threads
+  = 604k thread-instrs / (2 lanes x 40 SM x 1.8-2.1 GHz = 144-169 G/s)
+  = 3.6-4.2 us of pure FP64-issue floor running UNDER the memory stream.
+  The two roofs overlap: max(6.3 us memory, ~4 us FP64) + tail/ramp/issue
+  conflicts = the measured 8.2-8.4 us. There is no geometry lever in either
+  term: DRAM bandwidth and FP64 lanes are both machine resources.
+
+fused_update_p_beta (reads d_beta,d_converged + z,p; writes p,Ap):
+  traffic = 4 x 8B x 50,334 = 1.61 MB
+  measured 3.68 us -> 438 GB/s = 97-98 % of the DRAM roof. AT the roof.
+  The only FP64 is 1 DFMA/thread (0.36 us of issue). Nothing left to win.
+
+fused_dot (reads r,z; one FP64 atomicAdd per block):
+  0.80 MB in 6.94-7.04 us = 114 GB/s -- but it is NOT a streaming kernel:
+  two-level tree (14 DADD + 20 SHFL per thread) plus 197 same-address FP64
+  atomicAdds serialized in L2. A block-size change here would change the tree
+  shape (partials count) => NOT bit-identical, and the spread contract
+  excludes block-cooperative kernels anyway. Never a spread candidate.
+
+fused_pcg_scalar <<<1,1>>>: 1.92-1.95 us for 3 loads + a div + 4 stores of a
+  single thread -- mostly its own serial dependent memory round trips. The
+  graph-node floor is the INTER-NODE GAP: median 384 ns (p90 2.46 us) between
+  consecutive PCG-family nodes inside a replay. Graph-replay launch overhead
+  is real but small, and unaddressable by geometry.
+
+Distribution shape (3-frame traces, 12,850 / 14,270 instances):
+  xr: bimodal -- 1.4 % at 2.1-2.5 us (post-convergence early-exit iterations:
+  Ap(i)=0 store only) and 92 % at 8-9 us (working instances, p10-p90
+  8.03-8.45 us, nothing co-running -- the whole PCG chain is on stream 18).
+  The per-launch average is NOT a contention artifact: the working instances
+  are tight and uniform.
+
+Why the vector kernels stream from DRAM rather than hitting L2: every PCG
+iteration's SpMV streams the BCSR matrix (~30 MB class traffic at 67.7
+us/launch) through the 4 MB L2, evicting the 2 MB of vectors between nodes.
+
+The empirical pricing (the exact geometry launch_spread would pick)
+-------------------------------------------------------------------
+spread_block_dim_from(50334, 256) = 128 == UIPC_PCG_BLOCK_DIM=128, so the
+wiring was priced with the existing round-4 knob on the unmodified main
+binary; geometry confirmed in-trace: <<<197,256>>> default vs <<<394,128>>>.
+
+Sweep (full 130-frame runs, medians):  64: 8.19 | 128: 8.16 | 256: 8.35 |
+512: 8.42 | 1024: 10.40 us  (xr; p_beta 3.81/3.62/3.68/3.81/4.16).
+The instrument sees real effects: the 1024 arm (the pre-round-4-s11 geometry)
+reads +24 % on xr. 64..512 are a plateau within ~3 %.
+
+Repeats n=4 full runs/arm (interleaved):
+  xr:     8.40 -> 8.14 us  (-3.05 % raw, -2.38 % normalised by the in-run
+                            dot control)   [def 8.35-8.48, spread 8.13-8.16]
+  p_beta: 3.70 -> 3.60 us  (-2.60 % raw, -1.93 % ctl-norm)
+  controls: dot -0.68 %, scalar node +0.00 %, spmv +1.17 %, collectZ -0.49 %
+The -2.5 % is real (above the +-1.2 % same-binary drift bar, consistent
+in-run and cross-run, monotone through 64). The likely residue of the
+mechanism: the tail wave's 37 coarse blocks leave whole SMs idle while 74
+fine blocks shave that imbalance -- an order of magnitude less than the
+effect spread was built for (s20/s24 sites ran 3-48 blocks on 36-40 SMs).
+
+PRIZE: 0.0305 x 2.90 % + 0.026 x 1.30 % = 0.12 % of scene GPU kernel time.
+8x below the brief's 1 % wiring bar; ~46x below crease-press's 5.4 %
+meanFrameMs MDE at n=5/arm. => launch_spread is NOT wired. The round-6 TODO
+("the four PCG vector-kernel sites were never checked for spreading") closes
+with this measurement.
+
+End-to-end (the priced arm through the existing knob, one build = main):
+  crease-press n=6/arm: meanFrameMs 248.66 -> 259.43 ms (+4.33 %, p=0.11,
+    OVERLAPPING; the count guard fired -- PCG 97k-141k on BOTH arms, the
+    scene's documented frame-0 chaos; the wall number is unreadable).
+  mas-bunny n=5/arm (the +-0.1 % instrument, PCG family ~40 % of kernel
+    time there): -0.10 % mean (p=0.15, overlapping), Newton exactly 465 in
+    all 10 runs, PCG -0.05 %. The co-target confirms: the end-to-end value
+    of the geometry change is unresolvable from zero even where sub-1 %
+    effects are resolvable.
+
+Bit-identity (had it shipped; also covers the measured knob arms):
+  xr and p_beta satisfy every condition of the spread contract
+  (spread_launch.h:32-33): elementwise in the global index, no shared memory,
+  no __syncthreads, no warp primitives, no atomics; block sizes are whole
+  warps so warp composition (__activemask()) is unchanged; the i==0
+  side-stores live in block 0 both ways. Every element is computed by the
+  same instruction sequence on the same operands into the same slot =>
+  bit-identical per launch. mas-bunny's exactly-465 Newton count x 10 runs
+  is consistent. No device-side SpreadVerifier run: there is no wired call
+  site to instrument, and the verifier cannot run inside the graph capture
+  anyway (the s24 side-stream trap / fold_verify precedent -- it would have
+  to force graph replay off, as do_build already does for UIPC_FOLD_VERIFY).
