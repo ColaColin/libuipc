@@ -1,0 +1,32 @@
+=== cube-wall-cloth at head (cross-scene reference), graph-node tracing: fresh full-run nsys cuda_gpu_kern_sum ===
+total GPU kernel time 6076.2 ms over 276267 launches
+
+  #   share   total ms  launches  us/launch  kernel
+  1   12.00%      731.8       370     1978.0  do_assemble_kernel<(bool)0, (int)1, (bool)1, (bool)1, (bool)0, (int)8>(D
+  2   10.20%      618.2     19645       31.5  Spmv_rbk_sym_spmv_dot_chunked_kernel<(int)1, (int)0>(double, const int *, const int *, con
+  3    6.90%      419.4       506      828.8  ortho_potential_compute_gradient_hessian_kernel<(int)1>(CBufferView<Eigen::Matrix<double, (int)12, (i
+  4    4.80%      289.9       370      783.5  do_assemble_kernel<(bool)0, (int)2, (bool)0, (bool)0, (bool)1, (int)1>(D
+  5    4.30%      262.9       608      432.3  InfoStacklessBVH_stacklessSelf_kernel<(bool)1, (bool)0, InfoStacklessBVHSimplexTrajectoryFi
+  6    3.90%      238.9       506      472.2  abd_diag_preconditioner_do_assemble_kernel(CBufferView<Eigen::Matrix<double, (int)12, (int)12, 
+  7    3.90%      237.0       364      651.2  do_assemble_kernel<(bool)0>(Dense2DBase<(bool)1, uipc::backend::cuda::Co
+  8    3.20%      195.9     20151        9.7  MASPreconditionerEngine_schwarz_local_solve_fused_R_kernel<(bool)1, (int)1>(CBufferView<uipc::backend::cuda::M
+  9    2.80%      172.2     20151        8.5  abd_diag_preconditioner_do_apply_lanes_kernel(DenseVectorViewT<(bool)1, double>, DenseVectorViewT<
+ 10    2.80%      168.9       506      333.7  InfoStacklessBVHSimplexTrajectoryFilter_filter_toi_k4_kernel<(bool)1, (bool)0, (bool)1>(BufferView<double>, CB
+ 11    2.40%      145.2      4419       32.9  void cub::CUB_200700_750_NS::DeviceRadixSortOnesweepKernel<cub::CUB_200700_750_NS::DeviceRadixSortPolicy<unsig
+ 12    2.20%      134.9       608      221.9  InfoStacklessBVH_pairFilter_kernel<(bool)1, InfoStacklessBVHSimplexTrajectoryFilter_dete
+ 13    2.00%      122.4       370      330.7  matrix_converter_radix_sort_indices_and_blocks_k3_kernel<double, (int)3>(CBufferView<DeviceTripletMatrix<T1, T
+ 14    1.80%      111.2     19645        5.7  fused_update_xr_kernel(CDense<double>, CDense<double>, CDense<int>, DenseVe
+ 15    1.80%      109.5       370      295.9  void <unnamed>::fast_segmental_reduce_matrix_k2_kernel<(int)128, (int)32, double, (int)3, (int)3, FastSegmen
+
+family shares:
+  contact assemble (do_assemble)                24.65%     1497.7 ms
+  BVH + CCD (InfoStacklessBVH*)                 17.39%     1056.6 ms
+  pcg kernels (spmv/dot/update)                 14.47%      879.1 ms
+  preconditioners (MAS + abd_diag)               9.90%      601.5 ms
+  converter/sort/compact                         8.83%      536.5 ms
+  membrane (SLBW + NeoHookean2D)                 2.69%      163.3 ms
+  plain hinge bending                            1.70%      103.1 ms
+  energy                                         0.05%        3.0 ms
+
+bending-family + instantiation checks:
+     506 launches     177.8 us/launch   1.50%  kernel<(int)3, (int)1>  DiscreteShellBending_do_compute_gradient_hessian_kernel<
