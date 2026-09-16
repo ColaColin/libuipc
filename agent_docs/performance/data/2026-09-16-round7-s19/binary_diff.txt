@@ -1,0 +1,34 @@
+main funcs: 2955  branch funcs: 2957
+identical instruction bodies (name-independent multiset): 2947
+bodies only in branch: 10, only in main: 8
+
+-- bending family, main vs branch --
+ strain<1,1,2>   main=11112i branch=11112i identical=True
+ strain<1,1,0>   main=11664i branch=11664i identical=True
+ strain<0,1>     main=12704i branch=12704i identical=True
+ strain<2,1>     main=14232i branch=14232i identical=True
+ strain<1,0>     main x2 branch x2 identical=[True, True] sizesA=[15848, 15480] sizesB=[15848, 15480]
+ strain<0,0>     main=17752i branch=17760i identical=False
+ strain pair     main x0 branch x1 identical=[] sizesA=[] sizesB=[24104]
+ stress<1,1,2>   main=11632i branch=11632i identical=True
+ stress<1,1,0>   main=11656i branch=11656i identical=True
+ stress<0,1>     main=13152i branch=13152i identical=True
+ stress<2,1>     main=12768i branch=12768i identical=True
+ stress<1,0>     main x2 branch x2 identical=[True, True] sizesA=[16296, 15928] sizesB=[16296, 15928]
+ stress<0,0>     main=18096i branch=18096i identical=False
+ stress pair     main x0 branch x1 identical=[] sizesA=[] sizesB=[25192]
+ dahl<3,1>       main=4512i branch=4512i identical=True
+ dahl<1,1>       main=13240i branch=13240i identical=True
+ hinge<3,1>      main=2464i branch=2464i identical=True
+ nhs2d<1,1>      main x8 branch x8 identical=[True, True, True, True, True, True, True, True] sizesA=[10224, 9384, 11800, 12432, 7480, 11760, 776, 272] sizesB=[10224, 9384, 11800, 12432, 7480, 11760, 776, 272]
+
+-- functions with new bodies --
+ + 17760i  6MatrixIiLi4ELi1ELi0ELi4ELi1EEEEENS5_IdEESA_SA_SA_SA_NS4_11CBufferViewINS7_IdLi3ELi1ELi0ELi3ELi1EEEEENS4_18DoubletVectorViewTILb0EdLi3EEENS4_18TripletMatrixViewTILb0EdLi3ELi3EEEdbi
+ + 24104i  6MatrixIiLi4ELi1ELi0ELi4ELi1EEEEENS5_IdEESA_SA_SA_SA_NS4_11CBufferViewINS7_IdLi3ELi1ELi0ELi3ELi1EEEEENS4_18DoubletVectorViewTILb0EdLi3EEENS4_18TripletMatrixViewTILb0EdLi3ELi3EEEdbi
+ + 18096i  trixIiLi4ELi1ELi0ELi4ELi1EEEEENS5_IdEESA_SA_SA_SA_SA_NS4_11CBufferViewINS7_IdLi3ELi1ELi0ELi3ELi1EEEEENS4_18DoubletVectorViewTILb0EdLi3EEENS4_18TripletMatrixViewTILb0EdLi3ELi3EEEdbi
+ + 25192i  trixIiLi4ELi1ELi0ELi4ELi1EEEEENS5_IdEESA_SA_SA_SA_SA_NS4_11CBufferViewINS7_IdLi3ELi1ELi0ELi3ELi1EEEEENS4_18DoubletVectorViewTILb0EdLi3EEENS4_18TripletMatrixViewTILb0EdLi3ELi3EEEdbi
+-- functions with gone bodies (plastic/hinge related) --
+ - 19560i  ELi1ELi0ELi4ELi1EEEEENS5_IdEESA_SA_SA_SA_SA_SA_SA_SA_NS4_11CBufferViewINS7_IdLi3ELi1ELi0ELi3ELi1EEEEENS4_18DoubletVectorViewTILb0EdLi3EEENS4_18TripletMatrixViewTILb0EdLi3ELi3EEEdbi
+ - 14528i  6MatrixIiLi4ELi1ELi0ELi4ELi1EEEEENS5_IdEESA_SA_SA_SA_NS4_11CBufferViewINS7_IdLi3ELi1ELi0ELi3ELi1EEEEENS4_18DoubletVectorViewTILb0EdLi3EEENS4_18TripletMatrixViewTILb0EdLi3ELi3EEEdbi
+ - 17752i  6MatrixIiLi4ELi1ELi0ELi4ELi1EEEEENS5_IdEESA_SA_SA_SA_NS4_11CBufferViewINS7_IdLi3ELi1ELi0ELi3ELi1EEEEENS4_18DoubletVectorViewTILb0EdLi3EEENS4_18TripletMatrixViewTILb0EdLi3ELi3EEEdbi
+ - 18096i  trixIiLi4ELi1ELi0ELi4ELi1EEEEENS5_IdEESA_SA_SA_SA_SA_NS4_11CBufferViewINS7_IdLi3ELi1ELi0ELi3ELi1EEEEENS4_18DoubletVectorViewTILb0EdLi3EEENS4_18TripletMatrixViewTILb0EdLi3ELi3EEEdbi

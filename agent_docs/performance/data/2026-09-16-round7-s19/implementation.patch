@@ -1,0 +1,1025 @@
+diff --git a/src/backends/cuda/cuda_tool/eigen/evd.h b/src/backends/cuda/cuda_tool/eigen/evd.h
+index bb1c4b11..e29e2ad0 100644
+--- a/src/backends/cuda/cuda_tool/eigen/evd.h
++++ b/src/backends/cuda/cuda_tool/eigen/evd.h
+@@ -40,7 +40,7 @@ namespace eigen
+     template <typename T, int N>
+     UIPC_GENERIC void evd_tridiag_ql(const Eigen::Matrix<T, N, N>& M,
+                                      Eigen::Vector<T, N>&          eigen_values,
+-                                     Eigen::Matrix<T, N, N>&       eigen_vectors)
++                                     Eigen::Matrix<T, N, N>& eigen_vectors)
+     {
+         static_assert(N >= 2, "evd_tridiag_ql needs N >= 2");
+         T V[N][N];
+@@ -52,7 +52,7 @@ namespace eigen
+             for(int j = 0; j < N; ++j)
+                 V[i][j] = M(i, j);
+ 
+-        // --- Householder reduction to tridiagonal form (EISPACK tred2)
++                // --- Householder reduction to tridiagonal form (EISPACK tred2)
+ #pragma unroll
+         for(int j = 0; j < N; ++j)
+             d[j] = V[N - 1][j];
+@@ -237,6 +237,428 @@ namespace eigen
+                 eigen_vectors(i, j) = V[i][j];
+     }
+ 
++    /**
++     * @brief Two independent symmetric eigen-decompositions driven through
++     * one set of loops -- the s19 (round 7) ILP twin of `evd_tridiag_ql`.
++     *
++     * The plastic-hinge G/H kernels are launched at <<<ceil(n/256), 256>>> with
++     * 255 registers, i.e. at the machine's full register-limited occupancy of
++     * 256 threads/SM, and the scene's hinge count is ~93 % of that capacity,
++     * so no launch-geometry change can add concurrent chains (measured in
++     * agent_docs/performance/data/2026-09-16-round7-s19/). The one remaining
++     * mechanism for the QL's latency half (s16: the solve runs at 52 % of its
++     * FP64-issue floor) is to give each *thread* a second independent chain:
++     * the two solves' long-latency ops (divisions, hypots, dynamically
++     * indexed local-memory round trips of d/e/V) overlap inside one
++     * instruction stream without a warp switch.
++     *
++     * This function runs both matrices through the SAME loop nests: every
++     * fixed-trip loop carries one statement per matrix, and the serial QL
++     * do-while of tql2 is fused into one loop that advances whichever of the
++     * two chains is still unconverged (the rotation loop descends from
++     * max(mA, mB) - 1 with each chain's step guarded by `i < m`). Each
++     * chain's operations run in the same order as `evd_tridiag_ql` --
++     * interleaving is a scheduling change only -- so the per-matrix results
++     * are bit-identical to the single-matrix function (proved on device by
++     * the UIPC_PDSB_OCC_VERIFY probe over full simulation runs).
++     */
++    template <typename T, int N>
++    UIPC_GENERIC void evd_tridiag_ql_pair(const Eigen::Matrix<T, N, N>& Ma,
++                                          const Eigen::Matrix<T, N, N>& Mb,
++                                          Eigen::Vector<T, N>&          wa,
++                                          Eigen::Vector<T, N>&          wb,
++                                          Eigen::Matrix<T, N, N>&       Va,
++                                          Eigen::Matrix<T, N, N>&       Vb)
++    {
++        static_assert(N >= 2, "evd_tridiag_ql_pair needs N >= 2");
++        T VA[N][N];
++        T VB[N][N];
++        T dA[N];
++        T dB[N];
++        T eA[N];
++        T eB[N];
++#pragma unroll
++        for(int i = 0; i < N; ++i)
++#pragma unroll
++            for(int j = 0; j < N; ++j)
++            {
++                VA[i][j] = Ma(i, j);
++                VB[i][j] = Mb(i, j);
++            }
++
++            // --- Householder reduction to tridiagonal form (tred2), both
++            // matrices in the same loop nests
++#pragma unroll
++        for(int j = 0; j < N; ++j)
++        {
++            dA[j] = VA[N - 1][j];
++            dB[j] = VB[N - 1][j];
++        }
++        for(int i = N - 1; i > 0; --i)
++        {
++            T scaleA = 0.0;
++            T scaleB = 0.0;
++            T hA     = 0.0;
++            T hB     = 0.0;
++            for(int k = 0; k < i; ++k)
++            {
++                scaleA += abs(dA[k]);
++                scaleB += abs(dB[k]);
++            }
++            if(scaleA == 0.0)
++            {
++                eA[i] = dA[i - 1];
++                for(int j = 0; j < i; ++j)
++                {
++                    dA[j]    = VA[i - 1][j];
++                    VA[i][j] = 0.0;
++                    VA[j][i] = 0.0;
++                }
++            }
++            else
++            {
++                for(int k = 0; k < i; ++k)
++                {
++                    dA[k] /= scaleA;
++                    hA += dA[k] * dA[k];
++                }
++                T f = dA[i - 1];
++                T g = sqrt(hA);
++                if(f > 0)
++                    g = -g;
++                eA[i]     = scaleA * g;
++                hA        = hA - f * g;
++                dA[i - 1] = f - g;
++                for(int j = 0; j < i; ++j)
++                    eA[j] = 0.0;
++                for(int j = 0; j < i; ++j)
++                {
++                    f        = dA[j];
++                    VA[j][i] = f;
++                    g        = eA[j] + VA[j][j] * f;
++                    for(int k = j + 1; k <= i - 1; ++k)
++                    {
++                        g += VA[k][j] * dA[k];
++                        eA[k] += VA[k][j] * f;
++                    }
++                    eA[j] = g;
++                }
++                f = 0.0;
++                for(int j = 0; j < i; ++j)
++                {
++                    eA[j] /= hA;
++                    f += eA[j] * dA[j];
++                }
++                T hh = f / (hA + hA);
++                for(int j = 0; j < i; ++j)
++                    eA[j] -= hh * dA[j];
++                for(int j = 0; j < i; ++j)
++                {
++                    f = dA[j];
++                    g = eA[j];
++                    for(int k = j; k <= i - 1; ++k)
++                        VA[k][j] -= (f * eA[k] + g * dA[k]);
++                    dA[j]    = VA[i - 1][j];
++                    VA[i][j] = 0.0;
++                }
++            }
++            if(scaleB == 0.0)
++            {
++                eB[i] = dB[i - 1];
++                for(int j = 0; j < i; ++j)
++                {
++                    dB[j]    = VB[i - 1][j];
++                    VB[i][j] = 0.0;
++                    VB[j][i] = 0.0;
++                }
++            }
++            else
++            {
++                for(int k = 0; k < i; ++k)
++                {
++                    dB[k] /= scaleB;
++                    hB += dB[k] * dB[k];
++                }
++                T f = dB[i - 1];
++                T g = sqrt(hB);
++                if(f > 0)
++                    g = -g;
++                eB[i]     = scaleB * g;
++                hB        = hB - f * g;
++                dB[i - 1] = f - g;
++                for(int j = 0; j < i; ++j)
++                    eB[j] = 0.0;
++                for(int j = 0; j < i; ++j)
++                {
++                    f        = dB[j];
++                    VB[j][i] = f;
++                    g        = eB[j] + VB[j][j] * f;
++                    for(int k = j + 1; k <= i - 1; ++k)
++                    {
++                        g += VB[k][j] * dB[k];
++                        eB[k] += VB[k][j] * f;
++                    }
++                    eB[j] = g;
++                }
++                f = 0.0;
++                for(int j = 0; j < i; ++j)
++                {
++                    eB[j] /= hB;
++                    f += eB[j] * dB[j];
++                }
++                T hh = f / (hB + hB);
++                for(int j = 0; j < i; ++j)
++                    eB[j] -= hh * dB[j];
++                for(int j = 0; j < i; ++j)
++                {
++                    f = dB[j];
++                    g = eB[j];
++                    for(int k = j; k <= i - 1; ++k)
++                        VB[k][j] -= (f * eB[k] + g * dB[k]);
++                    dB[j]    = VB[i - 1][j];
++                    VB[i][j] = 0.0;
++                }
++            }
++            dA[i] = hA;
++            dB[i] = hB;
++        }
++        for(int i = 0; i < N - 1; ++i)
++        {
++            VA[N - 1][i] = VA[i][i];
++            VB[N - 1][i] = VB[i][i];
++            VA[i][i]     = 1.0;
++            VB[i][i]     = 1.0;
++            T hA         = dA[i + 1];
++            T hB         = dB[i + 1];
++            if(hA != 0.0)
++            {
++                for(int k = 0; k <= i; ++k)
++                    dA[k] = VA[k][i + 1] / hA;
++                for(int j = 0; j <= i; ++j)
++                {
++                    T g = 0.0;
++                    for(int k = 0; k <= i; ++k)
++                        g += VA[k][i + 1] * VA[k][j];
++                    for(int k = 0; k <= i; ++k)
++                        VA[k][j] -= g * dA[k];
++                }
++            }
++            if(hB != 0.0)
++            {
++                for(int k = 0; k <= i; ++k)
++                    dB[k] = VB[k][i + 1] / hB;
++                for(int j = 0; j <= i; ++j)
++                {
++                    T g = 0.0;
++                    for(int k = 0; k <= i; ++k)
++                        g += VB[k][i + 1] * VB[k][j];
++                    for(int k = 0; k <= i; ++k)
++                        VB[k][j] -= g * dB[k];
++                }
++            }
++            for(int k = 0; k <= i; ++k)
++            {
++                VA[k][i + 1] = 0.0;
++                VB[k][i + 1] = 0.0;
++            }
++        }
++#pragma unroll
++        for(int j = 0; j < N; ++j)
++        {
++            dA[j]        = VA[N - 1][j];
++            dB[j]        = VB[N - 1][j];
++            VA[N - 1][j] = 0.0;
++            VB[N - 1][j] = 0.0;
++        }
++        VA[N - 1][N - 1] = 1.0;
++        VB[N - 1][N - 1] = 1.0;
++        eA[0]            = 0.0;
++        eB[0]            = 0.0;
++
++        // --- implicit-shift QL (tql2), fused: one do-while advances both
++        // chains, each guarded by its own convergence; the rotation loop
++        // descends from max(mA, mB) - 1 so the two chains' rotation steps
++        // interleave.
++        for(int i = 1; i < N; ++i)
++        {
++            eA[i - 1] = eA[i];
++            eB[i - 1] = eB[i];
++        }
++        eA[N - 1]         = 0.0;
++        eB[N - 1]         = 0.0;
++        T           fA    = 0.0;
++        T           fB    = 0.0;
++        T           tst1A = 0.0;
++        T           tst1B = 0.0;
++        constexpr T eps   = 2.220446049250313e-16;
++        for(int l = 0; l < N; ++l)
++        {
++            T tlA = abs(dA[l]) + abs(eA[l]);
++            T tlB = abs(dB[l]) + abs(eB[l]);
++            if(tlA > tst1A)
++                tst1A = tlA;
++            if(tlB > tst1B)
++                tst1B = tlB;
++            int mA = l;
++            while(mA < N)
++            {
++                if(abs(eA[mA]) <= eps * tst1A)
++                    break;
++                ++mA;
++            }
++            int mB = l;
++            while(mB < N)
++            {
++                if(abs(eB[mB]) <= eps * tst1B)
++                    break;
++                ++mB;
++            }
++            bool actA  = mA > l;
++            bool actB  = mB > l;
++            int  iterA = 0;
++            int  iterB = 0;
++            // per-chain running rotation state (tql2 locals)
++            T cA = 1.0, sA = 0.0, c2A = 1.0, c3A = 1.0, s2A = 0.0, pA = 0.0;
++            T cB = 1.0, sB = 0.0, c2B = 1.0, c3B = 1.0, s2B = 0.0, pB = 0.0;
++            T el1A = 0.0, dl1A = 0.0, el1B = 0.0, dl1B = 0.0;
++            while(actA || actB)
++            {
++                if(actA)
++                {
++                    ++iterA;
++                    T g = dA[l];
++                    T p = (dA[l + 1] - g) / (2.0 * eA[l]);
++                    T r = hypot(p, T(1.0));
++                    if(p < 0)
++                        r = -r;
++                    dA[l]     = eA[l] / (p + r);
++                    dA[l + 1] = eA[l] * (p + r);
++                    dl1A      = dA[l + 1];
++                    T h       = g - dA[l];
++                    for(int i = l + 2; i < N; ++i)
++                        dA[i] -= h;
++                    fA += h;
++                    pA   = dA[mA];
++                    cA   = 1.0;
++                    c2A  = cA;
++                    c3A  = cA;
++                    el1A = eA[l + 1];
++                    sA   = 0.0;
++                    s2A  = 0.0;
++                }
++                if(actB)
++                {
++                    ++iterB;
++                    T g = dB[l];
++                    T p = (dB[l + 1] - g) / (2.0 * eB[l]);
++                    T r = hypot(p, T(1.0));
++                    if(p < 0)
++                        r = -r;
++                    dB[l]     = eB[l] / (p + r);
++                    dB[l + 1] = eB[l] * (p + r);
++                    dl1B      = dB[l + 1];
++                    T h       = g - dB[l];
++                    for(int i = l + 2; i < N; ++i)
++                        dB[i] -= h;
++                    fB += h;
++                    pB   = dB[mB];
++                    cB   = 1.0;
++                    c2B  = cB;
++                    c3B  = cB;
++                    el1B = eB[l + 1];
++                    sB   = 0.0;
++                    s2B  = 0.0;
++                }
++                // fused rotation loop: chain A participates while it is still
++                // active and i < mA, chain B likewise; both descend to the
++                // shared l. (The activity flag in the guard is load-bearing:
++                // a chain that converged at an earlier iteration of the fused
++                // do-while must not keep rotating while the other finishes.)
++                int mhi = actA ? mA : l;
++                if(actB && mB > mhi)
++                    mhi = mB;
++                for(int i = mhi - 1; i >= l; --i)
++                {
++                    if(actA && i < mA)
++                    {
++                        T g       = cA * eA[i];
++                        T h       = cA * pA;
++                        T r       = hypot(pA, eA[i]);
++                        c3A       = c2A;
++                        c2A       = cA;
++                        s2A       = sA;
++                        eA[i + 1] = sA * r;
++                        sA        = eA[i] / r;
++                        cA        = pA / r;
++                        pA        = cA * dA[i] - sA * g;
++                        dA[i + 1] = h + sA * (cA * g + sA * dA[i]);
++#pragma unroll
++                        for(int k = 0; k < N; ++k)
++                        {
++                            h            = VA[k][i + 1];
++                            VA[k][i + 1] = sA * VA[k][i] + cA * h;
++                            VA[k][i]     = cA * VA[k][i] - sA * h;
++                        }
++                    }
++                    if(actB && i < mB)
++                    {
++                        T g       = cB * eB[i];
++                        T h       = cB * pB;
++                        T r       = hypot(pB, eB[i]);
++                        c3B       = c2B;
++                        c2B       = cB;
++                        s2B       = sB;
++                        eB[i + 1] = sB * r;
++                        sB        = eB[i] / r;
++                        cB        = pB / r;
++                        pB        = cB * dB[i] - sB * g;
++                        dB[i + 1] = h + sB * (cB * g + sB * dB[i]);
++#pragma unroll
++                        for(int k = 0; k < N; ++k)
++                        {
++                            h            = VB[k][i + 1];
++                            VB[k][i + 1] = sB * VB[k][i] + cB * h;
++                            VB[k][i]     = cB * VB[k][i] - sB * h;
++                        }
++                    }
++                }
++                if(actA)
++                {
++                    T p   = -sA * s2A * c3A * el1A * eA[l] / dl1A;
++                    eA[l] = sA * p;
++                    dA[l] = cA * p;
++                    actA  = abs(eA[l]) > eps * tst1A && iterA < 40;
++                }
++                if(actB)
++                {
++                    T p   = -sB * s2B * c3B * el1B * eB[l] / dl1B;
++                    eB[l] = sB * p;
++                    dB[l] = cB * p;
++                    actB  = abs(eB[l]) > eps * tst1B && iterB < 40;
++                }
++            }
++            dA[l] += fA;
++            dB[l] += fB;
++            eA[l] = 0.0;
++            eB[l] = 0.0;
++        }
++
++#pragma unroll
++        for(int i = 0; i < N; ++i)
++        {
++            wa(i) = dA[i];
++            wb(i) = dB[i];
++        }
++#pragma unroll
++        for(int i = 0; i < N; ++i)
++#pragma unroll
++            for(int j = 0; j < N; ++j)
++            {
++                Va(i, j) = VA[i][j];
++                Vb(i, j) = VB[i][j];
++            }
++    }
++
+     namespace details
+     {
+         template <typename T, int N>
+diff --git a/src/backends/cuda/finite_element/constitutions/strain_plastic_discrete_shell_bending.cu b/src/backends/cuda/finite_element/constitutions/strain_plastic_discrete_shell_bending.cu
+index dbc81ed0..b1ccf25c 100644
+--- a/src/backends/cuda/finite_element/constitutions/strain_plastic_discrete_shell_bending.cu
++++ b/src/backends/cuda/finite_element/constitutions/strain_plastic_discrete_shell_bending.cu
+@@ -6,6 +6,7 @@
+ #include <limits>
+ #include <numbers>
+ #include <utils/make_spd.h>
++#include <cuda_tool/spread_launch.h>
+ #include <utils/matrix_assembler.h>
+ #include <utils/dump_utils.h>
+ #include <kernel_cout.h>
+@@ -157,6 +158,115 @@ namespace
+         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
+     }
+ 
++    // s19 (round 7): the two-hinges-per-thread twin. The blocked kernel runs
++    // 255 registers at <<<ceil(n/256), 256>>> -- at the machine's full
++    // 256-thread/SM register-limited occupancy, one block per SM -- and the
++    // crease-press hinge count (~9.5k) nearly exactly fills that capacity, so
++    // no launch-geometry change can add concurrent chains. This arm instead
++    // gives each thread a second independent hinge: the two stencils' dEdx /
++    // ddEddx / QL chains interleave inside one instruction stream (the fused
++    // make_spd_translation_free_4x3_blocked_pair), overlapping the divisions,
++    // hypots and local-memory round trips that s16 measured as the QL's
++    // latency half (the solve runs at 52 % of its FP64-issue floor).
++    // Per-hinge arithmetic is unchanged -- same expressions, same order, the
++    // pairing is a scheduling change only -- so G and H are bit-identical to
++    // the single-hinge kernel (UIPC_PDSB_OCC_VERIFY proves it on device).
++    // The block dim is fixed at 128, not best_block_dim: the pair kernel
++    // serves ceil(n/2) threads and needs ceil(n/2)/128 = ceil(n/256) blocks
++    // to keep today's one-block-per-SM fill (the occupancy API would return
++    // 256 and leave half the SMs empty).
++    // UIPC_PDSB_OCC=0 restores the single-hinge kernel everywhere.
++    template <int Proj, int Solver, int SymAsm = 2>
++    __global__ void StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_pair_kernel(
++        cuda_tool::BufferView<Vector4i>        stencils,
++        cuda_tool::BufferView<Float>           bending_stiffnesses,
++        cuda_tool::BufferView<Float>           theta_bars,
++        cuda_tool::BufferView<Float>           h_bars,
++        cuda_tool::BufferView<Float>           V_bars,
++        cuda_tool::BufferView<Float>           L0s,
++        cuda_tool::CBufferView<Vector3>        xs,
++        cuda_tool::DoubletVectorView<Float, 3> G3s,
++        cuda_tool::TripletMatrixView<Float, 3> H3x3s,
++        Float                                  dt,
++        bool                                   gradient_only,
++        int                                    n)
++    {
++        int half = (n + 1) / 2;
++        int i0   = blockIdx.x * blockDim.x + threadIdx.x;
++        if(i0 >= half)
++            return;
++        int  i1   = i0 + half;
++        bool has1 = i1 < n;  // false only for the last thread when n is odd
++
++        Vector4i sa          = stencils(i0);
++        Float    kappa_a     = bending_stiffnesses(i0);
++        Float    L0_a        = L0s(i0);
++        Float    h_bar_a     = h_bars(i0);
++        Float    theta_bar_a = theta_bars(i0);
++        Float    V_bar_a     = V_bars(i0);
++        // the degenerate unpaired thread computes on a duplicate of its own
++        // (in-bounds) inputs and discards the second write
++        Vector4i sb          = has1 ? stencils(i1) : sa;
++        Float    kappa_b     = has1 ? bending_stiffnesses(i1) : kappa_a;
++        Float    L0_b        = has1 ? L0s(i1) : L0_a;
++        Float    h_bar_b     = has1 ? h_bars(i1) : h_bar_a;
++        Float    theta_bar_b = has1 ? theta_bars(i1) : theta_bar_a;
++        Float    V_bar_b     = has1 ? V_bars(i1) : V_bar_a;
++
++        Vector3 x0a = xs(sa[0]);
++        Vector3 x1a = xs(sa[1]);
++        Vector3 x2a = xs(sa[2]);
++        Vector3 x3a = xs(sa[3]);
++        Vector3 x0b = xs(sb[0]);
++        Vector3 x1b = xs(sb[1]);
++        Vector3 x2b = xs(sb[2]);
++        Vector3 x3b = xs(sb[3]);
++
++        Float Vdt2a = V_bar_a * dt * dt;
++        Float Vdt2b = V_bar_b * dt * dt;
++
++        Vector12    Ga;
++        Vector12    Gb;
++        Matrix12x12 Ha12;
++        Matrix12x12 Hb12;
++
++        PDSB::dEdx(Ga, x0a, x1a, x2a, x3a, L0_a, h_bar_a, theta_bar_a, kappa_a);
++        PDSB::dEdx(Gb, x0b, x1b, x2b, x3b, L0_b, h_bar_b, theta_bar_b, kappa_b);
++        Ga *= Vdt2a;
++        Gb *= Vdt2b;
++        {
++            DoubletVectorAssembler DVA{G3s};
++            DVA.segment<StencilSize>(i0 * StencilSize).write(sa, Ga);
++            if(has1)
++                DVA.segment<StencilSize>(i1 * StencilSize).write(sb, Gb);
++        }
++
++        if(gradient_only)
++            return;
++
++        PDSB::ddEddx(Ha12, x0a, x1a, x2a, x3a, L0_a, h_bar_a, theta_bar_a, kappa_a);
++        PDSB::ddEddx(Hb12, x0b, x1b, x2b, x3b, L0_b, h_bar_b, theta_bar_b, kappa_b);
++        Ha12 *= Vdt2a;
++        Hb12 *= Vdt2b;
++        if constexpr(Proj == 1)
++            make_spd_translation_free_4x3_blocked_pair<Solver, SymAsm>(Ha12, Hb12);
++        else if constexpr(Proj == 2)
++        {
++            make_spd_translation_free_4x3<Solver>(Ha12);
++            make_spd_translation_free_4x3<Solver>(Hb12);
++        }
++        else
++        {
++            make_spd<12, Solver>(Ha12);
++            make_spd<12, Solver>(Hb12);
++        }
++
++        TripletMatrixAssembler TMA{H3x3s};
++        TMA.half_block<StencilSize>(i0 * HalfHessianSize).write(sa, Ha12);
++        if(has1)
++            TMA.half_block<StencilSize>(i1 * HalfHessianSize).write(sb, Hb12);
++    }
++
+     __global__ void StrainPlasticDiscreteShellBendingTimeIntegrator_do_update_state_kernel(
+         cuda_tool::CBufferView<Vector4i> stencils,
+         cuda_tool::BufferView<Float>     theta_bars,
+@@ -242,6 +352,7 @@ class StrainPlasticDiscreteShellBending final : public FiniteElementExtraConstit
+     bool m_blocked_proj = true;
+     bool m_tql2         = true;
+     bool m_half_asm     = true;
++    bool m_occ_pair     = true;
+ 
+     virtual void do_build(BuildInfo& info) override
+     {
+@@ -253,6 +364,8 @@ class StrainPlasticDiscreteShellBending final : public FiniteElementExtraConstit
+         m_tql2         = !(t && t[0] == '0');
+         const char* s  = std::getenv("UIPC_MAKE_SPD_BLOCKED_HALF");
+         m_half_asm     = !(s && s[0] == '0');
++        const char* o  = std::getenv("UIPC_PDSB_OCC");
++        m_occ_pair     = !(o && o[0] == '0');
+     }
+ 
+     virtual void do_init(FilteredInfo& info) override
+@@ -451,6 +564,67 @@ class StrainPlasticDiscreteShellBending final : public FiniteElementExtraConstit
+                 n);
+         };
+ 
++        // s19: the two-hinges-per-thread arm (block 128 so ceil(n/2)/128 =
++        // ceil(n/256) blocks keep the one-block-per-SM fill; see the kernel's
++        // comment). It rides only the default projection arm <1, 1, 2> --
++        // the non-default knob combinations fall through to the single-hinge
++        // tree below.
++        auto launch_pair = [&](auto k)
++        {
++            constexpr int PairBlock = 128;
++            int           threads   = (n + 1) / 2;
++            int           grid      = (threads + PairBlock - 1) / PairBlock;
++            k<<<grid, PairBlock, 0, nullptr>>>(stencils.view(),
++                                               bending_stiffnesses.view(),
++                                               theta_bars.view(),
++                                               h_bars.view(),
++                                               V_bars.view(),
++                                               rest_lengths.view(),
++                                               info.xs(),
++                                               info.gradients(),
++                                               info.hessians(),
++                                               info.dt(),
++                                               info.gradient_only(),
++                                               n);
++        };
++
++        // s19: UIPC_PDSB_OCC_VERIFY=1 is the numerics probe, the
++        // UIPC_SPDSB_GN_VERIFY shape: run the *real* single-hinge kernel
++        // <1, 1, 2> (the reference), snapshot the gradient doublets AND the
++        // Hessian triplets it wrote, then run the pair kernel over the same
++        // inputs and count the mismatching 32-bit words on device. Both are
++        // supposed to be bit-identical -- the pairing is a scheduling change
++        // only -- and that is proved on the binary, not by reading the
++        // source. The live state after the pair is the pair launch's.
++        static const bool occ_verify = []
++        {
++            const char* v = std::getenv("UIPC_PDSB_OCC_VERIFY");
++            return v && v[0] != '0';
++        }();
++        if(m_occ_pair && m_tql2 && m_reduced_spd && m_blocked_proj && m_half_asm)
++        {
++            if(occ_verify)
++            {
++                static cuda_tool::SpreadVerifier sv_g{"StrainPlasticDSB::occ_pair_gradient"};
++                static cuda_tool::SpreadVerifier sv_h{"StrainPlasticDSB::occ_pair_hessian"};
++                sv_g.begin();
++                sv_g.add_doublet(info.gradients());
++                sv_h.begin();
++                sv_h.add_triplet(info.hessians());
++                launch(StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1, 2>);
++                sv_g.snapshot();
++                sv_h.snapshot();
++                launch_pair(
++                    StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_pair_kernel<1, 1, 2>);
++                sv_g.compare();
++                sv_h.compare();
++                return;
++            }
++            launch_pair(
++                StrainPlasticDiscreteShellBending_do_compute_gradient_hessian_pair_kernel<1, 1, 2>);
++            return;
++        }
++
+         // s01 (round 7): the plain hinge's dispatch shape -- only the
+         // instantiations the knobs can reach, each launched by name.
+         // s08: the blocked arm splits on the assembly variant (SymAsm).
+diff --git a/src/backends/cuda/finite_element/constitutions/stress_plastic_discrete_shell_bending.cu b/src/backends/cuda/finite_element/constitutions/stress_plastic_discrete_shell_bending.cu
+index 7de760d0..ee7de47f 100644
+--- a/src/backends/cuda/finite_element/constitutions/stress_plastic_discrete_shell_bending.cu
++++ b/src/backends/cuda/finite_element/constitutions/stress_plastic_discrete_shell_bending.cu
+@@ -4,6 +4,7 @@
+ #include <uipc/builtin/attribute_name.h>
+ #include <finite_element/constitutions/stress_plastic_discrete_shell_bending_function.h>
+ #include <utils/make_spd.h>
++#include <cuda_tool/spread_launch.h>
+ #include <utils/matrix_assembler.h>
+ #include <utils/dump_utils.h>
+ #include <algorithm>
+@@ -157,6 +158,111 @@ namespace
+         TMA.half_block<StencilSize>(I * HalfHessianSize).write(stencil, H12x12);
+     }
+ 
++    // s19 (round 7): the two-hinges-per-thread twin of the kernel above --
++    // see strain_plastic_discrete_shell_bending.cu for the occupancy
++    // argument (255 registers = full 256-thread/SM occupancy, one block per
++    // SM, the scene's hinge count nearly fills the machine, so the second
++    // chain per thread is the only latency-folding mechanism left; s16 put
++    // the QL at 52 % of its FP64-issue floor). Per-hinge arithmetic is
++    // unchanged (same expressions, same order) -- G and H are bit-identical
++    // to the single-hinge kernel, proved on device by UIPC_PDSB_OCC_VERIFY.
++    // Block dim fixed at 128 to keep ceil(n/2)/128 = ceil(n/256) blocks =
++    // today's one-block-per-SM fill. UIPC_PDSB_OCC=0 restores the
++    // single-hinge kernel.
++    template <int Proj, int Solver, int SymAsm = 2>
++    __global__ void StressPlasticDiscreteShellBending_do_compute_gradient_hessian_pair_kernel(
++        cuda_tool::BufferView<Vector4i>        stencils,
++        cuda_tool::BufferView<Float>           bending_stiffnesses,
++        cuda_tool::BufferView<Float>           theta_bars,
++        cuda_tool::BufferView<Float>           yield_stresses,
++        cuda_tool::BufferView<Float>           h_bars,
++        cuda_tool::BufferView<Float>           V_bars,
++        cuda_tool::BufferView<Float>           L0s,
++        cuda_tool::CBufferView<Vector3>        xs,
++        cuda_tool::DoubletVectorView<Float, 3> G3s,
++        cuda_tool::TripletMatrixView<Float, 3> H3x3s,
++        Float                                  dt,
++        bool                                   gradient_only,
++        int                                    n)
++    {
++        int half = (n + 1) / 2;
++        int i0   = blockIdx.x * blockDim.x + threadIdx.x;
++        if(i0 >= half)
++            return;
++        int  i1   = i0 + half;
++        bool has1 = i1 < n;  // false only for the last thread when n is odd
++
++        Vector4i sa             = stencils(i0);
++        Float    kappa_a        = bending_stiffnesses(i0);
++        Float    L0_a           = L0s(i0);
++        Float    h_bar_a        = h_bars(i0);
++        Float    theta_bar_a    = theta_bars(i0);
++        Float    yield_stress_a = yield_stresses(i0);
++        Float    V_bar_a        = V_bars(i0);
++        // the degenerate unpaired thread computes on a duplicate of its own
++        // (in-bounds) inputs and discards the second write
++        Vector4i sb             = has1 ? stencils(i1) : sa;
++        Float    kappa_b        = has1 ? bending_stiffnesses(i1) : kappa_a;
++        Float    L0_b           = has1 ? L0s(i1) : L0_a;
++        Float    h_bar_b        = has1 ? h_bars(i1) : h_bar_a;
++        Float    theta_bar_b    = has1 ? theta_bars(i1) : theta_bar_a;
++        Float    yield_stress_b = has1 ? yield_stresses(i1) : yield_stress_a;
++        Float    V_bar_b        = has1 ? V_bars(i1) : V_bar_a;
++
++        Vector3 x0a = xs(sa[0]);
++        Vector3 x1a = xs(sa[1]);
++        Vector3 x2a = xs(sa[2]);
++        Vector3 x3a = xs(sa[3]);
++        Vector3 x0b = xs(sb[0]);
++        Vector3 x1b = xs(sb[1]);
++        Vector3 x2b = xs(sb[2]);
++        Vector3 x3b = xs(sb[3]);
++
++        Float Vdt2a = V_bar_a * dt * dt;
++        Float Vdt2b = V_bar_b * dt * dt;
++
++        Vector12    Ga;
++        Vector12    Gb;
++        Matrix12x12 Ha12;
++        Matrix12x12 Hb12;
++
++        SPDSB::dEdx(Ga, x0a, x1a, x2a, x3a, L0_a, h_bar_a, theta_bar_a, kappa_a, yield_stress_a);
++        SPDSB::dEdx(Gb, x0b, x1b, x2b, x3b, L0_b, h_bar_b, theta_bar_b, kappa_b, yield_stress_b);
++        Ga *= Vdt2a;
++        Gb *= Vdt2b;
++        {
++            DoubletVectorAssembler DVA{G3s};
++            DVA.segment<StencilSize>(i0 * StencilSize).write(sa, Ga);
++            if(has1)
++                DVA.segment<StencilSize>(i1 * StencilSize).write(sb, Gb);
++        }
++
++        if(gradient_only)
++            return;
++
++        SPDSB::ddEddx(Ha12, x0a, x1a, x2a, x3a, L0_a, h_bar_a, theta_bar_a, kappa_a, yield_stress_a);
++        SPDSB::ddEddx(Hb12, x0b, x1b, x2b, x3b, L0_b, h_bar_b, theta_bar_b, kappa_b, yield_stress_b);
++        Ha12 *= Vdt2a;
++        Hb12 *= Vdt2b;
++        if constexpr(Proj == 1)
++            make_spd_translation_free_4x3_blocked_pair<Solver, SymAsm>(Ha12, Hb12);
++        else if constexpr(Proj == 2)
++        {
++            make_spd_translation_free_4x3<Solver>(Ha12);
++            make_spd_translation_free_4x3<Solver>(Hb12);
++        }
++        else
++        {
++            make_spd<12, Solver>(Ha12);
++            make_spd<12, Solver>(Hb12);
++        }
++
++        TripletMatrixAssembler TMA{H3x3s};
++        TMA.half_block<StencilSize>(i0 * HalfHessianSize).write(sa, Ha12);
++        if(has1)
++            TMA.half_block<StencilSize>(i1 * HalfHessianSize).write(sb, Hb12);
++    }
++
+     __global__ void StressPlasticDiscreteShellBendingTimeIntegrator_do_update_state_kernel(
+         cuda_tool::CBufferView<Vector4i> stencils,
+         cuda_tool::BufferView<Float>     theta_bars,
+@@ -247,6 +353,7 @@ class StressPlasticDiscreteShellBending final : public FiniteElementExtraConstit
+     bool m_blocked_proj = true;
+     bool m_tql2         = true;
+     bool m_half_asm     = true;
++    bool m_occ_pair     = true;
+ 
+     virtual void do_build(BuildInfo& info) override
+     {
+@@ -258,6 +365,8 @@ class StressPlasticDiscreteShellBending final : public FiniteElementExtraConstit
+         m_tql2         = !(t && t[0] == '0');
+         const char* s  = std::getenv("UIPC_MAKE_SPD_BLOCKED_HALF");
+         m_half_asm     = !(s && s[0] == '0');
++        const char* o  = std::getenv("UIPC_PDSB_OCC");
++        m_occ_pair     = !(o && o[0] == '0');
+     }
+ 
+     virtual void do_init(FilteredInfo& info) override
+@@ -458,6 +567,65 @@ class StressPlasticDiscreteShellBending final : public FiniteElementExtraConstit
+                 n);
+         };
+ 
++        // s19: the two-hinges-per-thread arm -- block 128 so ceil(n/2)/128 =
++        // ceil(n/256) blocks keep the one-block-per-SM fill (see the pair
++        // kernel's comment). Rides only the default projection arm <1, 1, 2>.
++        auto launch_pair = [&](auto k)
++        {
++            constexpr int PairBlock = 128;
++            int           threads   = (n + 1) / 2;
++            int           grid      = (threads + PairBlock - 1) / PairBlock;
++            k<<<grid, PairBlock, 0, nullptr>>>(stencils.view(),
++                                               bending_stiffnesses.view(),
++                                               theta_bars.view(),
++                                               yield_stresses.view(),
++                                               h_bars.view(),
++                                               V_bars.view(),
++                                               rest_lengths.view(),
++                                               info.xs(),
++                                               info.gradients(),
++                                               info.hessians(),
++                                               info.dt(),
++                                               info.gradient_only(),
++                                               n);
++        };
++
++        // s19: UIPC_PDSB_OCC_VERIFY=1 -- the UIPC_SPDSB_GN_VERIFY shape: run
++        // the *real* single-hinge kernel <1, 1, 2> (the reference), snapshot
++        // its gradient doublets and Hessian triplets, then run the pair
++        // kernel over the same inputs and count mismatching 32-bit words on
++        // device. Both are supposed to be bit-identical (the pairing is a
++        // scheduling change only); the live state after the pair is the pair
++        // launch's.
++        static const bool occ_verify = []
++        {
++            const char* v = std::getenv("UIPC_PDSB_OCC_VERIFY");
++            return v && v[0] != '0';
++        }();
++        if(m_occ_pair && m_tql2 && m_reduced_spd && m_blocked_proj && m_half_asm)
++        {
++            if(occ_verify)
++            {
++                static cuda_tool::SpreadVerifier sv_g{"StressPlasticDSB::occ_pair_gradient"};
++                static cuda_tool::SpreadVerifier sv_h{"StressPlasticDSB::occ_pair_hessian"};
++                sv_g.begin();
++                sv_g.add_doublet(info.gradients());
++                sv_h.begin();
++                sv_h.add_triplet(info.hessians());
++                launch(StressPlasticDiscreteShellBending_do_compute_gradient_hessian_kernel<1, 1, 2>);
++                sv_g.snapshot();
++                sv_h.snapshot();
++                launch_pair(
++                    StressPlasticDiscreteShellBending_do_compute_gradient_hessian_pair_kernel<1, 1, 2>);
++                sv_g.compare();
++                sv_h.compare();
++                return;
++            }
++            launch_pair(
++                StressPlasticDiscreteShellBending_do_compute_gradient_hessian_pair_kernel<1, 1, 2>);
++            return;
++        }
++
+         // s01 (round 7): the plain hinge's dispatch shape -- only the
+         // instantiations the knobs can reach, each launched by name.
+         // s08: the blocked arm splits on the assembly variant (SymAsm).
+diff --git a/src/backends/cuda/utils/make_spd.h b/src/backends/cuda/utils/make_spd.h
+index 0bd450cd..943e2a97 100644
+--- a/src/backends/cuda/utils/make_spd.h
++++ b/src/backends/cuda/utils/make_spd.h
+@@ -207,6 +207,149 @@ inline UIPC_GENERIC void make_spd_translation_free_4x3_blocked(Matrix12x12& H)
+     }
+ }
+ 
++// perf/round7 (s19): the two-matrix twin of the blocked 4x3 projection, for
++// the plastic-hinge kernels' two-hinges-per-thread arm (UIPC_PDSB_OCC). The
++// blocked kernel sits at 255 registers = the machine's full 256-thread/SM
++// register-limited occupancy, and crease-press supplies ~93 % of that
++// capacity in hinges, so the QL's latency half (s16: the solve runs at 52 %
++// of its FP64-issue floor) cannot be folded by occupancy -- the only
++// remaining mechanism is a second independent chain per *thread*. This
++// helper projects two Hessians through one set of loop nests: the assembly
++// and back-assembly carry both matrices' statements in the same (unrolled)
++// nests, and the eigen-solve is `evd_tridiag_ql_pair`, the fused do-while
++// form of tql2. Every per-matrix operation runs with the same expressions
++// in the same order as the single-matrix helper, so the two outputs are
++// bit-identical to calling the single helper twice (proved on device by
++// UIPC_PDSB_OCC_VERIFY over full runs). Solver = 0 (Eigen) and the
++// non-default SymAsm arms fall back to two sequential single-matrix calls:
++// the pair arm rides only the default <1, 1, 2> instantiation.
++template <int Solver = 0, int SymAsm = 2>
++inline UIPC_GENERIC void make_spd_translation_free_4x3_blocked_pair(Matrix12x12& Ha,
++                                                                    Matrix12x12& Hb)
++{
++    if constexpr(Solver != 1 || SymAsm != 2)
++    {
++        make_spd_translation_free_4x3_blocked<Solver, SymAsm>(Ha);
++        make_spd_translation_free_4x3_blocked<Solver, SymAsm>(Hb);
++        return;
++    }
++    else
++    {
++        constexpr Float            r2      = 0.70710678118654752440;
++        constexpr Float            r6      = 0.40824829046386301637;
++        constexpr Float            r12     = 0.28867513459481288225;
++        constexpr Float            h[3][4] = {{r2, -r2, 0.0, 0.0},
++                                              {r6, r6, -2.0 * r6, 0.0},
++                                              {r12, r12, r12, -3.0 * r12}};
++        constexpr int              nz[3]   = {2, 3, 4};
++        Eigen::Matrix<Float, 9, 9> Hra;
++        Eigen::Matrix<Float, 9, 9> Hrb;
++        // dead-triangle cut assembly (SymAsm = 2 forward half), both matrices
++        // in the same unrolled nest so their FMAs interleave
++        Hra.setZero();
++        Hrb.setZero();
++#pragma unroll
++        for(int j = 0; j < 3; ++j)
++#pragma unroll
++            for(int k = 0; k <= j; ++k)
++            {
++                if(j == k)
++                {
++#pragma unroll
++                    for(int p = 0; p < 3; ++p)
++#pragma unroll
++                        for(int q = 0; q <= p; ++q)
++                        {
++                            Float sa = 0.0;
++                            Float sb = 0.0;
++#pragma unroll
++                            for(int a = 0; a < nz[j]; ++a)
++#pragma unroll
++                                for(int b = 0; b < nz[j]; ++b)
++                                {
++                                    sa += (h[j][a] * h[j][b]) * Ha(3 * a + p, 3 * b + q);
++                                    sb += (h[j][a] * h[j][b]) * Hb(3 * a + p, 3 * b + q);
++                                }
++                            Hra(3 * j + p, 3 * j + q) = sa;
++                            Hrb(3 * j + p, 3 * j + q) = sb;
++                        }
++                    continue;
++                }
++                Matrix3x3 Ba = Matrix3x3::Zero();
++                Matrix3x3 Bb = Matrix3x3::Zero();
++                for(int a = 0; a < nz[j]; ++a)
++                    for(int b = 0; b < nz[k]; ++b)
++                    {
++                        Ba += (h[j][a] * h[k][b]) * Ha.template block<3, 3>(3 * a, 3 * b);
++                        Bb += (h[j][a] * h[k][b]) * Hb.template block<3, 3>(3 * a, 3 * b);
++                    }
++                Hra.template block<3, 3>(3 * j, 3 * k) = Ba;
++                Hrb.template block<3, 3>(3 * j, 3 * k) = Bb;
++            }
++        // the fused QL twin of make_spd<9, 1> for two matrices
++        Vector<Float, 9>           wa;
++        Vector<Float, 9>           wb;
++        Eigen::Matrix<Float, 9, 9> Va;
++        Eigen::Matrix<Float, 9, 9> Vb;
++        cuda_tool::eigen::evd_tridiag_ql_pair<Float, 9>(Hra, Hrb, wa, wb, Va, Vb);
++#pragma unroll
++        for(int i = 0; i < 9; ++i)
++        {
++            auto& vva = wa(i);
++            vva       = vva < 0.0 ? 0.0 : vva;
++            auto& vvb = wb(i);
++            vvb       = vvb < 0.0 ? 0.0 : vvb;
++        }
++        // V diag(w) V^T upper triangle + mirror, both matrices in one nest
++#pragma unroll
++        for(int i = 0; i < 9; ++i)
++#pragma unroll
++            for(int j = i; j < 9; ++j)
++            {
++                Float suma = 0.0;
++                Float sumb = 0.0;
++#pragma unroll
++                for(int k = 0; k < 9; ++k)
++                {
++                    suma += Va(i, k) * wa(k) * Va(j, k);
++                    sumb += Vb(i, k) * wb(k) * Vb(j, k);
++                }
++                Hra(i, j) = suma;
++                Hra(j, i) = suma;
++                Hrb(i, j) = sumb;
++                Hrb(j, i) = sumb;
++            }
++            // mirrored back-assembly (SymAsm = 2 back half), both matrices
++#pragma unroll
++        for(int a = 0; a < 4; ++a)
++#pragma unroll
++            for(int b = a; b < 4; ++b)
++            {
++                Matrix3x3 Ba = Matrix3x3::Zero();
++                Matrix3x3 Bb = Matrix3x3::Zero();
++                for(int j = 0; j < 3; ++j)
++                {
++                    if(a >= nz[j])
++                        continue;
++                    for(int k = 0; k < 3; ++k)
++                    {
++                        if(b >= nz[k])
++                            continue;
++                        Ba += (h[j][a] * h[k][b]) * Hra.template block<3, 3>(3 * j, 3 * k);
++                        Bb += (h[j][a] * h[k][b]) * Hrb.template block<3, 3>(3 * j, 3 * k);
++                    }
++                }
++                Ha.template block<3, 3>(3 * a, 3 * b) = Ba;
++                Hb.template block<3, 3>(3 * a, 3 * b) = Bb;
++                if(a != b)
++                {
++                    Ha.template block<3, 3>(3 * b, 3 * a) = Ba.transpose();
++                    Hb.template block<3, 3>(3 * b, 3 * a) = Bb.transpose();
++                }
++            }
++    }
++}
++
+ // perf/round7 (s07): the same projection for a THREE-vertex element Hessian
+ // (9x9) that annihilates rigid translations, e.g. a triangle membrane
+ // (NeoHookeanShell2D) whose energy depends on the vertices only through edge
