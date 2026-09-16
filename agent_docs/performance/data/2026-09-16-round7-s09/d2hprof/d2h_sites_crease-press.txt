@@ -1,0 +1,16 @@
+# crease-press -- UIPC_D2H_PROFILE=2 full default-frame run, per-call-site readback stalls
+# log: /workspace/deps/libuipc-src/output/benchmark-runs/crease-press-20260916T054733Z.log
+[d2h] readbacks=38545 bytes=52807648 drain=32370.978 ms stall=240.559 ms (stall/readback=6.24 us) oversize=0 verify=0 bad=0
+# stall_us n bytes fn(first stack frame after host_read)
+158064 26824 214592 LinearFusedPCG::fused_pcg(uipc::backend::cuda_tool::DenseVectorViewT<fal
+9850 1674 6696 GlobalDyTopoEffectManager::Impl::_distribute(GlobalDyTopoEffectManager::
+7597 130 52334880 FiniteElementMethod::Impl::write_scene(uipc::backend::WorldVisitor&)
+6546 1116 8928 GlobalDyTopoEffectManager::Impl::_distribute(GlobalDyTopoEffectManager::
+4466 555 2220 GlobalDyTopoEffectManager::Impl::_convert_matrix()
+4331 558 2232 MatrixConverter<double, 3>::convert_sym(uipc::backend::cuda_tool::Device
+4110 603 19296 LineSearcher::compute_energy(bool)
+3920 603 9648 InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_active(SimplexTraj
+3647 558 8928 InfoStacklessBVHSimplexTrajectoryFilter::Impl::filter_toi(SimplexTraject
+3625 555 2220 GlobalDyTopoEffectManager::Impl::_convert_matrix()
+3550 558 17856 InfoStacklessBVHSimplexTrajectoryFilter::Impl::detect(SimplexTrajectoryF
+3521 555 4440 GlobalContactManager::Impl::compute_feasible_step()
