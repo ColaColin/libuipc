@@ -1,0 +1,18 @@
+baseline (perf-round7-base, n=1): meanFrameMs 262.15  median 84.58  newton 552  pcg 104595  ls 620
+run meanFrameMs  newton      pcg    ls  wall_s  rc frames
+  1      238.03     555   107365   607    32.0   0    130
+  2      259.14     611   120885   689    34.8   0    130
+  3      231.06     540   103700   583    31.1   0    130
+  4      253.95     570   121805   612    34.1   0    130
+  5      234.65     553   105545   614    31.6   0    130
+  6      241.42     580   106380   643    32.4   0    130
+mean   mean=   243.040 sd=   11.134 cv= 4.58%
+newton mean=   568.167 sd=   25.199 cv= 4.44%
+pcg    mean=110946.667 sd= 8149.219 cv= 7.35%
+ls     mean=   624.667 sd=   36.871 cv= 5.90%
+
+REQUIRED: meanFrameMs old -> new = 262.15 -> 243.04 ms (-7.29 %), head n=6 (cv 4.34 % s00 noise floor; n=6 MDE ~4.4 %)
+ms_per_newton: 61.739 -> 55.609 (-9.93 %)
+newton_total: 552 -> 568.2 (+2.93 %)  s00 noise floor cv 2.56 %, range 552-587
+pcg_total:    104595 -> 110947 (+6.07 %)  s00 cv 7.64 %, range 104.6k-126.0k
+ls_total:     620 -> 624.7 (+0.75 %)  s00 cv 4.09 %, range 599-654
