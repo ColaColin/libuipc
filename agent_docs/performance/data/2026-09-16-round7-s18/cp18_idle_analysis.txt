@@ -1,0 +1,71 @@
+gpu rows=418727
+span=12.22s busy-union=12220830733.00s idle=0.997s (8.16% of span)
+
+gaps>=3us: n=20267 total=856.6ms (7.01% of span)
+bracket                                    n  total_ms   med_us   max_ms
+other->other                            4336     684.2      7.0   505.34
+pcg_vec->pcg_vec                        7759      63.8      7.2     1.32
+other->bvh_filter                       1002      15.7      8.6     0.71
+convert_sort->convert_sort              1464      10.2      4.2     0.53
+other->convert_sort                      817       9.9     11.0     0.21
+GH_slbw->other                             1       9.8   9781.7     9.78
+bvh_filter->other                        202       6.7      6.3     0.68
+abd_pairs->fill                          144       6.3      3.8     2.99
+convert_sort->other                      838       6.0      4.4     0.30
+other->pcg_vec                           217       5.8     14.0     0.58
+other->dist_k                            572       4.7      7.4     0.09
+other->assemble_other                    144       4.3      6.2     2.04
+other->energy                            381       3.3      9.2     0.08
+pcg_vec->other                           378       2.9      5.6     0.31
+assemble_other->other                      8       2.9     86.8     1.36
+dist_k->convert_sort                     501       2.6      3.9     0.17
+other->abd_pairs                         144       2.6      7.1     0.34
+bvh_filter->bvh_filter                   229       2.1      5.4     0.26
+other->fill                              225       1.8      7.6     0.08
+energy->energy                           138       1.8      3.6     0.75
+dist_k->dist_k                           273       1.6      5.9     0.01
+other->spmv                              213       0.8      3.5     0.01
+
+next==GH_dahl: n=14 total=0.53ms med=10.4us
+   other->GH_dahl                     n=  12 total=    0.51ms
+   GH_nhs2d->GH_dahl                  n=   2 total=    0.02ms
+
+next==GH_plastic: n=6 total=1.10ms med=65.8us
+   GH_dahl->GH_plastic                n=   3 total=    0.60ms
+   GH_slbw->GH_plastic                n=   2 total=    0.42ms
+   other->GH_plastic                  n=   1 total=    0.09ms
+
+next==GH_nhs2d: n=3 total=0.22ms med=70.2us
+   other->GH_nhs2d                    n=   3 total=    0.22ms
+
+next==fill: n=411 total=8.91ms med=7.3us
+   other->fill                        n= 225 total=    1.85ms
+   abd_pairs->fill                    n= 144 total=    6.29ms
+   convert_sort->fill                 n=  33 total=    0.36ms
+   fill->fill                         n=   5 total=    0.09ms
+   MAS->fill                          n=   2 total=    0.09ms
+   assemble_other->fill               n=   2 total=    0.23ms
+
+next==abd_pairs: n=239 total=3.18ms med=7.1us
+   other->abd_pairs                   n= 144 total=    2.58ms
+   convert_sort->abd_pairs            n=  94 total=    0.53ms
+   abd_pairs->abd_pairs               n=   1 total=    0.07ms
+
+next==dist_k: n=871 total=6.41ms med=7.2us
+   other->dist_k                      n= 572 total=    4.66ms
+   dist_k->dist_k                     n= 273 total=    1.63ms
+   convert_sort->dist_k               n=  26 total=    0.12ms
+
+biggest gaps:
+   gap= 505344.1us other         ->other          host: sync=1 launch=0 memcpy=2 api_overlap=   168.5us
+   gap=  42338.5us other         ->other          host: sync=1 launch=1 memcpy=0 api_overlap=   657.5us
+   gap=  16849.6us other         ->other          host: sync=0 launch=0 memcpy=1 api_overlap=   122.3us
+   gap=   9781.7us GH_slbw       ->other          host: sync=0 launch=1 memcpy=1 api_overlap=   130.0us
+   gap=   7056.8us other         ->other          host: sync=1 launch=6 memcpy=1 api_overlap=  6586.1us
+   gap=   6035.5us other         ->other          host: sync=1 launch=1 memcpy=1 api_overlap=  6020.3us
+   gap=   5825.0us other         ->other          host: sync=1 launch=1 memcpy=1 api_overlap=  5810.5us
+   gap=   5002.2us other         ->other          host: sync=1 launch=1 memcpy=1 api_overlap=  4987.3us
+   gap=   4454.4us other         ->other          host: sync=1 launch=1 memcpy=0 api_overlap=    61.5us
+   gap=   3710.6us other         ->other          host: sync=1 launch=1 memcpy=1 api_overlap=  3696.4us
+   gap=   3140.5us other         ->other          host: sync=0 launch=1 memcpy=0 api_overlap=    42.1us
+   gap=   3003.6us other         ->other          host: sync=1 launch=1 memcpy=1 api_overlap=  2984.6us
