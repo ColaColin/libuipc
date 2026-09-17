@@ -1,0 +1,47 @@
+[
+  {
+    "scene": "cube-wall-cloth",
+    "n": 4,
+    "status": "ok",
+    "returnCodes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "startedAt": "2026-09-17T09:41:27.299492+00:00",
+    "makespanS": 18.063,
+    "perProcSimS": [
+      18.062,
+      17.91,
+      17.759,
+      17.604
+    ],
+    "perProcMeanMs": [
+      154.3,
+      158.4,
+      154.1,
+      155.0
+    ],
+    "perProcMedianMs": [
+      138.1,
+      124.2,
+      136.3,
+      124.4
+    ],
+    "framesEach": 100,
+    "freeMiB_before": 6985,
+    "peakTotalMiB": 5298,
+    "meanUtil": 88.4,
+    "p90Util": 100.0,
+    "minSmClockMHz": 1605,
+    "meanPowerW": 175.7,
+    "steadyFps": 25.253,
+    "steadyFpsMean": 25.732,
+    "makespanFps": 22.145,
+    "meanFrameMs": 155.45,
+    "slowestFrameMs": 158.4,
+    "rep": 0,
+    "label": "split0-p2"
+  }
+]

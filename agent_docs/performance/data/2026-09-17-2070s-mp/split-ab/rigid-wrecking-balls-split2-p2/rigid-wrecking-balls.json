@@ -1,0 +1,47 @@
+[
+  {
+    "scene": "rigid-wrecking-balls",
+    "n": 4,
+    "status": "ok",
+    "returnCodes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "startedAt": "2026-09-17T09:40:42.756887+00:00",
+    "makespanS": 8.985,
+    "perProcSimS": [
+      8.984,
+      8.832,
+      8.681,
+      8.53
+    ],
+    "perProcMeanMs": [
+      61.4,
+      62.0,
+      62.7,
+      62.0
+    ],
+    "perProcMedianMs": [
+      58.9,
+      57.7,
+      58.4,
+      57.8
+    ],
+    "framesEach": 120,
+    "freeMiB_before": 6985,
+    "peakTotalMiB": 3562,
+    "meanUtil": 80,
+    "p90Util": 100.0,
+    "minSmClockMHz": 1605,
+    "meanPowerW": 171.7,
+    "steadyFps": 63.796,
+    "steadyFpsMean": 64.49,
+    "makespanFps": 53.424,
+    "meanFrameMs": 62.02,
+    "slowestFrameMs": 62.7,
+    "rep": 0,
+    "label": "split2-p2"
+  }
+]
