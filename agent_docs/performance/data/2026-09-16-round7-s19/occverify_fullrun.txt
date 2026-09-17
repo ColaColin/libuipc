@@ -1,4 +1,0 @@
-[SpreadVerify] StressPlasticDSB::occ_pair_hessian             1009537200 output words (32-bit) compared, 0 mismatching
-[SpreadVerify] StressPlasticDSB::occ_pair_gradient            141335208 output words (32-bit) compared, 0 mismatching
-[SpreadVerify] StrainPlasticDSB::occ_pair_hessian             1009537200 output words (32-bit) compared, 0 mismatching
-[SpreadVerify] StrainPlasticDSB::occ_pair_gradient            141335208 output words (32-bit) compared, 0 mismatching

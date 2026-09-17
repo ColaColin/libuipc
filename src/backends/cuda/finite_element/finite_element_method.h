@@ -393,9 +393,6 @@ class FiniteElementMethod final : public SimSystem
     friend class FiniteElementVertexReporter;
     friend class FiniteElementSurfaceReporter;
     friend class FiniteElementBodyReporter;
-    // DIAGNOSTIC only (extras/debug/warm_start_oracle): injects the captured
-    // frame positions into xs as the initial Newton iterate
-    friend class SimEngine;
 
     friend class FEMLinearSubsystem;
     friend class FEMLineSearchReporter;

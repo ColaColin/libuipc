@@ -1,6 +1,0 @@
-[2026-09-13 15:59:36.343] [warning] [ccd_compact_verify] calls=1000 candidates=703811006 dropped=639409126 (90.85 %) active_pairs=25939536 MISMATCHES=0
-[2026-09-13 15:59:39.160] [warning] [ccd_compact_verify] contents checks=1000 MISMATCHES=0
-[2026-09-13 15:59:39.464] [warning] [ccd_compact_verify] calls=1200 candidates=843202926 dropped=765580982 (90.79 %) active_pairs=31650968 MISMATCHES=0
-[2026-09-13 15:59:41.875] [warning] [ccd_compact_verify] calls=1400 candidates=944768586 dropped=858428969 (90.86 %) active_pairs=35561204 MISMATCHES=0
-[2026-09-13 15:59:42.158] [warning] [ccd_compact_verify] contents checks=1200 MISMATCHES=0
-[2026-09-13 15:59:44.720] [warning] [ccd_compact_verify] calls=1600 candidates=1056871554 dropped=958915814 (90.73 %) active_pairs=40765709 MISMATCHES=0

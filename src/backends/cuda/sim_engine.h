@@ -75,17 +75,6 @@ class SimEngine final : public backend::SimEngine
     void dump_global_surface();
     void dump_global_surface_pre_ccd(SizeT newton_iter);
 
-    // ---- NN-research oracle diagnostics (extras/debug/*, default off) ----
-    // warm_start_oracle == 1: append the converged global positions of every
-    // frame to <UIPC_ORACLE_DIR>/positions_f64.bin (one record per frame).
-    void oracle_capture_frame();
-    // warm_start_oracle == 2: overwrite the initial Newton iterate (FEM xs and
-    // the mirrored global positions) with the captured record of the current
-    // frame. Called right after predict_dof, so x_tilde / x_prev / friction
-    // anchors keep the run's own state.
-    void oracle_inject_frame();
-    void init_warm_start_oracle();
-
     std::stringstream m_string_stream;
     SimEngineState    m_state = SimEngineState::None;
 
@@ -157,18 +146,7 @@ class SimEngine final : public backend::SimEngine
     CAS<IndexT> m_strict_mode;
     CAS<Float>  m_ccd_tol;
     CAS<IndexT> m_dump_surface;
-    CAS<IndexT> m_candidate_reuse_oracle;
-    CAS<IndexT> m_warm_start_oracle;
-    CAS<IndexT> m_dump_candidates;
     CAS<IndexT> m_dcd_candidate_reuse;
     CAS<IndexT> m_dcd_candidate_reuse_verify;
-
-    // warm-start-oracle state (diagnostic only)
-    std::string          m_oracle_dir;
-    std::vector<Vector3> m_oracle_host;   // replay: all captured frames
-    std::vector<Vector3> m_oracle_frame;  // capture/download staging
-    SizeT                m_oracle_vertex_count = 0;
-    SizeT                m_oracle_fem_offset   = 0;
-    SizeT                m_oracle_frames       = 0;
 };
 }  // namespace uipc::backend::cuda

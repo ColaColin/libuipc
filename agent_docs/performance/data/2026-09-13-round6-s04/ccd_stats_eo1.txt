@@ -1,6 +1,0 @@
-# UIPC_CCD_STATS=1 UIPC_CCD_EARLY_OUT=1, tumbler-garments, 60 frames
-# (a separate run of a chaotic scene, so the absolute counts differ from eo0)
-CCD stats [200 calls] PT: accd_calls=31904677 first_pass_exits=31714975 (99.41 %) loop_passes=32173221 (1.008/call) converged_hits=32821 (0.1029 %)
-CCD stats [200 calls] EE: accd_calls=94256214 first_pass_exits=93766530 (99.48 %) loop_passes=94895339 (1.007/call) converged_hits=85160 (0.0903 %)
-CCD stats [400 calls] PT: accd_calls=80946335 first_pass_exits=80299702 (99.20 %) loop_passes=81876847 (1.011/call) converged_hits=121050 (0.1495 %)
-CCD stats [400 calls] EE: accd_calls=233109214 first_pass_exits=231282965 (99.22 %) loop_passes=235588789 (1.011/call) converged_hits=346859 (0.1488 %)

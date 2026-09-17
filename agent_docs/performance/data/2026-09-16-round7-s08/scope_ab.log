@@ -1,5 +1,0 @@
-cap ok /workspace/output/round7/s08/nsys_new_r1 (UIPC_MAKE_SPD_BLOCKED_HALF=) rc=0
-cap ok /workspace/output/round7/s08/nsys_old_r1 (UIPC_MAKE_SPD_BLOCKED_HALF=0) rc=0
-cap ok /workspace/output/round7/s08/nsys_old_r2 (UIPC_MAKE_SPD_BLOCKED_HALF=0) rc=0
-cap ok /workspace/output/round7/s08/nsys_new_r2 (UIPC_MAKE_SPD_BLOCKED_HALF=) rc=0
-SCOPE_AB_DONE

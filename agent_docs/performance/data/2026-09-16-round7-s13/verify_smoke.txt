@@ -1,8 +1,0 @@
-[segred-verify] convert<T,3> in=4970 out=1067 words=9603 mismatch_words=20 (in_multiwarp_slots=20, elsewhere=0) slots=6 multiwarp_slots=9 maxrel=1.507e-15
-[segred-verify] convert<T,3> in=441257 out=32763 words=294867 mismatch_words=4860 (in_multiwarp_slots=4860, elsewhere=0) slots=1846 multiwarp_slots=3404 maxrel=1.958e-14
-[segred-verify] convert<T,3> in=631190 out=51418 words=462762 mismatch_words=6288 (in_multiwarp_slots=6288, elsewhere=0) slots=2169 multiwarp_slots=3530 maxrel=8.502e-14
-[segred-verify] convert<T,3> in=861962 out=74223 words=668007 mismatch_words=8152 (in_multiwarp_slots=8152, elsewhere=0) slots=2840 multiwarp_slots=4369 maxrel=2.160e-14
-[segred-verify] convert<T,3> in=867890 out=75049 words=675441 mismatch_words=8136 (in_multiwarp_slots=8136, elsewhere=0) slots=2817 multiwarp_slots=4401 maxrel=1.088e-14
-[segred-verify] convert<T,3> in=878045 out=76207 words=685863 mismatch_words=8217 (in_multiwarp_slots=8217, elsewhere=0) slots=2844 multiwarp_slots=4408 maxrel=3.281e-13
-[segred-verify] convert<T,3> in=888456 out=77330 words=695970 mismatch_words=8202 (in_multiwarp_slots=8202, elsewhere=0) slots=2844 multiwarp_slots=4402 maxrel=8.390e-14
-[segred-verify] convert<T,3> in=1101278 out=98141 words=883269 mismatch_words=9849 (in_multiwarp_slots=9849, elsewhere=0) slots=3401 multiwarp_slots=5056 maxrel=4.387e-14

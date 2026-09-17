@@ -1,3 +1,0 @@
-Generating SQLite file /workspace/output/round7/s20/envaudit/k_segred_tree0.sqlite from /workspace/output/round7/s20/envaudit/k_segred_tree0.nsys-rep
-Processing [/workspace/output/round7/s20/envaudit/k_segred_tree0.sqlite] with [/workspace/deps/nsight/nsight-systems/2024.6.2/host-linux-x64/reports/cuda_gpu_kern_sum.py] to [/workspace/output/round7/s20/envaudit/k_segred_tree0_cuda_gpu_kern_sum.csv]... PROCESSED
-

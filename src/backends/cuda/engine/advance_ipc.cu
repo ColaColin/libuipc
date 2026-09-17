@@ -22,19 +22,6 @@ void SimEngine::advance()
     Float ccd_alpha = 1.0;
     Float cfl_alpha = 1.0;
 
-    // ---- DIAGNOSTIC oracle flags (extras/debug/*, both default off) ----
-    // [candidate_reuse_oracle] skip the DCD broadphase re-detection for
-    // newton_iter > 0 and reuse the previous iteration's candidate buffers
-    // as-is: the wall-time ceiling of a perfect learned candidate predictor.
-    // NOT exactness-preserving (the reused set is not a certified superset).
-    const bool dcd_candidate_reuse = m_candidate_reuse_oracle->view()[0] != 0;
-    if(dcd_candidate_reuse && m_current_frame == 0)  // announce once per run
-    {
-        logger::warn(
-            "[candidate_reuse_oracle] ACTIVE: DCD re-detection is "
-            "skipped for newton_iter > 0 (diagnostic only)");
-    }
-
     // ---- FEATURE: certified DCD candidate reuse
     // (collision_detection/dcd_candidate_reuse, default ON: the schema
     // default is 1, so every scene runs the reuse path unless it opts
@@ -68,16 +55,12 @@ void SimEngine::advance()
             "[dcd_candidate_reuse] ACTIVE: newton_iter > 0 reuses the "
             "certified trajectory candidate set");
     }
-    const bool reuse_candidates = dcd_candidate_reuse || certified_candidate_reuse;
+    const bool reuse_candidates = certified_candidate_reuse;
     // [dcd_candidate_reuse_verify] re-run the fresh DCD detection at every
     // reused iteration and check the certification invariant (fresh set
     // contained in reused set) on the host; default off, costly.
     const bool reuse_verify =
         reuse_candidates && m_dcd_candidate_reuse_verify->view()[0] != 0;
-    // [warm_start_oracle == 2] replay the captured frame-t positions as the
-    // initial Newton iterate of frame t: the ceiling of a perfect learned
-    // warm start. Changes the trajectory by construction.
-    const bool warm_start_replay = m_warm_start_oracle->view()[0] == 2;
 
     /***************************************************************************************
     *                                  Function Shortcuts
@@ -90,11 +73,6 @@ void SimEngine::advance()
             Timer timer{"Detect DCD Candidates"};
             m_global_trajectory_filter->detect(0.0);
             m_global_trajectory_filter->filter_active();
-
-            // DIAGNOSTIC (extras/debug/dump_candidates): per-pair candidate
-            // dump; no-op unless the flag is set.
-            if(m_dump_candidates->view()[0])
-                m_global_trajectory_filter->dump_dcd_candidates(m_current_frame, newton_iter);
         }
     };
 
@@ -393,11 +371,6 @@ void SimEngine::advance()
             step_animation_and_external_forces();
             m_time_integrator_manager->predict_dof();
 
-            // DIAGNOSTIC: overwrite the initial Newton iterate with the
-            // captured solution of this frame (warm-start oracle)
-            if(warm_start_replay)
-                oracle_inject_frame();
-
             // 3. Adaptive Parameter Calculation
             detect_dcd_candidates(0);
             compute_adaptive_kappa();
@@ -447,8 +420,7 @@ void SimEngine::advance()
 
 
                 // 2) Build Collision Pairs
-                // FEATURE (collision_detection/dcd_candidate_reuse) /
-                // DIAGNOSTIC (candidate_reuse_oracle): with reuse active,
+                // FEATURE (collision_detection/dcd_candidate_reuse): with reuse active,
                 // iterations > 0 keep the previous line-search trajectory
                 // candidate set (a certified superset, see the certification
                 // comment above) instead of re-running the DCD detection.
@@ -614,11 +586,6 @@ void SimEngine::advance()
                 Timer timer{"Update Velocity"};
                 m_time_integrator_manager->update_state();
             }
-
-            // DIAGNOSTIC: record the converged positions of this frame
-            // (warm-start oracle, capture mode)
-            if(m_warm_start_oracle->view()[0] == 1)
-                oracle_capture_frame();
 
             // Check Newton Iteration
             // report warnings or throw exceptions if needed

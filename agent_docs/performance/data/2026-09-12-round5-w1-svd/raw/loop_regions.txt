@@ -1,5 +1,0 @@
-kernel <true>: 8984 instructions, 3729 FP64
-  LOOP 0x45c0..0x6490: 494 instr, FP64=232, MUFU=12
---- fixed, 4 sweeps ---
-kernel <true>: 7064 instructions, 3171 FP64
-(no LOOP line = no backward branch)

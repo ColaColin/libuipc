@@ -1,9 +1,0 @@
-mode=0 [2026-09-14 12:17:27.572] [warning] [cuda] [bcoo-hash] nnz=286419 xor=0xe1961857c13546f8 sum=0x69bf90037d9d8d08
-mode=0 [2026-09-14 12:17:27.595] [warning] [cuda] [bcoo-hash] nnz=286439 xor=0x9ac5dcd786a963d5 sum=0x091da4cd02c7bcc3
-mode=0 [2026-09-14 12:17:27.615] [warning] [cuda] [bcoo-hash] nnz=286444 xor=0x3d8e245bde6e3ba3 sum=0xe365c2c6ca8302ff
-mode=1 [2026-09-14 12:17:31.062] [warning] [cuda] [bcoo-hash] nnz=286419 xor=0xdd2cc9c19dc6a967 sum=0x16540660d1c69b25
-mode=1 [2026-09-14 12:17:31.084] [warning] [cuda] [bcoo-hash] nnz=286439 xor=0xa860479107d457fd sum=0x688a0a3c79134fbb
-mode=1 [2026-09-14 12:17:31.103] [warning] [cuda] [bcoo-hash] nnz=286444 xor=0x7c47476c6304e43d sum=0x4df7398e56426205
-mode=2 [2026-09-14 12:17:34.635] [warning] [cuda] [bcoo-hash] nnz=286419 xor=0xd288eb930e6b32c7 sum=0xb109ad49168b7029
-mode=2 [2026-09-14 12:17:34.657] [warning] [cuda] [bcoo-hash] nnz=286439 xor=0x8c9b02a209f91cb3 sum=0xfc4969927305ebfd
-mode=2 [2026-09-14 12:17:34.676] [warning] [cuda] [bcoo-hash] nnz=286444 xor=0xa3de6aff13d1779e sum=0x99913127fb4419c4

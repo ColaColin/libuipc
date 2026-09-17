@@ -95,10 +95,6 @@ class GlobalTrajectoryFilter final : public SimSystem
     void add_filter(TrajectoryFilter* filter);
     void require_discard_friction();
 
-    // DIAGNOSTIC (extras/debug/dump_candidates): forward (frame, newton_iter)
-    // to every simplex filter so it can dump its per-pair candidate set.
-    void dump_dcd_candidates(SizeT frame, SizeT newton_iter);
-
     // DIAGNOSTIC (extras/debug/dcd_candidate_reuse_verify): snapshot the raw
     // broadphase candidate sets the certified DCD candidate reuse is about to
     // reuse; then, after the caller re-ran the fresh DCD detection,

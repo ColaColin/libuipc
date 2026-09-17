@@ -1,8 +1,0 @@
-part1 n=332  part2 n=332  snh n=332
-
-part1 window total 292.2 ms (880 us/launch); co-resident:
-      103.1ms ( 35.3% of part1)  void uipc::backend::cuda::<unnamed>::do_assemble_kernel<(b
-
-part1 end -> next SNH start: median 325 us, mean 377 us (n=332)
-
-SNH window total 939.2 ms (2829 us/launch); co-resident:

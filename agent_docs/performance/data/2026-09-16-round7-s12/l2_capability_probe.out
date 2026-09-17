@@ -1,6 +1,0 @@
-name=NVIDIA GeForce RTX 2070 SUPER cc=7.5
-l2CacheSize=4194304 bytes (4.00 MB)
-persistingL2CacheMaxSize=0 bytes (0.00 MB)
-accessPolicyMaxWindowSize=0 bytes (0.00 MB)
-current persisting setaside=0
-streamSetAttribute(window) -> invalid argument

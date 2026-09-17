@@ -1,5 +1,0 @@
-EE: samples=1000000  bool_mismatch=0  toc_bit_mismatch=0  hits(old)=194721 (19.47 %)  no-hit(new)=805279  larger_toc_on_new=0
-PT: samples=1000000  bool_mismatch=0  toc_bit_mismatch=0  hits(old)=154136 (15.41 %)  no-hit(new)=845864  larger_toc_on_new=0
-PE: samples=1000000  bool_mismatch=0  toc_bit_mismatch=0  hits(old)=110829 (11.08 %)  no-hit(new)=889171  larger_toc_on_new=0
-PP: samples=1000000  bool_mismatch=0  toc_bit_mismatch=0  hits(old)=72605 (7.26 %)  no-hit(new)=927395  larger_toc_on_new=0
-RESULT: BIT-IDENTICAL on every sample

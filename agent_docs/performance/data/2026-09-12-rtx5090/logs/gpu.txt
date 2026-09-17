@@ -1,2 +1,0 @@
-name, driver_version, memory.total [MiB], clocks.max.sm [MHz]
-NVIDIA GeForce RTX 5090, 580.126.09, 32607 MiB, 3105 MHz

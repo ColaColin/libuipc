@@ -1,4 +1,0 @@
-lb1283 regs=168 stack=1104 spillST=768 spillLD=888
-lb1284 regs=128 stack=1648 spillST=1644 spillLD=1812
-lb1922 regs=168 stack=1104 spillST=768 spillLD=888
-lb646 regs=168 stack=1104 spillST=768 spillLD=888

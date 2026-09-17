@@ -1,7 +1,0 @@
-CUDA Backend Kernel Console Init Success!
-SANITY(init): SanityCheckResult.Success clean= True
-crease-press: 7 sheets, 16774 verts, 32168 tris, hinges dahl/strain/stress = 28557/9506/9506, denim e=11.0mm res=45x74, carton e=15.5mm res=32x53, h_min=7.73mm, d_hat=2.00mm, gap=7.3mm, dt=0.0166667, 130 frames
-frame    0   243.6ms press1  newton= 7 pcg=  955 ls=21 conv=True press_y=0.650 press_z=-0.080 dahlF=0.995 yield=0.000/0.000
-frame   20    51.6ms hold1   newton= 1 pcg=    5 ls= 1 conv=True press_y=0.521 press_z=-0.080 dahlF=1.000 yield=0.000/0.013
-frame   40  4067.5ms shift   newton= 3 pcg=35100 ls= 3 conv=True press_y=0.651 press_z=+0.069 dahlF=1.000 yield=0.000/0.020
-frame   60  2169.2ms hold2   newton= 5 pcg=17190 ls= 5 conv=True press_y=0.521 press_z=+0.080 dahlF=1.000 yield=0.001/0.030

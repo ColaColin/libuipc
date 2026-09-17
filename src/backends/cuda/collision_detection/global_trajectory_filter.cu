@@ -78,17 +78,6 @@ void GlobalTrajectoryFilter::filter_active()
     }
 }
 
-void GlobalTrajectoryFilter::dump_dcd_candidates(SizeT frame, SizeT newton_iter)
-{
-    // DIAGNOSTIC: no-op for every filter unless extras/debug/dump_candidates
-    // is set (the simplex filter caches the flag at build time).
-    for(auto filter : m_impl.filters.view())
-    {
-        if(auto simplex = dynamic_cast<SimplexTrajectoryFilter*>(filter))
-            simplex->dump_active_pairs(frame, newton_iter);
-    }
-}
-
 void GlobalTrajectoryFilter::snapshot_reused_candidates()
 {
     // DIAGNOSTIC (extras/debug/dcd_candidate_reuse_verify): only the

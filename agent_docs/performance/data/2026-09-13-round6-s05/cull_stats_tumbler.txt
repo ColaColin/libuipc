@@ -1,8 +1,0 @@
-[2026-09-13 14:03:56.719] [warning] CCD stats [200 calls] PT: accd_calls=39718847 first_pass_exits=39393673 (99.18 %) loop_passes=40170952 (1.011/call) converged_hits=82860 (0.2086 %)
-[2026-09-13 14:03:56.719] [warning] CULL stats [200 calls] PT: pairs=39718847 ccd_only=39393673 (99.181 %) ccd_and_dcd=35637423 (89.724 %)
-[2026-09-13 14:03:56.719] [warning] CCD stats [200 calls] EE: accd_calls=116248799 first_pass_exits=115232901 (99.13 %) loop_passes=117543365 (1.011/call) converged_hits=236567 (0.2035 %)
-[2026-09-13 14:03:56.719] [warning] CULL stats [200 calls] EE: pairs=116248799 ccd_only=115232901 (99.126 %) ccd_and_dcd=103170937 (88.750 %)
-[2026-09-13 14:03:59.810] [warning] CCD stats [400 calls] PT: accd_calls=72000948 first_pass_exits=71453224 (99.24 %) loop_passes=72744284 (1.010/call) converged_hits=109050 (0.1515 %)
-[2026-09-13 14:03:59.810] [warning] CULL stats [400 calls] PT: pairs=72000948 ccd_only=71453224 (99.239 %) ccd_and_dcd=65765184 (91.339 %)
-[2026-09-13 14:03:59.810] [warning] CCD stats [400 calls] EE: accd_calls=210488978 first_pass_exits=208804700 (99.20 %) loop_passes=212606163 (1.010/call) converged_hits=317395 (0.1508 %)
-[2026-09-13 14:03:59.810] [warning] CULL stats [400 calls] EE: pairs=210488978 ccd_only=208804700 (99.200 %) ccd_and_dcd=190480806 (90.494 %)

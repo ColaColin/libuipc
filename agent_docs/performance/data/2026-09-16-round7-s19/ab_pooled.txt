@@ -1,8 +1,0 @@
-pooled n/arm: old=10, new=10  (ab r1-8 + topup r1-2, each batch ABBA-interleaved; warmup discarded in batch 1)
-all runs converged, no newton-limit: True
-meanFrameMs old     232.045  new     236.247   +1.81%   t=-0.73 p=0.474  MW p=0.521
-ms/newton   old      53.442  new      54.236   +1.48%   t=-0.79 p=0.439  MW p=0.473
-ms/pcg      old       0.260  new       0.262   +0.74%   t=-0.32 p=0.752  MW p=0.734
-newton      old     564.400  new     566.200   +0.32%   t=-0.22 p=0.829  MW p=0.596
-pcg         old  116558.500  new  118049.000   +1.28%   t=-0.27 p=0.787  MW p=0.850
-line_search old     621.800  new     626.700   +0.79%   t=-0.33 p=0.745  MW p=0.520

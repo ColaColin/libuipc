@@ -383,14 +383,10 @@ static SceneConfigContract make_scene_config_contract()
     add("extras/debug/dump_candidates",
         IndexT{0},
         "integer",
-        "DIAGNOSTIC (default off, do not ship enabled): after every DCD candidate "
-        "detection (frame start and every Newton iteration > 0), append one binary "
-        "record per reported candidate pair (PT/EE/PE/PP: vertex ids, squared "
-        "distance, per-primitive displacement magnitudes, d_hat, thickness, body "
-        "ids) to $UIPC_ORACLE_DIR/candidates.bin. Host-side only; used to train "
-        "offline candidate-persistence predictors for the NN-acceleration "
-        "research.",
-        {"src/backends/cuda/collision_detection/nn_candidate_dump.cu"},
+        "REMOVED 2026-09-17 (was the NN-research per-pair candidate dump, "
+        "nn_candidate_dump.cu). Registered as a no-op so old scene configs "
+        "still load under strictUnknownKeys; any non-zero value is ignored.",
+        {},
         flag);
     add("extras/debug/dcd_candidate_reuse_verify",
         IndexT{0},
@@ -408,24 +404,18 @@ static SceneConfigContract make_scene_config_contract()
     add("extras/debug/candidate_reuse_oracle",
         IndexT{0},
         "integer",
-        "DIAGNOSTIC (default off, do not ship enabled): skip the DCD broadphase "
-        "re-detection for newton_iter>0 and reuse the previous iteration's "
-        "candidate buffers as-is. Measures the wall-time ceiling of a learned "
-        "contact-candidate predictor; NOT exactness-preserving (the reused set "
-        "is not a certified superset of the exact one).",
-        {"src/backends/cuda/engine/advance_ipc.cu"},
+        "REMOVED 2026-09-17 (was the NN-research reuse ceiling experiment). "
+        "Registered as a no-op so old scene configs still load under "
+        "strictUnknownKeys; any non-zero value is ignored.",
+        {},
         flag);
     add("extras/debug/warm_start_oracle",
         IndexT{0},
         "integer",
-        "DIAGNOSTIC (default off, do not ship enabled): oracle for a learned "
-        "Newton warm start. 1 = capture the converged vertex positions at the "
-        "end of every frame to $UIPC_ORACLE_DIR/positions_f64.bin; 2 = replay "
-        "the captured frame-t positions as the initial Newton iterate of frame "
-        "t (injected right after predict_dof, so the potential itself is built "
-        "from the run's own state). Measures the ceiling of a perfect "
-        "next-frame predictor; changes the trajectory by construction.",
-        {"src/backends/cuda/engine/advance_ipc.cu"},
+        "REMOVED 2026-09-17 (was the NN-research warm-start capture/replay "
+        "oracle, nn_oracle.cu). Registered as a no-op so old scene configs "
+        "still load under strictUnknownKeys; any non-zero value is ignored.",
+        {},
         Json{{"enum", Json::array({0, 1, 2})}});
     add("extras/strict_mode/enable",
         IndexT{0},
