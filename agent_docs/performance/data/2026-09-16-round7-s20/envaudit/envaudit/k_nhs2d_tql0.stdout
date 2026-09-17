@@ -1,0 +1,12 @@
+WARNING: CPU IP/backtrace sampling not supported, disabling.
+Try the 'nsys status --environment' command to learn more.
+
+WARNING: CPU context switch tracing not supported, disabling.
+Try the 'nsys status --environment' command to learn more.
+
+CUDA Backend Kernel Console Init Success!
+SANITY(init): SanityCheckResult.Success clean= True
+crease-press: 7 sheets, 16774 verts, 32168 tris, hinges dahl/strain/stress = 28557/9506/9506, denim e=11.0mm res=45x74, carton e=15.5mm res=32x53, h_min=7.73mm, d_hat=2.00mm, gap=7.3mm, dt=0.0166667, 16 frames
+frame    0  1773.2ms press1  newton=35 pcg= 4490 ls=35 conv=True press_y=0.521 press_z=-0.080
+frame   15   469.8ms settle  newton= 7 pcg= 2640 ls= 7 conv=True press_y=0.651 press_z=+0.080
+TOTAL frames=16 mean=801.9ms median=447.0ms p95=1876.7ms
