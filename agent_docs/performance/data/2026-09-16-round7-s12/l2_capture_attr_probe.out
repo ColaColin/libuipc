@@ -1,6 +1,0 @@
-begin capture                                              -> no error
-end capture                                                -> no error
-captured 0 node(s)
-begin capture #2                                           -> no error
-streamSetAttribute WHILE capturing                         -> invalid argument
-end capture #2 (after failed attr set)                     -> no error

@@ -1,4 +1,0 @@
-CUDA Backend Kernel Console Init Success!
-tumbler: 4 garments, 10224 verts, 19920 tris (drum 1644), edge_len=6.2mm, h_min=4.24mm, r=1.00mm, d_hat=1.27mm, 40rpm, 180 frames
-PERTURBED none (default scene)
-[2026-09-13 14:53:25.207] [error] Assertion false failed. Frame 56, Newton 2, FusedPCG Init: r^T*z = nan, norm(r) = 12.587042812188004, norm(z) = nan. Hint: preconditioner failed, likely due to inverse matrix calculation failure. /workspace/deps/libuipc-src/src/backends/cuda/linear_system/linear_fused_pcg.cu(766)

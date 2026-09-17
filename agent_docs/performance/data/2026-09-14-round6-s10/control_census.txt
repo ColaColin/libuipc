@@ -1,8 +1,0 @@
-c2    kernel sum  41541.8 ms
-      NO ABD gradient/hessian kernels at all -> the prepass never executes here
-mb    kernel sum   6486.1 ms
-      NO ABD gradient/hessian kernels at all -> the prepass never executes here
-tum   kernel sum  20850.8 ms
-      abd_diag          640.2 ms =  3.07 %  n=1471
-      ortho G/H         324.8 ms =  1.56 %  n=1471
-      abd kin G/H        26.4 ms =  0.13 %  n=1471

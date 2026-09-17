@@ -1,6 +1,0 @@
-== global_linear_system
-functions in head: 57, identical: 57, different: 0, missing: 0, head instrs: 20664, head-only-in-new: 14
-== global_dytopo_effect_manager
-functions in head: 63, identical: 63, different: 0, missing: 0, head instrs: 31128, head-only-in-new: 15
-== external_articulation_constraint
-functions in head: 38, identical: 38, different: 0, missing: 0, head instrs: 42640, head-only-in-new: 0

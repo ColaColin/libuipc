@@ -1,5 +1,0 @@
-EE: samples=5000000 adversarial=2500229 dropped=1356728 (27.13 %) active_somewhere_on_[0,1]=1662299 (33.25 %) accd_hits=1003581 (20.07 %) | VIOLATIONS active=0 penetrating=0 | (info) dropped+active_only_past_t=1: 19
-PT: samples=5000000 adversarial=2497786 dropped=1142857 (22.86 %) active_somewhere_on_[0,1]=1530376 (30.61 %) accd_hits=1377196 (27.54 %) | VIOLATIONS active=0 penetrating=0 | (info) dropped+active_only_past_t=1: 12
-PE: samples=5000000 adversarial=2500040 dropped=1484788 (29.70 %) active_somewhere_on_[0,1]=1312808 (26.26 %) accd_hits=630148 (12.60 %) | VIOLATIONS active=0 penetrating=0 | (info) dropped+active_only_past_t=1: 29
-PP: samples=5000000 adversarial=2500305 dropped=1375474 (27.51 %) active_somewhere_on_[0,1]=1595243 (31.90 %) accd_hits=980711 (19.61 %) | VIOLATIONS active=0 penetrating=0 | (info) dropped+active_only_past_t=1: 143
-RESULT: every dropped pair is inactive over the whole swept step (0 violations)

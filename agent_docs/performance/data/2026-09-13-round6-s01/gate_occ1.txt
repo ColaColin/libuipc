@@ -1,4 +1,0 @@
-=== backend_cuda (UIPC_DSB_OCC=1)
-All tests passed (448 assertions in 23 test cases)
-=== sim_case (UIPC_DSB_OCC=1)
-All tests passed (14213 assertions in 95 test cases)

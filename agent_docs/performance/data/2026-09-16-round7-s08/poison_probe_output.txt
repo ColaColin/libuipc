@@ -1,6 +1,0 @@
-N=9, 200000 matrices
-  Solver=0 (Eigen evd):      upper-NaN -> 0/1800000 value + 0/16200000 vector words differ; lower-NaN -> 1800000 + 16200000
-  Solver=1 (evd_tridiag_ql): upper-NaN -> 0/1800000 value + 0/16200000 vector words differ; lower-NaN -> 1800000 + 16200000
-N=6, 200000 matrices
-  Solver=0 (Eigen evd):      upper-NaN -> 0/1200000 value + 0/7200000 vector words differ; lower-NaN -> 1200000 + 7200000
-  Solver=1 (evd_tridiag_ql): upper-NaN -> 0/1200000 value + 0/7200000 vector words differ; lower-NaN -> 1200000 + 7200000

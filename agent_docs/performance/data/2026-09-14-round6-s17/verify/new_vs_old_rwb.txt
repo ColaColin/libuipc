@@ -1,8 +1,0 @@
-[seg-hist] matrix<3,3> in=5740 out=5740 warps=180 levels0..5= 179 0 0 0 0 1
-[seg-verify] matrix<3,3> in=5740 out=5740 words=51660 mismatch_words=0 (in_multiwarp_slots=0, elsewhere=0) slots=0 multiwarp_slots=0 maxrel=0.000e+00
-[seg-verify] matrix<3,3> in=5740 out=5740 words=51660 mismatch_words=0 (in_multiwarp_slots=0, elsewhere=0) slots=0 multiwarp_slots=0 maxrel=0.000e+00
-[seg-verify] matrix<3,3> in=5740 out=5740 words=51660 mismatch_words=0 (in_multiwarp_slots=0, elsewhere=0) slots=0 multiwarp_slots=0 maxrel=0.000e+00
-[seg-verify] matrix<3,3> in=5740 out=5740 words=51660 mismatch_words=0 (in_multiwarp_slots=0, elsewhere=0) slots=0 multiwarp_slots=0 maxrel=0.000e+00
-[seg-verify] matrix<3,3> in=6540 out=5740 words=51660 mismatch_words=0 (in_multiwarp_slots=0, elsewhere=0) slots=0 multiwarp_slots=0 maxrel=0.000e+00
-[seg-verify] matrix<3,3> in=6540 out=5740 words=51660 mismatch_words=0 (in_multiwarp_slots=0, elsewhere=0) slots=0 multiwarp_slots=0 maxrel=0.000e+00
-[seg-verify] matrix<3,3> in=6540 out=5740 words=51660 mismatch_words=0 (in_multiwarp_slots=0, elsewhere=0) slots=0 multiwarp_slots=0 maxrel=0.000e+00

@@ -1,2 +1,0 @@
-plain bytes 164874 occ bytes 164874
-PTX BODIES IDENTICAL -- the two kernels differ only by .maxntid/.minnctapersm

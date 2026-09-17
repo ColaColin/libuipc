@@ -1,7 +1,0 @@
-=== s03 crease-press, UIPC_DAHL_GAUSS_NEWTON A/B, 2 ABBA blocks x n=8/arm (1 discarded warmup per arm per block), pooled n=16/arm
-meanFrameMs  old 265.413 [230.7,308.1]  new 248.735 [216.8,271.4]  -6.28%  p=0.0151  MWp=0.0275
-ms/newton   old    61.337  new    57.383  -6.45%  p=0.0036
-ms/pcg(us)  old   297.490  new   277.884  -6.59%  p=0.0286
-newton      old      562.3 (cv 2.2%)  new      563.2 (cv 2.9%)  +0.17%
-pcg         old   117576.2 (cv 16.3%)  new   117420.3 (cv 13.5%)  -0.13%
-line_search old      617.4 (cv 2.8%)  new      628.2 (cv 4.5%)  +1.75%

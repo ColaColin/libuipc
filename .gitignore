@@ -48,3 +48,10 @@ vsxmake*/
 
 # local dev notes
 docs/development/backend_cuda/
+# Raw instrument output (nsys/sqlite/csv/log/sass/scripts) lives in /workspace/output/<round>/,
+# never in git. agent_docs/performance/data keeps only the md evidence maps and rejected-step
+# patches; the full pre-2026-09-17 dump is archived at /workspace/output/agent_docs_data_archive.
+agent_docs/performance/data/**/*
+!agent_docs/performance/data/**/*/
+!agent_docs/performance/data/**/*.md
+!agent_docs/performance/data/**/*.patch

@@ -1,5 +1,0 @@
-TOTAL frames=130 mean=1514.3ms median=756.2ms p95=3996.5ms
-[SpreadVerify] StressPlasticDiscreteShellBending::gauss_newton_hessian 1446813200 output words (32-bit) compared, 1292948339 mismatching
-[SpreadVerify] StressPlasticDiscreteShellBending::gauss_newton_gradient 202553848 output words (32-bit) compared, 0 mismatching
-[SpreadVerify] StrainPlasticDiscreteShellBending::gauss_newton_hessian 1446813200 output words (32-bit) compared, 1292265236 mismatching
-[SpreadVerify] StrainPlasticDiscreteShellBending::gauss_newton_gradient 202553848 output words (32-bit) compared, 0 mismatching
