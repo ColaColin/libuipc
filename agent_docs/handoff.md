@@ -1734,3 +1734,40 @@ performance records cite the old hashes and are historical fact, left as written
 
 (`cd8e838`/`ecad2ca` were dropped as duplicates of upstream
 `90607b9`/`a7ca63f`.)
+
+## GC pass — docs purge + dead code removal (2026-09-17, after `8bd69898`)
+
+Branch `cleanup/gc-docs-and-deadcode`, merged as `0fe295cd`. Motivation: the
+fork-vs-upstream audit found `agent_docs/performance/data/` had accumulated
+265 MB / 3,573 files of raw instrument output duplicated from
+`/workspace/output`, and two NN-research tools compiled unconditionally into
+the backend.
+
+- **Docs**: every non-`*.md`/`*.patch` file under `performance/data/` deleted
+  (67 evidence maps + 5 rejected-step patches kept, 2.9 MB total). Nothing
+  lost: the full tree is archived verbatim at
+  `/workspace/output/agent_docs_data_archive/` (3,645 files, count-verified;
+  36 repo-only stragglers also at `/workspace/output/agent_docs_stragglers/`).
+  `.gitignore` now blocks re-adding anything but md/patch under `data/`.
+  Note the round reports reference data files by their old in-repo paths --
+  resolve them against the archive. History still carries the 256 MB of blobs;
+  `git filter-repo --path agent_docs/performance/data --invert-paths` +
+  force-push to `fork` reclaims it when wanted (never `origin`).
+- **Code** (-1,042 lines): `nn_oracle.cu` + `nn_candidate_dump.cu` deleted with
+  all wiring (SimEngine members, advance_ipc hooks, filter dump plumbing, the
+  FEM `friend class SimEngine`); the four `global_linear_system.cu` one-off
+  probes deleted (pattern/convert-verify/fill/BCOO-hash; the s26 dead-fill
+  optimization stays). `extras/debug/warm_start_oracle`, `candidate_reuse_oracle`
+  and `dump_candidates` REMAIN registered as documented no-ops -- the schema is
+  strictUnknownKeys and cloth-machine-2's configs list them; removing the keys
+  would break those configs.
+- **Kept deliberately**: `candidate_reuse_verify.cu` (certifies the default-ON
+  `collision_detection/dcd_candidate_reuse`), and the rejected-step env arms
+  (`UIPC_SPMV_GRID_STRIDE`, `UIPC_PCG_FOLD`, dot-fence modes) -- one-variable
+  transfer-prediction arms for future rented runs, not dead code.
+- **Validation**: gate identical to `baseline_tests.txt` (11/3, 1112/36,
+  2730/46, 100/3, 4/1, 448/23, 14213/95, pytest 48+1); `ab2.py` two-build ABBA
+  vs `main` (worktree base at `/workspace/output/cleanup-verify/`): mas-bunny
+  n=10/arm **Newton exactly 465 in all 20 runs**, PCG/peak-MiB flat, wall
+  +0.13 % overlapping; crease-press n=8/arm wall −1.89 % overlapping, counts
+  inside the documented frame-0 chaos. Evidence: `/workspace/output/cleanup-verify/`.
