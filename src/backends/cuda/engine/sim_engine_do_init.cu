@@ -62,9 +62,6 @@ void SimEngine::init_scene()
 {
     auto& info     = world().scene().config();
     m_dump_surface = info.find<IndexT>("extras/debug/dump_surface");
-    m_candidate_reuse_oracle = info.find<IndexT>("extras/debug/candidate_reuse_oracle");
-    m_warm_start_oracle = info.find<IndexT>("extras/debug/warm_start_oracle");
-    m_dump_candidates   = info.find<IndexT>("extras/debug/dump_candidates");
     m_dcd_candidate_reuse = info.find<IndexT>("collision_detection/dcd_candidate_reuse");
     m_dcd_candidate_reuse_verify =
         info.find<IndexT>("extras/debug/dcd_candidate_reuse_verify");
@@ -148,9 +145,6 @@ void SimEngine::init_scene()
         //if(m_abd_diff_sim_manager)
         //    m_abd_diff_sim_manager->init();
     }
-
-    // 4. DIAGNOSTIC: warm-start oracle file setup (no-op when disabled)
-    init_warm_start_oracle();
 }
 
 void SimEngine::do_init(InitInfo& info)
