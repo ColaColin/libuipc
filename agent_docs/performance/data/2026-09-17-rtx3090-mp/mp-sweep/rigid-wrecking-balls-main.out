@@ -1,0 +1,33 @@
+[rigid-wrecking-balls] rep0 N=1 launching...
+  ok: meanFrameMs=19.8 steadyFps=50.505 makespanFps=31.84 peakMem=1616 perProc=1577 util=67.1%
+[rigid-wrecking-balls] rep0 N=2 launching...
+  ok: meanFrameMs=24.75 steadyFps=79.051 makespanFps=49.129 peakMem=3195 perProc=1578 util=58.8%
+[rigid-wrecking-balls] rep0 N=4 launching...
+  ok: meanFrameMs=33.4 steadyFps=119.403 makespanFps=78.315 peakMem=6349 perProc=1578 util=66.5%
+[rigid-wrecking-balls] rep0 N=8 launching...
+  ok: meanFrameMs=57.2 steadyFps=138.648 makespanFps=97.578 peakMem=12657 perProc=1577 util=78.5%
+[rigid-wrecking-balls] rep0 N=12 launching...
+  ok: meanFrameMs=81.18 steadyFps=143.369 makespanFps=104.751 peakMem=18969 perProc=1577 util=80.2%
+[rigid-wrecking-balls] rep1 N=1 launching...
+  ok: meanFrameMs=20.7 steadyFps=48.309 makespanFps=31.902 peakMem=1620 perProc=1579 util=54%
+[rigid-wrecking-balls] rep1 N=2 launching...
+  ok: meanFrameMs=23.6 steadyFps=83.682 makespanFps=54.882 peakMem=3196 perProc=1578 util=62.5%
+[rigid-wrecking-balls] rep1 N=4 launching...
+  ok: meanFrameMs=34.42 steadyFps=114.286 makespanFps=78.939 peakMem=6348 perProc=1577 util=74.2%
+[rigid-wrecking-balls] rep1 N=8 launching...
+  ok: meanFrameMs=57.17 steadyFps=138.648 makespanFps=97.733 peakMem=12647 perProc=1576 util=81.1%
+[rigid-wrecking-balls] rep1 N=12 launching...
+  ok: meanFrameMs=81.62 steadyFps=145.278 makespanFps=107.369 peakMem=18963 perProc=1577 util=85.1%
+
+wrote /root/work/mp-sweep/rigid-wrecking-balls-main/rigid-wrecking-balls.json
+  N  meanFrameMs  slowdown  steadyFps  makespanFps  peakMiB  util%
+  1         19.8     0.978     50.505        31.84     1616   67.1
+  2        24.75     1.222     79.051       49.129     3195   58.8
+  4         33.4     1.649    119.403       78.315     6349   66.5
+  8         57.2     2.825    138.648       97.578    12657   78.5
+ 12        81.18     4.009    143.369      104.751    18969   80.2
+  1         20.7     1.022     48.309       31.902     1620     54
+  2         23.6     1.165     83.682       54.882     3196   62.5
+  4        34.42       1.7    114.286       78.939     6348   74.2
+  8        57.17     2.823    138.648       97.733    12647   81.1
+ 12        81.62     4.031    145.278      107.369    18963   85.1

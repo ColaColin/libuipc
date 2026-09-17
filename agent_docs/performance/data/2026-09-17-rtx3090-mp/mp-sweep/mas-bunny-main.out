@@ -1,0 +1,33 @@
+[mas-bunny] rep0 N=1 launching...
+  ok: meanFrameMs=37.8 steadyFps=26.455 makespanFps=14.348 peakMem=1824 perProc=1783 util=51.1%
+[mas-bunny] rep0 N=2 launching...
+  ok: meanFrameMs=59.1 steadyFps=33.841 makespanFps=21.742 peakMem=3606 perProc=1782 util=58.8%
+[mas-bunny] rep0 N=4 launching...
+  ok: meanFrameMs=102.33 steadyFps=38.948 makespanFps=29.256 peakMem=7172 perProc=1783 util=73.7%
+[mas-bunny] rep0 N=8 launching...
+  ok: meanFrameMs=196.56 steadyFps=40.486 makespanFps=33.443 peakMem=14303 perProc=1783 util=86.1%
+[mas-bunny] rep0 N=12 launching...
+  ok: meanFrameMs=304.77 steadyFps=39.113 makespanFps=33.097 peakMem=21437 perProc=1783 util=90.9%
+[mas-bunny] rep1 N=1 launching...
+  ok: meanFrameMs=37.9 steadyFps=26.385 makespanFps=14.339 peakMem=1824 perProc=1783 util=53.4%
+[mas-bunny] rep1 N=2 launching...
+  ok: meanFrameMs=59.3 steadyFps=33.727 makespanFps=21.678 peakMem=3606 perProc=1782 util=64.7%
+[mas-bunny] rep1 N=4 launching...
+  ok: meanFrameMs=102.05 steadyFps=39.101 makespanFps=29.319 peakMem=7172 perProc=1783 util=77.0%
+[mas-bunny] rep1 N=8 launching...
+  ok: meanFrameMs=196.93 steadyFps=40.404 makespanFps=33.28 peakMem=14303 perProc=1783 util=85.1%
+[mas-bunny] rep1 N=12 launching...
+  ok: meanFrameMs=307.24 steadyFps=38.898 makespanFps=33.187 peakMem=21437 perProc=1783 util=90.7%
+
+wrote /root/work/mp-sweep/mas-bunny-main/mas-bunny.json
+  N  meanFrameMs  slowdown  steadyFps  makespanFps  peakMiB  util%
+  1         37.8     0.999     26.455       14.348     1824   51.1
+  2         59.1     1.561     33.841       21.742     3606   58.8
+  4       102.33     2.704     38.948       29.256     7172   73.7
+  8       196.56     5.193     40.486       33.443    14303   86.1
+ 12       304.77     8.052     39.113       33.097    21437   90.9
+  1         37.9     1.001     26.385       14.339     1824   53.4
+  2         59.3     1.567     33.727       21.678     3606   64.7
+  4       102.05     2.696     39.101       29.319     7172   77.0
+  8       196.93     5.203     40.404        33.28    14303   85.1
+ 12       307.24     8.117     38.898       33.187    21437   90.7

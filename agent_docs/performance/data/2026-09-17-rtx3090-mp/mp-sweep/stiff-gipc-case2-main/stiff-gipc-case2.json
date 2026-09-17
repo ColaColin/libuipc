@@ -1,0 +1,420 @@
+[
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 1,
+    "status": "ok",
+    "returnCodes": [
+      0
+    ],
+    "startedAt": "2026-09-17T10:33:01.593215+00:00",
+    "makespanS": 26.378,
+    "perProcSimS": [
+      26.377
+    ],
+    "perProcMeanMs": [
+      84.8
+    ],
+    "perProcMedianMs": [
+      84.5
+    ],
+    "framesEach": 250,
+    "freeMiB_before": 24084,
+    "baselineMiB": 41,
+    "peakTotalMiB": 2426,
+    "meanUtil": 79.8,
+    "p90Util": 98.0,
+    "minSmClockMHz": 315,
+    "meanPowerW": 306.9,
+    "steadyFps": 11.792,
+    "steadyFpsMean": 11.792,
+    "makespanFps": 9.478,
+    "meanFrameMs": 84.8,
+    "slowestFrameMs": 84.8,
+    "perProcPeakMib": 2385,
+    "rep": 0,
+    "label": "main",
+    "n1BaseMeanMs": 84.6,
+    "perProcSlowdown": 1.002,
+    "steadySpeedupVsN1": 0.998,
+    "makespanSpeedupVsN1": 0.802
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 2,
+    "status": "ok",
+    "returnCodes": [
+      0,
+      0
+    ],
+    "startedAt": "2026-09-17T10:33:31.043890+00:00",
+    "makespanS": 41.057,
+    "perProcSimS": [
+      41.056,
+      41.006
+    ],
+    "perProcMeanMs": [
+      142.3,
+      142.0
+    ],
+    "perProcMedianMs": [
+      143.4,
+      143.2
+    ],
+    "framesEach": 250,
+    "freeMiB_before": 24084,
+    "baselineMiB": 41,
+    "peakTotalMiB": 4792,
+    "meanUtil": 87.1,
+    "p90Util": 100.0,
+    "minSmClockMHz": 255,
+    "meanPowerW": 351.3,
+    "steadyFps": 14.055,
+    "steadyFpsMean": 14.07,
+    "makespanFps": 12.178,
+    "meanFrameMs": 142.15,
+    "slowestFrameMs": 142.3,
+    "perProcPeakMib": 2376,
+    "rep": 0,
+    "label": "main",
+    "n1BaseMeanMs": 84.6,
+    "perProcSlowdown": 1.68,
+    "steadySpeedupVsN1": 1.189,
+    "makespanSpeedupVsN1": 1.03
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 4,
+    "status": "ok",
+    "returnCodes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "startedAt": "2026-09-17T10:34:15.161031+00:00",
+    "makespanS": 71.36,
+    "perProcSimS": [
+      71.359,
+      71.308,
+      71.258,
+      71.207
+    ],
+    "perProcMeanMs": [
+      259.9,
+      262.6,
+      263.0,
+      262.0
+    ],
+    "perProcMedianMs": [
+      263.4,
+      263.9,
+      265.7,
+      264.3
+    ],
+    "framesEach": 250,
+    "freeMiB_before": 24084,
+    "baselineMiB": 41,
+    "peakTotalMiB": 9546,
+    "meanUtil": 92.5,
+    "p90Util": 100.0,
+    "minSmClockMHz": 255,
+    "meanPowerW": 366.3,
+    "steadyFps": 15.209,
+    "steadyFpsMean": 15.274,
+    "makespanFps": 14.013,
+    "meanFrameMs": 261.88,
+    "slowestFrameMs": 263.0,
+    "perProcPeakMib": 2376,
+    "rep": 0,
+    "label": "main",
+    "n1BaseMeanMs": 84.6,
+    "perProcSlowdown": 3.096,
+    "steadySpeedupVsN1": 1.287,
+    "makespanSpeedupVsN1": 1.185
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 8,
+    "status": "ok",
+    "returnCodes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "startedAt": "2026-09-17T10:35:29.581819+00:00",
+    "makespanS": 138.936,
+    "perProcSimS": [
+      138.934,
+      138.883,
+      138.833,
+      138.782,
+      138.73,
+      138.679,
+      138.628,
+      138.576
+    ],
+    "perProcMeanMs": [
+      527.7,
+      531.0,
+      531.2,
+      523.7,
+      530.3,
+      530.4,
+      529.3,
+      528.9
+    ],
+    "perProcMedianMs": [
+      536.4,
+      538.5,
+      540.8,
+      528.8,
+      531.8,
+      534.4,
+      532.2,
+      535.8
+    ],
+    "framesEach": 250,
+    "freeMiB_before": 24084,
+    "baselineMiB": 41,
+    "peakTotalMiB": 19053,
+    "meanUtil": 96.2,
+    "p90Util": 100.0,
+    "minSmClockMHz": 300,
+    "meanPowerW": 377.7,
+    "steadyFps": 15.06,
+    "steadyFpsMean": 15.121,
+    "makespanFps": 14.395,
+    "meanFrameMs": 529.06,
+    "slowestFrameMs": 531.2,
+    "perProcPeakMib": 2376,
+    "rep": 0,
+    "label": "main",
+    "n1BaseMeanMs": 84.6,
+    "perProcSlowdown": 6.254,
+    "steadySpeedupVsN1": 1.274,
+    "makespanSpeedupVsN1": 1.218
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 12,
+    "status": "skipped",
+    "freeMiB": 24084,
+    "needMiB": 29020,
+    "rep": 0,
+    "label": "main"
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 1,
+    "status": "ok",
+    "returnCodes": [
+      0
+    ],
+    "startedAt": "2026-09-17T10:37:51.614086+00:00",
+    "makespanS": 26.336,
+    "perProcSimS": [
+      26.335
+    ],
+    "perProcMeanMs": [
+      84.4
+    ],
+    "perProcMedianMs": [
+      85.2
+    ],
+    "framesEach": 250,
+    "freeMiB_before": 24084,
+    "baselineMiB": 41,
+    "peakTotalMiB": 2424,
+    "meanUtil": 79.5,
+    "p90Util": 98.0,
+    "minSmClockMHz": 285,
+    "meanPowerW": 308.5,
+    "steadyFps": 11.848,
+    "steadyFpsMean": 11.848,
+    "makespanFps": 9.493,
+    "meanFrameMs": 84.4,
+    "slowestFrameMs": 84.4,
+    "perProcPeakMib": 2383,
+    "rep": 1,
+    "label": "main",
+    "n1BaseMeanMs": 84.6,
+    "perProcSlowdown": 0.998,
+    "steadySpeedupVsN1": 1.002,
+    "makespanSpeedupVsN1": 0.803
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 2,
+    "status": "ok",
+    "returnCodes": [
+      0,
+      0
+    ],
+    "startedAt": "2026-09-17T10:38:21.013173+00:00",
+    "makespanS": 41.044,
+    "perProcSimS": [
+      41.042,
+      40.992
+    ],
+    "perProcMeanMs": [
+      142.4,
+      142.6
+    ],
+    "perProcMedianMs": [
+      143.7,
+      144.0
+    ],
+    "framesEach": 250,
+    "freeMiB_before": 24084,
+    "baselineMiB": 41,
+    "peakTotalMiB": 4808,
+    "meanUtil": 87.3,
+    "p90Util": 100.0,
+    "minSmClockMHz": 300,
+    "meanPowerW": 350.5,
+    "steadyFps": 14.025,
+    "steadyFpsMean": 14.035,
+    "makespanFps": 12.182,
+    "meanFrameMs": 142.5,
+    "slowestFrameMs": 142.6,
+    "perProcPeakMib": 2384,
+    "rep": 1,
+    "label": "main",
+    "n1BaseMeanMs": 84.6,
+    "perProcSlowdown": 1.684,
+    "steadySpeedupVsN1": 1.187,
+    "makespanSpeedupVsN1": 1.031
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 4,
+    "status": "ok",
+    "returnCodes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "startedAt": "2026-09-17T10:39:05.128554+00:00",
+    "makespanS": 70.922,
+    "perProcSimS": [
+      70.921,
+      70.87,
+      70.82,
+      70.769
+    ],
+    "perProcMeanMs": [
+      260.0,
+      262.1,
+      261.8,
+      261.3
+    ],
+    "perProcMedianMs": [
+      264.7,
+      267.5,
+      268.6,
+      264.9
+    ],
+    "framesEach": 250,
+    "freeMiB_before": 24084,
+    "baselineMiB": 41,
+    "peakTotalMiB": 9550,
+    "meanUtil": 92.4,
+    "p90Util": 100.0,
+    "minSmClockMHz": 300,
+    "meanPowerW": 366.2,
+    "steadyFps": 15.261,
+    "steadyFpsMean": 15.308,
+    "makespanFps": 14.1,
+    "meanFrameMs": 261.3,
+    "slowestFrameMs": 262.1,
+    "perProcPeakMib": 2377,
+    "rep": 1,
+    "label": "main",
+    "n1BaseMeanMs": 84.6,
+    "perProcSlowdown": 3.089,
+    "steadySpeedupVsN1": 1.291,
+    "makespanSpeedupVsN1": 1.193
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 8,
+    "status": "ok",
+    "returnCodes": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "startedAt": "2026-09-17T10:40:19.121959+00:00",
+    "makespanS": 138.608,
+    "perProcSimS": [
+      138.606,
+      138.555,
+      138.504,
+      138.453,
+      138.389,
+      138.291,
+      138.24,
+      138.189
+    ],
+    "perProcMeanMs": [
+      519.0,
+      524.4,
+      527.7,
+      527.9,
+      527.0,
+      526.7,
+      527.9,
+      527.0
+    ],
+    "perProcMedianMs": [
+      540.7,
+      527.8,
+      535.4,
+      535.3,
+      534.1,
+      533.4,
+      538.9,
+      528.0
+    ],
+    "framesEach": 250,
+    "freeMiB_before": 24084,
+    "baselineMiB": 41,
+    "peakTotalMiB": 19019,
+    "meanUtil": 96.5,
+    "p90Util": 100.0,
+    "minSmClockMHz": 285,
+    "meanPowerW": 377.9,
+    "steadyFps": 15.154,
+    "steadyFpsMean": 15.211,
+    "makespanFps": 14.429,
+    "meanFrameMs": 525.95,
+    "slowestFrameMs": 527.9,
+    "perProcPeakMib": 2372,
+    "rep": 1,
+    "label": "main",
+    "n1BaseMeanMs": 84.6,
+    "perProcSlowdown": 6.217,
+    "steadySpeedupVsN1": 1.282,
+    "makespanSpeedupVsN1": 1.221
+  },
+  {
+    "scene": "stiff-gipc-case2",
+    "n": 12,
+    "status": "skipped",
+    "freeMiB": 24084,
+    "needMiB": 29020,
+    "rep": 1,
+    "label": "main"
+  }
+]

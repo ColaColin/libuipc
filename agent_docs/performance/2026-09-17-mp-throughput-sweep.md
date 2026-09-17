@@ -11,6 +11,10 @@ ceiling per GPU is now **1.11–1.77×** at N=2–8, because single-process GPU
 utilisation is already 53–92 % and per-process slowdown grows ≈ linearly beyond
 N=2. Multi-process still pays, much less than it used to on lighter scenes.
 
+*(Same day, rented RTX 3090: see "Rented RTX 3090" below — scaling there is
+**1.29–2.92×**, better than the 2070S on every scene, and per-machine throughput
+at best-N is a uniform ~2.0–2.2× the 2070S.)*
+
 ## Method
 
 - Box: RTX 2070 SUPER (cc 7.5, 8 GB, 215 W cap), 32-core host, user-level CUDA MPS
@@ -84,6 +88,55 @@ The hypothesis is **not confirmed**: `=2` remains equal-or-better under MPS
 (cube-wall's −2.5 % for `=0` matches its single-process sign from round-6 s09).
 Keep the default; n=2 pairs, so treat <±3 % as noise.
 
+## Rented RTX 3090 (same protocol, 2026-09-17)
+
+Owner-requested repeat on a rented 24 GB card ("rent a 3090 or similar and repeat").
+Driver `tools/vast/vast_run_mp_sweep.sh` + on-box `vast_remote_mp_sweep.sh` (single
+tree at fork branch `mp-sweep-20260917` = main `8382c951`, native sm_86, MPS daemon
+on the box, stagger 0.05 s, reps=2, adaptive per-proc VRAM guard). Same scenes,
+same default frames, same slowest-proc aggregate metric — directly comparable to
+the 2070S table above.
+
+| scene | 3090 N=1 (ms, util) | best N | aggregate | scaling | MiB/proc on 3090 (2070S) |
+|---|---|---|---|---|---|
+| rigid-wrecking-balls | 20.2, 61 % | 12 | **144.3 f/s** | **2.92×** | 1578 (692) |
+| cube-wall-cloth | 36.5, 56 % | 8 | **57.6 f/s** | **2.10×** | 1984 (1086) |
+| tumbler-garments | 68.0, 82 % | 8 | **28.2 f/s** | **1.92×** | 2033 (1100) |
+| mas-bunny | 37.8, 52 % | 8 | **40.5 f/s** | **1.53×** | 1783 (838) |
+| crease-press | 130.6, 87 % | 4 | **10.3 f/s** | **1.35×** | 3005 (2136) |
+| stiff-gipc-case2 | 84.6, 80 % | 4 | **15.2 f/s** | **1.29×** | 2378 (1490) |
+
+Findings beyond the 2070S picture:
+
+- **Scaling is better on the bigger card for every scene** (e.g. mas-bunny
+  1.53× vs 1.25×, cube-wall 2.10× vs 1.46×, tumbler 1.92× vs 1.35×). 82 SMs vs 36
+  leave more room for MPS to overlap kernels before time-slicing takes over;
+  utilisation at the best N reaches 80–97 %, same saturation signature as locally.
+- **Per-process VRAM grows with the card** (~1.6–2.9× the 2070S per-proc figure),
+  confirming the old cloth-machine observation that allocator pools/context scale
+  with device size. On 24 GB the practical ceilings were N≈12–14 (rwb), ~11–12
+  (cube/tumbler — the guard skipped their N=12 arms at ~1.97–2.0 GB/proc),
+  ~9–10 (case2), ~7 (crease). Throughput had saturated before all of these.
+- **Per-machine throughput at best N is a uniform ~2.0–2.2× the 2070S** on every
+  scene, although single-process speed is only 1.3–1.8× — the bigger card gains
+  more from concurrency than the small one, so the *machine* ratio exceeds the
+  *process* ratio.
+- Single-process util is *lower* on the 3090 than the 2070S on the same scenes
+  (e.g. cube-wall 56 % vs 66 %; mas-bunny 52 % vs 62 %): the same code leaves a
+  larger fraction of a bigger GPU idle, which is exactly what MPS converts into
+  the better scaling above. The round-4/5 "grid-size against machine-size"
+  transfer table predicted this direction.
+
+Ledger (VAST_AI.md rule): instance **51295839**, offer 51016746, RTX 3090,
+$0.3622/h, 64 effective cores, Michigan US, image nvidia/cuda:12.8.1-devel-
+ubuntu24.04; created 2026-09-17T10:05:44Z, destroyed 10:47:03Z (41 min, incl.
+~9 min build); charged **$0.28** (credit 3.7625 → 3.4959). One earlier failed
+attempt (instance 51295416, same offer, $0.02) died at cmake configure: my
+remote script dropped the old script's `mkdir -p build`, and the shell opens
+`> build/configure.log` before `cmake -B build` can create the directory —
+fixed in `vast_remote_mp_sweep.sh`. Raw data:
+`data/2026-09-17-rtx3090-mp/` (per-scene sweep JSONs, timeline, instance facts).
+
 ## Caveats
 
 - 2–3 arms per (scene, N); day-to-day scatter on these scenes is 2–8 %, so the
@@ -96,3 +149,7 @@ Keep the default; n=2 pairs, so treat <±3 % as noise.
   1.6 s, never reproduced (15+ later N=1 arms clean). Treated as a startup flake.
 - WDDM-style caveat does not apply (Linux), but the ~800 MiB display+MPS baseline
   is included in every peakTotalMiB; per-proc MiB above already subtracts it.
+- 3090 arms: reps=2 per (scene, N), stagger 0.05 s (short scenes on a fast card);
+  rwb at ~2 s/run is the timing-sensitive end — trust its per-process ms over the
+  makespan figure. The N=12 arms the guard skipped (cube-wall, tumbler) had
+  already-flat throughput at N=8.

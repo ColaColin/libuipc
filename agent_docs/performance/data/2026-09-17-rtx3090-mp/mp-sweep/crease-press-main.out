@@ -1,0 +1,27 @@
+[crease-press] rep0 N=1 launching...
+  ok: meanFrameMs=128.2 steadyFps=7.8 makespanFps=6.894 peakMem=3052 perProc=3011 util=84.6%
+[crease-press] rep0 N=2 launching...
+  ok: meanFrameMs=209.1 steadyFps=9.381 makespanFps=8.751 peakMem=6054 perProc=3006 util=90.8%
+[crease-press] rep0 N=4 launching...
+  ok: meanFrameMs=390.02 steadyFps=10.033 makespanFps=9.604 peakMem=12050 perProc=3002 util=96.9%
+[crease-press] rep0 N=8 launching...
+  skipped: {"scene": "crease-press", "n": 8, "status": "skipped", "freeMiB": 24084, "needMiB": 24488, "rep": 0, "label": "main"}
+[crease-press] rep1 N=1 launching...
+  ok: meanFrameMs=133.1 steadyFps=7.513 makespanFps=6.716 peakMem=3090 perProc=3049 util=88.8%
+[crease-press] rep1 N=2 launching...
+  ok: meanFrameMs=213.6 steadyFps=9.099 makespanFps=8.456 peakMem=6050 perProc=3004 util=92.8%
+[crease-press] rep1 N=4 launching...
+  ok: meanFrameMs=360.8 steadyFps=10.638 makespanFps=10.122 peakMem=12056 perProc=3004 util=95.8%
+[crease-press] rep1 N=8 launching...
+  skipped: {"scene": "crease-press", "n": 8, "status": "skipped", "freeMiB": 24084, "needMiB": 24792, "rep": 1, "label": "main"}
+
+wrote /root/work/mp-sweep/crease-press-main/crease-press.json
+  N  meanFrameMs  slowdown  steadyFps  makespanFps  peakMiB  util%
+  1        128.2     0.981        7.8        6.894     3052   84.6
+  2        209.1       1.6      9.381        8.751     6054   90.8
+  4       390.02     2.985     10.033        9.604    12050   96.9
+  8      skipped
+  1        133.1     1.019      7.513        6.716     3090   88.8
+  2        213.6     1.635      9.099        8.456     6050   92.8
+  4        360.8     2.762     10.638       10.122    12056   95.8
+  8      skipped
